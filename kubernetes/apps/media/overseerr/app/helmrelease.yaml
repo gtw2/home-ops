@@ -33,7 +33,7 @@ spec:
               repository: ghcr.io/sct/overseerr
               tag: 1.34.0
             env:
-              TZ: ${TIMEZONE}
+              TZ: America/New_York
             resources:
               requests:
                 cpu: 15m

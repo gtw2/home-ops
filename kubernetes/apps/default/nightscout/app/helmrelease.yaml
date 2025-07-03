@@ -41,7 +41,7 @@ spec:
               tag: 15.0.3
               pullPolicy: IfNotPresent
             env:
-              TZ: "${TIMEZONE}"
+              TZ: "America/New_York"
               MONGO_CONNECTION: "mongodb://nightscout:${NIGHTSCOUT_MONGODB_PASSWORD}@mongodb.database.svc.cluster.local:27017/nightscout"
               AUTH_DEFAULT_ROLES: "readable"
               ALARM_TIMEAGO_URGENT: "off"
