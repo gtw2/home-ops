@@ -137,14 +137,14 @@ spec:
       media:
         enabled: true
         type: nfs
-        server: "${SECRET_NFS_SERVER}"
+        server: 10.10.40.4
         path: "/mnt/sega/PlexNAS/Compressed"
         globalMounts:
           - path: /media
             readOnly: true
       dvr:
         type: nfs
-        server: "${SECRET_NFS_SERVER}"
+        server: 10.10.40.4
         path: "/mnt/sega/PlexNAS/DVR"
         globalMounts:
           - path: /dvr
