@@ -3,6 +3,7 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: bitnami
+  namespace: flux-system
 spec:
   interval: 1h
   type: oci
@@ -15,9 +16,14 @@ metadata:
   namespace: database
 spec:
   interval: 1h
-  chartRef:
-    kind: HelmRepository
-    name: bitnami
+  chart:
+    spec:
+      chart: mongodb
+      version: 16.5.27
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: flux-system
   install:
     remediation:
       retries: 3
