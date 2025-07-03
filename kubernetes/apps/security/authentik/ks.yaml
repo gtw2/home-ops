@@ -14,8 +14,11 @@ spec:
   #   - ../../../../components/gatus/external
   dependsOn:
     - name: cloudnative-pg-cluster
+      namespace: database
     - name: dragonfly-cluster
+      namespace: database
     - name: external-secrets-stores
+      namespace: kube-system
   path: ./kubernetes/apps/security/authentik/app
   prune: true
   sourceRef:
