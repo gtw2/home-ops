@@ -11,7 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/common
+    # - ../../../../components/common
     - ../../../../components/volsync
   dependsOn:
     - name: external-secrets-stores

@@ -10,8 +10,8 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  components:
-    - ../../../../components/common
+  # components:
+  #   - ../../../../components/common
   path: ./kubernetes/apps/kube-system/external-secrets/app
   prune: true
   sourceRef:
@@ -38,8 +38,8 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  components:
-    - ../../../../components/common
+  # components:
+  #   - ../../../../components/common
   dependsOn:
     - name: external-secrets
   path: ./kubernetes/apps/kube-system/external-secrets/stores

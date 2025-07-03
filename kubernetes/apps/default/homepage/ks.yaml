@@ -10,7 +10,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/common
+    # - ../../../../components/common
     - ../../../../components/volsync
   path: ./kubernetes/apps/default/homepage/app
   prune: true

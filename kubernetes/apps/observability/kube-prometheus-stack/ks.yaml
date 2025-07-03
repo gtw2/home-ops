@@ -9,8 +9,12 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  components:
-    - ../../../../components/common
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  # components:
+  #   - ../../../../components/common
   dependsOn:
     - name: rook-ceph-cluster
       namespace: rook-ceph
