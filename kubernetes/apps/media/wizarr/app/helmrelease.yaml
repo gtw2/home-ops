@@ -68,9 +68,9 @@ spec:
           # gethomepage.dev/widget.type: wizarr
           # gethomepage.dev/widget.url: http://wizarr.media.svc.cluster.local:5690
           # gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_WIZARR_TOKEN}}` }}"
-          external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
+          external-dns.alpha.kubernetes.io/target: external.westphal.io
         hosts:
-          - host: &host join.${SECRET_DOMAIN}
+          - host: &host join.westphal.io
             paths:
               - path: /
                 service:

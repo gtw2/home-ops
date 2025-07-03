@@ -77,7 +77,7 @@ spec:
           gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_TAUTULLI_KEY}}` }}"
           gethomepage.dev/widget.enableUser: "true"
         hosts:
-          - host: &host "{{ .Release.Name }}.${SECRET_DOMAIN}"
+          - host: &host "{{ .Release.Name }}.westphal.io"
             paths:
               - path: /
                 pathType: Prefix

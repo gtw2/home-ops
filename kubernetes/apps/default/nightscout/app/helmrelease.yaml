@@ -47,7 +47,7 @@ spec:
               ALARM_TIMEAGO_URGENT: "off"
               ALARM_TIMEAGO_WARN: "off"
               ALARM_TYPES: " "
-              BASE_URL: "https://{{ .Release.Name }}.${SECRET_DOMAIN}"
+              BASE_URL: "https://{{ .Release.Name }}.westphal.io"
               DEVICESTATUS_ADVANCED: "true"
               DISABLE: "simplealarms upbat"
               ENABLE: "ar2 careportal connect cors delta"
@@ -79,7 +79,7 @@ spec:
       app:
         className: internal
         hosts:
-          - host: &host "{{ .Release.Name }}.${SECRET_DOMAIN}"
+          - host: &host "{{ .Release.Name }}.westphal.io"
             paths:
               - path: /
                 pathType: Prefix

@@ -54,7 +54,7 @@ spec:
               OCIS_LOG_COLOR: true
               OCIS_LOG_LEVEL: info
               OCIS_LOG_PRETTY: true
-              OCIS_URL: https://cloud.${SECRET_DOMAIN}
+              OCIS_URL: https://cloud.westphal.io
               PROXY_DEBUG_ADDR: 0.0.0.0:9205
               PROXY_HTTP_ADDR: 0.0.0.0:9200
               PROXY_TLS: false
@@ -64,7 +64,7 @@ spec:
               # Authelia OIDC
               # Auto role assignment:
               # docs: https://doc.owncloud.com/ocis/next/deployment/services/s-list/proxy.html#automatic-role-assignments
-              OCIS_OIDC_ISSUER: https://sso.${SECRET_DOMAIN}/application/o/ocis-web/
+              OCIS_OIDC_ISSUER: https://sso.westphal.io/application/o/ocis-web/
               PROXY_AUTOPROVISION_ACCOUNTS: true
               PROXY_OIDC_ACCESS_TOKEN_VERIFY_METHOD: none
               PROXY_OIDC_REWRITE_WELLKNOWN: true
@@ -72,7 +72,7 @@ spec:
               PROXY_ROLE_ASSIGNMENT_OIDC_CLAIM: groups
               PROXY_USER_OIDC_CLAIM: "preferred_username"
               PROXY_CSP_CONFIG_FILE_LOCATION: /etc/ocis/csp.yaml
-              WEB_OIDC_METADATA_URL: https://sso.${SECRET_DOMAIN}/application/o/ocis-web/.well-known/openid-configuration
+              WEB_OIDC_METADATA_URL: https://sso.westphal.io/application/o/ocis-web/.well-known/openid-configuration
               WEB_OIDC_SCOPE: "openid profile email groups"
               # Storage
               STORAGE_USERS_DRIVER: s3ng
@@ -115,14 +115,14 @@ spec:
       app:
         className: external
         annotations:
-          external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
+          external-dns.alpha.kubernetes.io/target: external.westphal.io
           gethomepage.dev/enabled: "true"
           gethomepage.dev/icon: owncloud.svg
           gethomepage.dev/name: OwnCloud Infinite Scale
           gethomepage.dev/description: Cloud native file provider
           gethomepage.dev/group: Storage
         hosts:
-          - host: cloud.${SECRET_DOMAIN}
+          - host: cloud.westphal.io
             paths:
               - path: /
                 service:

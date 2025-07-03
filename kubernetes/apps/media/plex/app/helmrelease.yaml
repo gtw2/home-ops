@@ -29,7 +29,7 @@ spec:
               tag: 1.41.8.9834@sha256:40e620ffcdc65331a0c2a7ed9a95700da7d527244f33c21bd35fc30aa25f19ea
             env:
               TZ: ${TIMEZONE}
-              PLEX_ADVERTISE_URL: https://plex.${SECRET_DOMAIN}:443,http://10.10.40.100:32400
+              PLEX_ADVERTISE_URL: https://plex.westphal.io:443,http://10.10.40.100:32400
               PLEX_NO_AUTH_NETWORKS: ${NODE_CIDR}
             envFrom:
               - secretRef:
@@ -85,7 +85,7 @@ spec:
       app:
         className: external
         annotations:
-          external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
+          external-dns.alpha.kubernetes.io/target: external.westphal.io
           nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
           # cert-manager.io/cluster-issuer: letsencrypt-production
           gethomepage.dev/enabled: "true"
@@ -97,7 +97,7 @@ spec:
           gethomepage.dev/widget.url: http://plex.media:32400
           gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_PLEX_KEY}}` }}"
         hosts:
-          - host: "{{ .Release.Name }}.${SECRET_DOMAIN}"
+          - host: "{{ .Release.Name }}.westphal.io"
             paths:
               - path: /
                 service:

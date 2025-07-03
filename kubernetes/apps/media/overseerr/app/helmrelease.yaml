@@ -66,9 +66,9 @@ spec:
           gethomepage.dev/widget.type: *app
           gethomepage.dev/widget.url: http://overseerr.media:5055
           gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}` }}"
-          external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
+          external-dns.alpha.kubernetes.io/target: external.westphal.io
         hosts:
-          - host: &host requests.${SECRET_DOMAIN}
+          - host: &host requests.westphal.io
             paths:
               - path: /
                 service:
