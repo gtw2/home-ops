@@ -1,0 +1,59 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app discordgsm
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  dependsOn:
+    - name: volsync
+      namespace: storage
+  values:
+    annotations:
+      reloader.stakater.com/auto: "true"
+    defaultPodOptions:
+      securityContext:
+        fsGroup: 1000
+        supplementalGroups: [1000]
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+    controllers:
+      discordgsm:
+        containers:
+          app:
+            image:
+              repository: discordgsm/discord-game-server-monitor
+              tag: 2.19.0@sha256:44281d6e427e906b68e758de06c4a2c0f549c79c795d7de2f53954c34fd4ccb5
+            envFrom:
+              - secretRef:
+                  name: discordgsm-secret
+            resources:
+              requests:
+                cpu: 50m
+                memory: 100M
+              limits:
+                memory: 350M
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+    persistence:
+      data:
+        enabled: true
+        existingClaim: *app
+        advancedMounts:
+          discordgsm:
+            app:
+              - path: /usr/src/app/data

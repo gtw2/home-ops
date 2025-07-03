@@ -1,0 +1,49 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: bitnami
+spec:
+  interval: 1h
+  type: oci
+  url: oci://registry-1.docker.io/bitnamicharts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app mongodb
+  namespace: database
+spec:
+  interval: 1h
+  chartRef:
+    kind: HelmRepository
+    name: bitnami
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    force: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  dependsOn:
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+    - name: volsync
+      namespace: storage
+  values:
+    architecture: standalone
+    useStatefulSet: true
+    auth:
+      enabled: true
+      rootPassword: "${NIGHTSCOUT_MONGODB_ROOT_PASSWORD}"
+      usernames:
+        - "nightscout"
+      passwords:
+        - "${NIGHTSCOUT_MONGODB_PASSWORD}"
+      databases:
+        - "nightscout"
+    persistence:
+      enabled: true
+      existingClaim: *app

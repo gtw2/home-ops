@@ -1,0 +1,276 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-config
+  labels:
+    app.kubernetes.io/name: homepage
+data:
+  bookmarks.yaml: |
+    - Communitcate:
+        - Discord:
+            - icon: discord.png
+              href: https://discord.com/app
+    - Streams:
+        - YouTube:
+            - icon: youtube.png
+              href: https://youtube.com/feed/subscriptions
+        - Twitch:
+            - icon: twitch.svg
+              href: https://www.twitch.tv/directory/following
+    - Utility:
+        - 1Pass:
+            - icon: passwork.svg
+              href: https://my.1password.com/home
+    - Git:
+        - kubesearch:
+            - icon: kubernetes-dashboard.png
+              href: https://kubesearch.dev
+        - homeops:
+            - icon: github.png
+              href: https://github.com/gtw2/homeops
+  docker.yaml: ""
+  kubernetes.yaml: |
+    mode: cluster
+    ingress: true
+  services.yaml: |
+    - Network:
+        - Cloudflared:
+            href: https://dash.cloudflare.com
+            icon: cloudflare-zero-trust.png
+            widget:
+              type: cloudflared
+              accountid: "{{HOMEPAGE_VAR_CLOUDFLARED_ACCOUNTID}}"
+              tunnelid: "{{HOMEPAGE_VAR_CLOUDFLARED_TUNNELID}}"
+              key: "{{HOMEPAGE_VAR_CLOUDFLARED_API_TOKEN}}"
+    - Observability:
+        - Nightscout:
+            href: https://nightscout.${SECRET_DOMAIN}
+            icon: nightscout.png
+            siteMonitor: http://nightscout.default:1337
+            widget:
+              type: customapi
+              url: http://nightscout.default:1337/api/v2/properties
+              mappings:
+                - field:
+                    bgnow:
+                      sgvs:
+                        0: mgdl
+                  label: mg/dl
+                - field:
+                    delta: display
+                  label: Delta
+                - field:
+                    bgnow:
+                      sgvs:
+                        0: direction
+                  label: Trend
+                  remap:
+                    - value: NONE
+                      to: ⇼
+                    - value: TripleUp
+                      to: ⤊
+                    - value: DoubleUp
+                      to: ⇈
+                    - value: SingleUp
+                      to: ↑
+                    - value: FortyFiveUp
+                      to: ↗
+                    - value: Flat
+                      to: →
+                    - value: FortyFiveDown
+                      to: ↘
+                    - value: SingleDown
+                      to: ↓
+                    - value: DoubleDown
+                      to: ⇊
+                    - value: TripleDown
+                      to: ⤋
+                - field:
+                    bgnow: mills
+                  label: Last Reading
+                  format: relativeDate
+    - Calendar:
+        - Upcoming Releases:
+            widget:
+              type: calendar
+              view: monthly # optional - possible values monthly, agenda
+              maxEvents: 20 # optional - defaults to 10
+              integrations: # optional
+                - type: sonarr # active widget type that is currently enabled on homepage - possible values: radarr, sonarr>
+                  service_group: Downloads # group name where widget exists
+                  service_name: Sonarr # service name for that widget
+                - type: radarr # active widget type that is currently enabled on homepage - possible values: radarr, sonarr>
+                  service_group: Downloads # group name where widget exists
+                  service_name: Radarr # service name for that widget
+                # - type: readarr # active widget type that is currently enabled on homepage - possible values: radarr, sonar>
+                #   service_group: Downloads # group name where widget exists
+                #   service_name: Readarr # service name for that widget
+    - PVE1:
+      - Info:
+          widget:
+            type: glances
+            url: http://10.10.40.11:61208
+            version: 4
+            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
+            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
+            metric: info
+      - CPU Temp:
+          widget:
+            type: glances
+            url: http://10.10.40.11:61208
+            version: 4
+            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
+            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
+            metric: sensor:Package id 0
+      - Memory Usage:
+          widget:
+            type: glances
+            url: http://10.10.40.11:61208
+            version: 4
+            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
+            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
+            metric: memory
+    - PVE2:
+      - Info:
+          widget:
+            type: glances
+            url: http://10.10.40.12:61208
+            version: 4
+            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
+            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
+            metric: info
+      - CPU Temp:
+          widget:
+            type: glances
+            url: http://10.10.40.12:61208
+            version: 4
+            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
+            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
+            metric: sensor:Package id 0
+      - Memory Usage:
+          widget:
+            type: glances
+            url: http://10.10.40.12:61208
+            version: 4
+            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
+            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
+            metric: memory
+    - PVE3:
+      - Info:
+          widget:
+            type: glances
+            url: http://10.10.40.13:61208
+            version: 4
+            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
+            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
+            metric: info
+      - CPU Temp:
+          widget:
+            type: glances
+            url: http://10.10.40.13:61208
+            version: 4
+            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
+            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
+            metric: sensor:Package id 0
+      - Memory Usage:
+          widget:
+            type: glances
+            url: http://10.10.40.13:61208
+            version: 4
+            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
+            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
+            metric: memory
+
+  settings.yaml: |
+    instanceName: internal
+    title: Dashboard
+    theme: dark
+    color: slate
+    background:
+    image: https://images.unsplash.com/photo-1541296434114-65d3360d5772?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?auto=format&fit=crop&w=2560&q=80
+    brightness: 50
+    cardBlur: xl
+    target: _blank
+    layout:
+      Infrastructure:
+        tab: Home
+        style: row
+        columns: 4
+        icon: mdi-home-analytics
+      Network:
+        tab: Home
+        style: column
+        icon: mdi-server
+      Observability:
+        tab: Home
+        style: column
+        icon: mdi-chart-line
+      Storage:
+        tab: Home
+        syle: column
+        icon: mdi-nas
+      Media:
+        tab: Home
+        style: column
+        # columns: 4
+        icon: mdi-projector-screen
+      PVE1:
+        tab: Stats
+        style: column
+        # columns: 4
+        icon: mdi-chart-line
+      PVE2:
+        tab: Stats
+        style: column
+        # columns: 4
+        # icon: mdi-chart-line
+      PVE3:
+        tab: Stats
+        style: column
+        # columns: 4
+        # icon: mdi-chart-line
+      Downloads:
+        tab: Schedule
+        style: column
+        # columns: 3
+        icon: mdi-download-circle
+      Calendar:
+        tab: Schedule
+        style: column
+        icon: mdi-calendar
+  widgets.yaml: |
+    - unifi_console:
+        url: https://192.168.1.1:443
+        username: "{{HOMEPAGE_VAR_UNIFI_USER}}"
+        password: "{{HOMEPAGE_VAR_UNIFI_PASS}}"
+    # - resources:
+    #     backend: kubernetes
+    #     cpu: true
+    #     expanded: true
+    #     memory: true
+    - kubernetes:
+        cluster:
+          cpu: true
+          label: MS-01 Cluster
+          memory: true
+          show: true
+          showLabel: false
+        nodes:
+          cpu: true
+          memory: true
+          show: false
+          showLabel: true
+    - search:
+        provider: ["duckduckgo"]
+        focus: false
+        target: _blank
+    - greeting:
+        text_size: xl
+        text: "Welcome!"
+    - datetime:
+        text_size: l
+        format:
+          dateStyle: short
+          timeStyle: short
+          hourCycle: h23

@@ -8,6 +8,8 @@ components:
 resources:
   - ./cilium/ks.yaml
   - ./coredns/ks.yaml
+  - ./external-secrets/ks.yaml
   - ./metrics-server/ks.yaml
+  - ./onepassword-connect/ks.yaml
   - ./reloader/ks.yaml
   - ./spegel/ks.yaml

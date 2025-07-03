@@ -2,11 +2,11 @@
 # yaml-language-server: $schema=https://json.schemastore.org/kustomization
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: default
+namespace: media
 components:
   - ../../components/common
 resources:
-  - ./discordgsm/ks.yaml
-  - ./echo/ks.yaml
-  - ./homepage/ks.yaml
-  - ./nightscout/ks.yaml
+  - ./overseerr/ks.yaml
+  - ./plex/ks.yaml
+  - ./tautulli/ks.yaml
+  - ./wizarr/ks.yaml
