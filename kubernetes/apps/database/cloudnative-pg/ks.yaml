@@ -10,10 +10,6 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   dependsOn:
     - name: external-secrets-stores
       namespace: kube-system
@@ -27,10 +23,6 @@ spec:
   interval: 30m
   retryInterval: 1m
   timeout: 5m
-  postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -43,10 +35,6 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   dependsOn:
     - name: cloudnative-pg
   path: ./kubernetes/apps/database/cloudnative-pg/cluster
@@ -59,7 +47,3 @@ spec:
   interval: 30m
   retryInterval: 1m
   timeout: 5m
-  postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret

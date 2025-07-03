@@ -28,6 +28,3 @@ spec:
       APP: *app
       VOLSYNC_CAPACITY: 2Gi
       GATUS_SUBDOMAIN: *app
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret

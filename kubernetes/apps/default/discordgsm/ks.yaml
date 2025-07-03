@@ -11,7 +11,6 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    # - ../../../../components/common
     - ../../../../components/volsync
   dependsOn:
     - name: external-secrets-stores
@@ -30,6 +29,3 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 1Gi
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
