@@ -10,10 +10,6 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   components:
     # - ../../../../components/gatus/guarded
     - ../../../../components/volsync
@@ -34,6 +30,3 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 15Gi
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret

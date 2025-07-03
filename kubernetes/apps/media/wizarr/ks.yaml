@@ -10,10 +10,6 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   dependsOn:
     - name: plex
     # - name: overseerr
@@ -32,6 +28,3 @@ spec:
       APP: *app
       VOLSYNC_CAPACITY: 2Gi
       # GATUS_SUBDOMAIN: join
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret

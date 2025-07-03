@@ -10,10 +10,6 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   # components:
   #   - ../../../../components/gatus/external
   dependsOn:
@@ -36,6 +32,3 @@ spec:
     substitute:
       APP: *app
       GATUS_SUBDOMAIN: sso
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
