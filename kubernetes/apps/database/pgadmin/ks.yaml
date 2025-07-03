@@ -11,7 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    # - ../../../../components/gatus/external
+    - ../../../../components/common
     - ../../../../components/volsync
   path: ./kubernetes/apps/database/pgadmin/app
   prune: true
@@ -21,8 +21,11 @@ spec:
     namespace: flux-system
   dependsOn:
     - name: rook-ceph-cluster
+      namespace: rook-ceph
     - name: external-secrets-stores
+      namespace: kube-system
     - name: volsync
+      namespace: storage
   wait: false
   interval: 30m
   retryInterval: 1m
@@ -33,3 +36,6 @@ spec:
       VOLSYNC_CAPACITY: 2Gi
       VOLSYNC_UID: "5050"
       VOLSYNC_GID: "5050"
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret

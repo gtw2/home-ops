@@ -9,8 +9,8 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  # components:
-  #   - ../../../../components/gatus/guarded
+  components:
+    - ../../../../components/common
   interval: 1h
   path: ./kubernetes/apps/observability/grafana/app
   postBuild:
@@ -25,3 +25,7 @@ spec:
   targetNamespace: *namespace
   timeout: 5m
   wait: false
+  postBuild:
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
