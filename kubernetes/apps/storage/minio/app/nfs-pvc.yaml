@@ -11,7 +11,7 @@ spec:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   nfs:
-    server: ${SECRET_NFS_SERVER}
+    server: 10.10.40.4
     path: /mnt/sega/k8s
   mountOptions:
     - nfsvers=4
