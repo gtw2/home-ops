@@ -7,7 +7,7 @@ components:
   - ../../components/common
 resources:
   # - ./openebs/ks.yaml
-  - ./minio/ks.yaml
-  # - ./ocis/ks.yaml
+  # - ./minio/ks.yaml
+  - ./ocis/ks.yaml
   - ./snapshot-controller/ks.yaml
   - ./volsync/ks.yaml
