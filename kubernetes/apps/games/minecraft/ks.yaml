@@ -46,7 +46,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-   - ../../../../../components/volsync
+    - ../../../../components/volsync
   decryption:
     provider: sops
     secretRef:
@@ -88,7 +88,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-   - ../../../../../components/volsync
+    - ../../../../components/volsync
   decryption:
     provider: sops
     secretRef:
@@ -131,7 +131,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-   - ../../../../../components/volsync
+    - ../../../../components/volsync
   decryption:
     provider: sops
     secretRef:
@@ -174,7 +174,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-   - ../../../../../components/volsync
+    - ../../../../components/volsync
   decryption:
     provider: sops
     secretRef:
