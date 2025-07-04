@@ -54,10 +54,10 @@ spec:
               TZ: ${TIMEZONE}
               UID: "1000"
               GID: "1000"
-              TYPE: "VELOCITY"
+              TYPE: VELOCITY
               # TODO renovate
-              MINECRAFT_VERSION: 1.21.4
-              VELOCITY_VERSION: "3.4.0-SNAPSHOT"
+              # MINECRAFT_VERSION: 1.21.4
+              # VELOCITY_VERSION: "3.4.0-SNAPSHOT"
               OVERRIDE_ICON: "true"
               # PLUGINS_FILE: /config/plugins.txt
               INIT_MEMORY: 128M
