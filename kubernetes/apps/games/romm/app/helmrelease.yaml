@@ -73,25 +73,32 @@ spec:
         ports:
           http:
             port: 8080
-    ingress:
+    route:
       app:
-        className: external
-        annotations:
-          external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
-          gethomepage.dev/enabled: "true"
-          gethomepage.dev/description: Rom emulator
-          gethomepage.dev/group: Media
-          gethomepage.dev/icon: sh-romm.png
-          gethomepage.dev/name: Romm
-        hosts:
-          - host: &host "{{ .Release.Name }}.${SECRET_DOMAIN}"
-            paths:
-              - path: /
-                service:
-                  identifier: app
-                  port: http
-        tls:
-          - hosts: [*host]
+        hostnames: ["{{ .Release.Name }}.westphal.io"]
+        parentRefs:
+          - name: internal
+            namespace: kube-system
+            sectionName: https
+    # ingress:
+    #   app:
+    #     className: external
+    #     annotations:
+    #       external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
+    #       gethomepage.dev/enabled: "true"
+    #       gethomepage.dev/description: Rom emulator
+    #       gethomepage.dev/group: Media
+    #       gethomepage.dev/icon: sh-romm.png
+    #       gethomepage.dev/name: Romm
+    #     hosts:
+    #       - host: &host "{{ .Release.Name }}.${SECRET_DOMAIN}"
+    #         paths:
+    #           - path: /
+    #             service:
+    #               identifier: app
+    #               port: http
+    #     tls:
+    #       - hosts: [*host]
     persistence:
       data:
         existingClaim: *app

@@ -39,9 +39,9 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app minecraft-velocity
-  namespace: flux-system
+  namespace: &namespace games
 spec:
-  targetNamespace: games
+  targetNamespace: *namespace
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
@@ -81,9 +81,9 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app minecraft-create
-  namespace: flux-system
+  namespace: &namespace games
 spec:
-  targetNamespace: games
+  targetNamespace: *namespace
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
@@ -124,9 +124,9 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app minecraft-lobby
-  namespace: flux-system
+  namespace: &namespace games
 spec:
-  targetNamespace: games
+  targetNamespace: *namespace
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
@@ -167,9 +167,9 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app minecraft-vanilla
-  namespace: flux-system
+  namespace: &namespace games
 spec:
-  targetNamespace: games
+  targetNamespace: *namespace
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app

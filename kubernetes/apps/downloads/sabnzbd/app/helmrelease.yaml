@@ -1,0 +1,157 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app sabnzbd
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  dependsOn:
+  - name: rook-ceph-cluster
+    namespace: rook-ceph
+  - name: volsync
+    namespace: storage
+  values:
+    controllers:
+      sabnzbd:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/home-operations/sabnzbd
+              tag: 4.5.1@sha256:d57f89bf771f2236a22643482d5a80736cb6c2944c7f7d4168a15332a5a26f83
+            env:
+              TZ: ${TIMEZONE}
+              SABNZBD__PORT: &port 8080
+              SABNZBD__HOST_WHITELIST_ENTRIES: >-
+                sabnzbd, sabnzbd.downloads, sabnzbd.downloads.svc, sabnzbd.downloads.svc.cluster, sabnzbd.downloads.svc.cluster.local, sabnzbd.${SECRET_DOMAIN}
+            envFrom:
+            - secretRef:
+                name: sabnzbd-secret
+            probes:
+              liveness:
+                enabled: true
+              readiness:
+                enabled: true
+              startup:
+                enabled: true
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
+            resources:
+              requests:
+                cpu: 5m
+                memory: 1024Mi
+              limits:
+                memory: 6144Mi
+            securityContext:
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              fsGroup: 1000
+              fsGroupChangePolicy: OnRootMismatch
+              supplementalGroups: [10000]
+              seccompProfile: { type: RuntimeDefault }
+              capabilities:
+                drop:
+                  - ALL
+          #gluetun:
+          #  image:
+          #    repository: ghcr.io/qdm12/gluetun
+          #    tag: v3.39.1
+          #  env:
+          #    # VPN_SERVICE_PROVIDER: "private internet access"
+          #    VPN_SERVICE_PROVIDER: "custom"
+          #    VPN_TYPE: wireguard
+          #    VPN_INTERFACE: wg0
+          #    # SERVER_REGIONS: "US East"
+          #    # VPN_TYPE: openvpn
+          #    # OPENVPN_PROTOCOL: udp
+          #    # Currently need this in K8s to hit Cluster DNS for lookup
+          #    # FIREWALL: "off"
+          #    # FIREWALL_VPN_INPUT_PORTS: "1197"
+          #    # Currently need this in K8s to hit Cluster DNS for lookup
+          #    # DOT: "off"
+         #     FIREWALL_INPUT_PORTS: 8080
+         #     FIREWALL_OUTBOUND_SUBNETS: 10.0.0.0/8,192.168.0.0/16
+         #   envFrom:
+         #     - secretRef:
+         #         name: vpn-gateway-secret
+         #   securityContext:
+         #     capabilities:
+         #       add:
+         #         - NET_ADMIN
+         #     allowPrivilegeEscalation: false
+    defaultPodOptions:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values: ["qbittorrent"]
+              topologyKey: kubernetes.io/hostname
+    service:
+      app:
+        controller: *app
+        ports:
+          http:
+            port: *port
+    route:
+      app:
+        hostnames: ["{{ .Release.Name }}.westphal.io"]
+        parentRefs:
+          - name: internal
+            namespace: kube-system
+            sectionName: https
+    # ingress:
+    #   app:
+    #     className: internal
+    #     annotations:
+    #       gethomepage.dev/enabled: "true"
+    #       gethomepage.dev/group: Downloads
+    #       gethomepage.dev/name: SABnzbd
+    #       gethomepage.dev/icon: sabnzbd.png
+    #       gethomepage.dev/description: NZB Download Client
+    #       gethomepage.dev/widget.type: sabnzbd
+    #       gethomepage.dev/widget.url: http://sabnzbd.downloads:8080
+    #       gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_SABNZBD_TOKEN}}` }}"
+    #       external-dns.alpha.kubernetes.io/target: internal.${SECRET_DOMAIN}
+    #     hosts:
+    #     - host: "{{ .Release.Name }}.${SECRET_DOMAIN}"
+    #       paths:
+    #       - path: /
+    #         service:
+    #           identifier: app
+    #           port: http
+    persistence:
+      config:
+        existingClaim: *app
+      downloads:
+        type: nfs
+        server: ${SECRET_NFS_SERVER}
+        path: /mnt/sega/PlexNAS/DVR
+        globalMounts:
+        - path: /downloads
+          subPath: usenet
+      logs:
+        type: emptyDir
+        globalMounts:
+          - path: /config/logs
+      tmp:
+        type: emptyDir
+
