@@ -90,9 +90,8 @@ spec:
         enabled: true
         kind: HTTPRoute
         parentRefs:
-          - kind: Gateway
-            name: internal
-            namespace: network
+          - name: internal
+            namespace: kube-system
             sectionName: https
         hostnames:
           - minio.westphal.io
@@ -108,9 +107,8 @@ spec:
         enabled: true
         kind: HTTPRoute
         parentRefs:
-          - kind: Gateway
-            name: internal
-            namespace: network
+          - name: internal
+            namespace: kube-system
             sectionName: https
         hostnames:
           - s3.westphal.io
