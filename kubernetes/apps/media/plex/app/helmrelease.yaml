@@ -41,7 +41,7 @@ spec:
                 spec:
                   httpGet:
                     path: /identity
-                    port: 32400
+                    port: &port 32400
                   initialDelaySeconds: 0
                   periodSeconds: 10
                   timeoutSeconds: 1
@@ -80,23 +80,11 @@ spec:
           io.cilium/lb-ipam-ips: 10.10.40.100
         ports:
           http:
-            port: 32400
+            port: *port
     route:
       app:
         hostnames:
           - "{{ .Release.Name }}.westphal.io"
-        # annotations:
-        #   external-dns.alpha.kubernetes.io/target: external.westphal.io
-        #   nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
-        #   # cert-manager.io/cluster-issuer: letsencrypt-production
-        #   gethomepage.dev/enabled: "true"
-        #   gethomepage.dev/icon: plex.png
-        #   gethomepage.dev/name: Plex
-        #   gethomepage.dev/group: Media
-        #   gethomepage.dev/weight: "20"
-        #   gethomepage.dev/widget.type: plex
-        #   gethomepage.dev/widget.url: http://plex.media:32400
-        #   gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_PLEX_KEY}}` }}"
         parentRefs:
           - name: external
             namespace: kube-system
