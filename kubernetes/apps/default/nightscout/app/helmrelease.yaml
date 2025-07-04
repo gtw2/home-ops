@@ -75,16 +75,10 @@ spec:
           http:
             port: 1337
 
-    ingress:
+    route:
       app:
-        className: internal
-        hosts:
-          - host: &host "{{ .Release.Name }}.westphal.io"
-            paths:
-              - path: /
-                pathType: Prefix
-                service:
-                  identifier: app
-                  port: http
-        tls:
-          - hosts: [*host]
+        hostnames: ["{{} .Release.Name }}.westphal.io"]
+        parentRefs:
+          - name: internal
+            namespace: kube-system
+            sectionName: https
