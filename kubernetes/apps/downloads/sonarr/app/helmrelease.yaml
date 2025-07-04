@@ -94,6 +94,7 @@ spec:
             namespace: kube-system
             sectionName: https
         annotations:
+          gethomepage.dev/href: "https://{{ .Release.Name }}.westphal.io"
           gethomepage.dev/enabled: "true"
           gethomepage.dev/group: Downloads
           gethomepage.dev/name: Sonarr
