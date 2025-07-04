@@ -62,23 +62,31 @@ spec:
         prometheus:
           serviceMonitor:
             enabled: true
-      ingress:
-        enabled: true
-        ingressClassName: external
-        annotations:
-          gethomepage.dev/enabled: "true"
-          gethomepage.dev/icon: authentik.png
-          gethomepage.dev/name: Authentik
-          gethomepage.dev/group: Infrastructure
-          gethomepage.dev/app: authentik
-          gethomepage.dev/description: OIDC User Management
-          gethomepage.dev/widget.type: authentik
-          gethomepage.dev/widget.url: http://authentik-server.security
-          gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_AUTHENTIK_TOKEN}}"
-          external-dns.alpha.kubernetes.io/target: external.westphal.io
-        hosts:
-          - sso.westphal.io
-        https: false
+      route:
+        main:
+          enabled: true
+          hostnames: ["sso.westphal.io"]
+          parentRefs:
+            - name: external
+              namespace: kube-system
+              sectionName: https
+      # ingress:
+      #   enabled: true
+      #   ingressClassName: external
+      #   annotations:
+      #     gethomepage.dev/enabled: "true"
+      #     gethomepage.dev/icon: authentik.png
+      #     gethomepage.dev/name: Authentik
+      #     gethomepage.dev/group: Infrastructure
+      #     gethomepage.dev/app: authentik
+      #     gethomepage.dev/description: OIDC User Management
+      #     gethomepage.dev/widget.type: authentik
+      #     gethomepage.dev/widget.url: http://authentik-server.security
+      #     gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_AUTHENTIK_TOKEN}}"
+      #     external-dns.alpha.kubernetes.io/target: external.westphal.io
+      #   hosts:
+      #     - sso.westphal.io
+      #   https: false
     worker:
       autoscaling:
         enabled: true

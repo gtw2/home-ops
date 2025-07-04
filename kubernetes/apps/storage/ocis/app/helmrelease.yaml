@@ -110,24 +110,31 @@ spec:
             primary: true
           metrics:
             port: 9205
-
-    ingress:
+    route:
       app:
-        className: external
-        annotations:
-          external-dns.alpha.kubernetes.io/target: external.westphal.io
-          gethomepage.dev/enabled: "true"
-          gethomepage.dev/icon: owncloud.svg
-          gethomepage.dev/name: OwnCloud Infinite Scale
-          gethomepage.dev/description: Cloud native file provider
-          gethomepage.dev/group: Storage
-        hosts:
-          - host: cloud.westphal.io
-            paths:
-              - path: /
-                service:
-                  identifier: app
-                  port: http
+        enabled: true
+        hostnames: ["cloud.westphal.io"]
+        parentRefs:
+          - name: external
+            namespace: kube-system
+            sectionName: https
+    # ingress:
+    #   app:
+    #     className: external
+    #     annotations:
+    #       external-dns.alpha.kubernetes.io/target: external.westphal.io
+    #       gethomepage.dev/enabled: "true"
+    #       gethomepage.dev/icon: owncloud.svg
+    #       gethomepage.dev/name: OwnCloud Infinite Scale
+    #       gethomepage.dev/description: Cloud native file provider
+    #       gethomepage.dev/group: Storage
+    #     hosts:
+    #       - host: cloud.westphal.io
+    #         paths:
+    #           - path: /
+    #             service:
+    #               identifier: app
+    #               port: http
 
     persistence:
       # storage-users:
