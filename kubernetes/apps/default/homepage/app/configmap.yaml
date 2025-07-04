@@ -32,7 +32,7 @@ data:
   docker.yaml: ""
   kubernetes.yaml: |
     mode: cluster
-    ingress: true
+    gateway: true
   services.yaml: |
     - Network:
         - Cloudflared:
