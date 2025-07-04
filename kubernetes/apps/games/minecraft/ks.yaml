@@ -45,6 +45,8 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
+  components:
+   - ../../../../../components/volsync
   decryption:
     provider: sops
     secretRef:
@@ -85,6 +87,8 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
+  components:
+   - ../../../../../components/volsync
   decryption:
     provider: sops
     secretRef:
@@ -126,6 +130,8 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
+  components:
+   - ../../../../../components/volsync
   decryption:
     provider: sops
     secretRef:
@@ -167,6 +173,8 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
+  components:
+   - ../../../../../components/volsync
   decryption:
     provider: sops
     secretRef:
