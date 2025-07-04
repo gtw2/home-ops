@@ -1,0 +1,68 @@
+#you can use placeholders from placeholder api
+[Message-format]
+#set it to true to use MiniMessage and false to use hex colors
+minimessage = true
+[Message]
+#place holders:
+#- "#player#" : return the player name
+#- "#prefix#" : return the player's luckperms prefix
+#- "#suffix#" : return the player's luckperms suffix
+#- "#message#" : return the player's message
+#- "#server#" : return the player's server name
+#- "#custom1#" : return the player's custom defined luckperms meta keys
+#- "#custom2#" : return the player's custom defined luckperms meta keys
+format = "<white>(<red>#server#</red>)</white> #prefix##player# <b><gray>></gray></b> <white>#message#<reset>"
+all = false #if the formated message is sent even in the server where the player is located (can cause some issues with other plugins)
+commands = []
+enabled = true
+[Join]
+#place holders:
+#- "#player#" : return the player name
+#- "#server#" : return the new player's server name
+#- "#prefix#" : return the player's luckperms prefix
+#- "#suffix#" : return the player's luckperms suffix
+#- "#custom1#" : return the player's custom defined luckperms meta keys
+#- "#custom2#" : return the player's custom defined luckperms meta keys
+format = "<reset>#prefix##player# <gray>joined</gray> <yellow>#server#"
+commands = [] #The proxy commands which are executed (no / in the commands)
+enabled = true
+[Leave]
+#place holders:
+#- "#player#" : return the player name
+#- "#oldserver#" : return the previous player's server name
+#- "#prefix#" : return the player's luckperms prefix
+#- "#suffix#" : return the player's luckperms suffix
+#- "#custom1#" : return the player's custom defined luckperms meta keys
+#- "#custom2#" : return the player's custom defined luckperms meta keys
+format = "<reset>#prefix##player# <gray>left</gray> <yellow>#oldserver#"
+commands = []
+enabled = true
+[Kick]
+#place holders:
+#- "#player#" : return the player name
+#- "#oldserver#" : return the previous player's server name
+#- "#prefix#" : return the player's luckperms prefix
+#- "#suffix#" : return the player's luckperms suffix
+#- "#custom1#" : return the player's custom defined luckperms meta keys
+#- "#custom2#" : return the player's custom defined luckperms meta keys
+format = "<reset>#prefix##player# <red>was kicked from</red> <yellow>#oldserver#"
+commands = [] #The proxy commands which are executed (no / in the commands)
+enabled = true
+[Server-change]
+#place holders:
+#- "#player#" : return the player name
+#- "#prefix#" : return the player's luckperms prefix
+#- "#suffix#" : return the player's luckperms suffix
+#- "#oldserver#" : return the previous player's server name
+#- "#server#" : return the new player's server name
+#- "#custom1#" : return the player's custom defined luckperms meta keys
+#- "#custom2#" : return the player's custom defined luckperms meta keys
+format = "<reset>#prefix##player# <red>moved to</red> <yellow>#server#"
+commands = []
+enabled = true
+[Aliases]
+servername = "Server Name"
+[Custom-Meta]
+#Enables definition of Custom Luckperms Meta Placeholders
+custom1 = ""
+custom2 = ""

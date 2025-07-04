@@ -1,0 +1,156 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app minecraft-lobby
+spec:
+  interval: 15m
+  timeout: 5m
+  maxHistory: 3
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    defaultPodOptions:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    controllers:
+      minecraft-lobby:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/itzg/minecraft-server
+              tag: 2025.6.2-java21@sha256:262e2309f7cc6b2ff0ac1458ac52c91e9bc778989543feec6588501f6dad31ef
+            tty: true
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  periodSeconds: 60
+                  exec: &mc-health { command: ["mc-health"] }
+              readiness: *probes
+              startup:
+                <<: *probes
+                spec:
+                  initialDelaySeconds: 60
+                  periodSeconds: 1
+                  failureThreshold: 300
+                  exec: *mc-health
+            env:
+              # Server Configuration
+              ## General
+              EULA: "true"
+              TZ: "${TIMEZONE}"
+              TYPE: PAPER
+              # ENABLE_AUTOPAUSE: TRUE
+              # renovate: depName=minecraft datasource=custom.minecraft versioning=semver-coerced
+              VERSION: 1.21.4
+              MOTD: "Lobby server"
+              DIFFICULTY: normal
+              SEED: "flat"
+              LEVEL: "hub"
+              MODE: "adventure"
+              SPAWN_PROTECTION: 1
+              FORCE_REDOWNLOAD: "true"
+              ONLINE_MODE: "false"
+              ALLOW_FLIGHT: "true"
+              # Logging
+              ENABLE_ROLLING_LOGS: "true"
+              LOG_TIMESTAMP: "true"
+              # Performance
+              JVM_XX_OPTS: -XX:MaxRAMPercentage=75
+              JVM_DD_OPTS: disable.watchdog:true
+              MAX_MEMORY: 2024M
+              USE_AIKAR_FLAGS: "true"
+              SNOOPER_ENABLED: "false"
+              VIEW_DISTANCE: 14
+              ## Mods
+              REMOVE_OLD_MODS: "true"
+              MODRINTH_DEFAULT_VERSION_TYPE: release
+              MODRINTH_PROJECTS: |-
+                advanced-portals
+                luckperms
+                simple-voice-chat
+                worldedit
+              # signedvelocity:TKC72r9l
+              # discordsrv
+              # PLUGINS: |-
+              ENABLE_QUERY: "true"
+              EXISTING_OPS_FILE: SYNCHRONIZE
+            envFrom:
+              - secretRef:
+                  name: minecraft-lobby-secret
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: [ALL]
+                add: ["NET_RAW"]
+            resources:
+              requests:
+                cpu: 150m
+                memory: 1Gi
+              limits:
+                memory: 2Gi
+    service:
+      minecraft:
+        controller: *app
+        type: ClusterIP
+        ports:
+          java:
+            port: 25565
+            protocol: TCP
+          voice:
+            port: 24454
+            protocol: UDP
+          bedrock:
+            port: 19132
+            protocol: UDP
+          # map:
+          #   port: 8100
+          rcon:
+            port: 25575
+          metrics:
+            port: 25585
+    serviceMonitor:
+      metrics:
+        enabled: false
+        serviceName: *app
+        endpoints:
+          - port: metrics
+            scheme: http
+            path: /
+            interval: 1m
+    persistence:
+      data:
+        existingClaim: *app
+      config:
+        enabled: true
+        type: configMap
+        name: minecraft-lobby-configmap
+        globalMounts:
+          - subPath: luckperms.yml
+            path: /plugins/LuckPerms/config.yml
+          - subPath: paper-global.yml
+            path: /config/paper-global.yml

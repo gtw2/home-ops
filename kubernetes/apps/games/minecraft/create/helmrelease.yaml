@@ -1,0 +1,188 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app minecraft-create
+spec:
+  interval: 15m
+  timeout: 5m
+  maxHistory: 3
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    defaultPodOptions:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    controllers:
+      minecraft-create:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/itzg/minecraft-server
+              tag: 2025.6.2-java21@sha256:262e2309f7cc6b2ff0ac1458ac52c91e9bc778989543feec6588501f6dad31ef
+            tty: true
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  periodSeconds: 60
+                  exec: &mc-health { command: ["mc-health"] }
+              readiness: *probes
+              startup:
+                <<: *probes
+                spec:
+                  initialDelaySeconds: 60
+                  periodSeconds: 1
+                  failureThreshold: 300
+                  exec: *mc-health
+            env:
+              # Server Configuration
+              ## General
+              EULA: "true"
+              TZ: "${TIMEZONE}"
+              TYPE: NEOFORGE
+              # ENABLE_AUTOPAUSE: TRUE
+              MAX_TICK_TIME: "-1"
+              # USES_PLUGINS: "true"
+              # NEOFORGE_VERSION: 21.3.58
+              # renovate: depName=minecraft datasource=custom.minecraft versioning=semver-coerced
+              VERSION: 1.21.1
+              MOTD: "Our seasonal Create mod server"
+              DIFFICULTY: normal
+              SEED: "-2135836821937050197"
+              LEVEL: "create"
+              MODE: "survival"
+              SPAWN_PROTECTION: 0
+              FORCE_REDOWNLOAD: "true"
+              ONLINE_MODE: "false"
+              ALLOW_FLIGHT: "true"
+              REPLACE_ENV_IN_PLACE: "true"
+              # Logging
+              ENABLE_ROLLING_LOGS: "true"
+              LOG_TIMESTAMP: "true"
+              # Performance
+              JVM_XX_OPTS: -XX:MaxRAMPercentage=75
+              MAX_MEMORY: 8192M
+              USE_AIKAR_FLAGS: "true"
+              SNOOPER_ENABLED: "false"
+              VIEW_DISTANCE: 14
+              ## Mods
+              REMOVE_OLD_MODS: "true"
+              MODRINTH_DEFAULT_VERSION_TYPE: release
+              MODRINTH_PROJECTS: |-
+                appleskin
+                builders-jetpack-mod
+                create
+                create-dragons-plus:beta
+                create-copper-zinc
+                create-enchantment-industry
+                create-power-loader
+                create-stam1o-tweaks
+                copycats
+                curios
+                emi
+                jade
+                jade-addons-forge
+                jei:TxS03dKM
+                simple-voice-chat
+                sleep
+                travelersbackpack
+                platform
+                proxy-compatible-forge
+                luckperms:dKAPoPGd
+                vanillabackport
+                worldedit
+              # MODS: |-
+              CURSEFORGE_FILES: |-
+                architectury-api
+                ftb-teams-forge
+                ftb-library-forge
+                ftb-chunks-forge
+                ftb-xmod-compat
+              # PLUGINS: |-
+              #   https://cdn.modrinth.com/data/7IbzD4Zm/versions/JZpRIpOD/SignedVelocity-Sponge-10-1.3.0.jar
+              # PLUGINS_OUT_DIR: /data/mods/plugins
+              # https://vanillatweaks.net/share#NpW9a6
+              # VANILLATWEAKS_SHARECODE: NpW9a6 # Anti-Endermen Griefing for 1.21
+              ENABLE_QUERY: "true"
+              EXISTING_OPS_FILE: SYNCHRONIZE
+            envFrom:
+              - secretRef:
+                  name: minecraft-create-secret
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: [ALL]
+                add: ["NET_RAW"]
+            resources:
+              requests:
+                cpu: 300m
+                memory: 4Gi
+              limits:
+                memory: 8Gi
+    service:
+      minecraft:
+        controller: *app
+        type: ClusterIP
+        ports:
+          java:
+            port: 25565
+            protocol: TCP
+          voice:
+            port: 24454
+            protocol: UDP
+          bedrock:
+            port: 19132
+            protocol: UDP
+          # map:
+          #   port: 8100
+          rcon:
+            port: 25575
+          metrics:
+            port: 25585
+    serviceMonitor:
+      metrics:
+        enabled: false
+        serviceName: *app
+        endpoints:
+          - port: metrics
+            scheme: http
+            path: /
+            interval: 1m
+    persistence:
+      data:
+        existingClaim: *app
+      config:
+        enabled: true
+        type: configMap
+        name: minecraft-create-configmap
+        globalMounts:
+          - subPath: luckperms.conf
+            path: /config/luckperms/luckperms.conf
+          - subPath: pcf-common.toml
+            path: /config/pcf-common.toml
+          - subPath: create.toml
+            path: /config/create-server.toml

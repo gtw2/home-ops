@@ -1,0 +1,7 @@
+#Modern Forwarding Settings
+[modernForwarding]
+        forwardingSecret = "$${CFG_FORWARDING_SECRET}"
+
+[commandWrapping]
+        #List of argument types that are not vanilla but are integrated into the server (found in the Vanilla registry)
+        moddedArgumentTypes = ["livingthings:sampler_types"]

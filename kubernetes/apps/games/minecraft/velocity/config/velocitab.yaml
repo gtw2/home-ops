@@ -1,0 +1,39 @@
+# ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+# ┃     Velocitab Tab Groups     ┃
+# ┃  by William278 & AlexDev03   ┃
+# ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+# ┣╸ Information: https://william278.net/project/velocitab
+# ┗╸ Documentation: https://william278.net/docs/velocitab
+
+groups:
+- name: default
+  headers:
+  - <rainbow>Welcome to Busted RNG Network
+  footers:
+  - <gray>[There are currently %players_online%/%max_players_online% players online]
+  format: <gradient:red:white>%server%</gradient> %prefix%%username%
+  nametag:
+    prefix: '%prefix%'
+    suffix: '%suffix%'
+  servers:
+  - Hub
+  - Vanilla
+  - Create
+  - Creative
+  sorting_placeholders:
+  - '%role_weight%'
+  - '%username_lower%'
+  placeholder_replacements:
+    '%current_date_weekday_en-US%':
+    - placeholder: Monday
+      replacement: <red>Monday</red>
+    - placeholder: Tuesday
+      replacement: <gold>Tuesday</gold>
+    - placeholder: Else
+      replacement: <green>Other day</green>
+  collisions: false
+  header_footer_update_rate: 1000
+  format_update_rate: 1000
+  nametag_update_rate: 1000
+  placeholder_update_rate: 1000
+  only_list_players_in_same_server: false
