@@ -74,6 +74,14 @@ spec:
             - name: internal
               namespace: kube-system
               sectionName: https
+          annotations:
+            gethomepage.dev/enabled: "true"
+            gethomepage.dev/icon: prometheus.png
+            gethomepage.dev/name: Prometheus
+            gethomepage.dev/group: Observability
+            gethomepage.dev/app: prometheus
+            gethomepage.dev/widget.type: prometheus
+            gethomepage.dev/widget.url: http://kube-prometheus-stack-prometheus.monitoring:9090
       prometheusSpec:
         image:
           registry: docker.io

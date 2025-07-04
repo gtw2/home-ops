@@ -93,6 +93,12 @@ spec:
           - name: internal
             namespace: kube-system
             sectionName: https
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Storage
+          gethomepage.dev/name: Minio
+          gethomepage.dev/icon: minio.svg
+          gethomepage.dev/description: S3 Object Storage
         hostnames:
           - minio.westphal.io
         rules:

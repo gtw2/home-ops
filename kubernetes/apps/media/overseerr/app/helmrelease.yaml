@@ -62,29 +62,15 @@ spec:
           - name: external
             namespace: kube-system
             sectionName: https
-    # ingress:
-    #   app:
-    #     className: external
-    #     annotations:
-    #       gethomepage.dev/enabled: "true"
-    #       gethomepage.dev/group: Calendar
-    #       gethomepage.dev/name: Overseerr
-    #       gethomepage.dev/icon: overseerr.png
-    #       gethomepage.dev/description: Media Request Management
-    #       gethomepage.dev/widget.type: *app
-    #       gethomepage.dev/widget.url: http://overseerr.media:5055
-    #       gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}` }}"
-    #       external-dns.alpha.kubernetes.io/target: external.westphal.io
-    #     hosts:
-    #       - host: &host requests.westphal.io
-    #         paths:
-    #           - path: /
-    #             service:
-    #               identifier: app
-    #               port: http
-    #     tls:
-    #       - hosts:
-    #           - *host
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Calendar
+          gethomepage.dev/name: Overseerr
+          gethomepage.dev/icon: overseerr.png
+          gethomepage.dev/description: Media Request Management
+          gethomepage.dev/widget.type: *app
+          gethomepage.dev/widget.url: http://overseerr.media:5055
+          gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}` }}"
     persistence:
       config:
         existingClaim: *app

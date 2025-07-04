@@ -71,29 +71,16 @@ spec:
           - name: internal
             namespace: kube-system
             sectionName: https
-    # ingress:
-    #   app:
-    #     className: internal
-    #     annotations:
-    #       gethomepage.dev/enabled: "true"
-    #       gethomepage.dev/icon: tautulli.png
-    #       gethomepage.dev/name: Tautulli
-    #       gethomepage.dev/group: Media
-    #       gethomepage.dev/weight: "50"
-    #       gethomepage.dev/widget.type: tautulli
-    #       gethomepage.dev/widget.url: http://tautulli.media:80
-    #       gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_TAUTULLI_KEY}}` }}"
-    #       gethomepage.dev/widget.enableUser: "true"
-    #     hosts:
-    #       - host: &host "{{ .Release.Name }}.westphal.io"
-    #         paths:
-    #           - path: /
-    #             pathType: Prefix
-    #             service:
-    #               identifier: app
-    #               port: http
-    #     tls:
-    #       - hosts: [*host]
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/icon: tautulli.png
+          gethomepage.dev/name: Tautulli
+          gethomepage.dev/group: Media
+          gethomepage.dev/weight: "50"
+          gethomepage.dev/widget.type: tautulli
+          gethomepage.dev/widget.url: http://tautulli.media:80
+          gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_TAUTULLI_KEY}}` }}"
+          gethomepage.dev/widget.enableUser: "true"
     persistence:
       config:
         enabled: true

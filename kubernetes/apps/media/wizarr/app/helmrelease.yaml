@@ -63,30 +63,16 @@ spec:
           - name: external
             namespace: kube-system
             sectionName: https
-    # ingress:
-    #   app:
-    #     className: external
-    #     annotations:
-    #       gethomepage.dev/enabled: "true"
-    #       gethomepage.dev/group: Media
-    #       gethomepage.dev/name: Wizarr
-    #       gethomepage.dev/icon: wizarr.png
-    #       gethomepage.dev/description: Plex Invite Management
-    #       gethomepage.dev/weight: "10"
-    #       # gethomepage.dev/widget.type: wizarr
-    #       # gethomepage.dev/widget.url: http://wizarr.media.svc.cluster.local:5690
-    #       # gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_WIZARR_TOKEN}}` }}"
-    #       external-dns.alpha.kubernetes.io/target: external.westphal.io
-    #     hosts:
-    #       - host: &host join.westphal.io
-    #         paths:
-    #           - path: /
-    #             service:
-    #               identifier: app
-    #               port: http
-    #     tls:
-    #       - hosts:
-    #           - *host
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: Wizarr
+          gethomepage.dev/icon: wizarr.png
+          gethomepage.dev/description: Plex Invite Management
+          gethomepage.dev/weight: "10"
+          # gethomepage.dev/widget.type: wizarr
+          # gethomepage.dev/widget.url: http://wizarr.media.svc.cluster.local:5690
+          # gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_WIZARR_TOKEN}}` }}"
     persistence:
       config:
         existingClaim: *app
