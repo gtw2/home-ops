@@ -73,7 +73,7 @@ spec:
         controller: *app
         ports:
           http:
-            port: 9001
+            port: &port 9001
           s3:
             port: *api-port
     serviceMonitor:
@@ -85,32 +85,43 @@ spec:
             path: /minio/v2/metrics/cluster
             interval: 1m
             scrapeTimeout: 10s
-    ingress:
-      app:
-        className: internal
-        annotations:
-          gethomepage.dev/enabled: "true"
-          gethomepage.dev/group: Storage
-          gethomepage.dev/name: Minio
-          gethomepage.dev/icon: minio.svg
-          gethomepage.dev/description: S3 Object Storage
-        hosts:
-          - host: &host "{{ .Release.Name }}.westphal.io"
-            paths:
-              - path: /
-                service:
-                  identifier: app
-                  port: http
-          - host: &s3host s3.westphal.io
-            paths:
-              - path: /
-                service:
-                  identifier: app
-                  port: s3
-        tls:
-          - hosts:
-              - *host
-              - *s3host
+    route:
+      main:
+        enabled: true
+        kind: HTTPRoute
+        parentRefs:
+          - kind: Gateway
+            name: internal
+            namespace: network
+            sectionName: https
+        hostnames:
+          - minio.westphal.io
+        rules:
+          - backendRefs:
+              - name: *app
+                port: *port
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+      s3:
+        enabled: true
+        kind: HTTPRoute
+        parentRefs:
+          - kind: Gateway
+            name: internal
+            namespace: network
+            sectionName: https
+        hostnames:
+          - s3.westphal.io
+        rules:
+          - backendRefs:
+              - name: *app
+                port: *api-port
+            matches:
+              - path:
+                  type: PathPrefix
+                  value: /
     persistence:
       config:
         existingClaim: minio-nfs
