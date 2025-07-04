@@ -6,6 +6,6 @@ namespace: games
 components:
   - ../../components/common
 resources:
-  - ./minecraft/ks.yaml
-  - ./romm/ks.yaml
-  - ./valheim/ks.yaml
+  # - ./minecraft/ks.yaml
+  # - ./romm/ks.yaml
+  # - ./valheim/ks.yaml
