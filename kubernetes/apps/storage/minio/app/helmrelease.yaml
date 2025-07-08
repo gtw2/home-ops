@@ -99,7 +99,10 @@ spec:
           gethomepage.dev/name: Minio
           gethomepage.dev/icon: minio.svg
           gethomepage.dev/description: S3 Object Storage
-          gethomepage.dev/pod-selector: "app.kubernetes.io/name: minio"
+          gethomepage.dev/pod-selector: >-
+            app.kubernetes.io/name in (
+              minio
+            )
         hostnames:
           - minio.westphal.io
         rules:
