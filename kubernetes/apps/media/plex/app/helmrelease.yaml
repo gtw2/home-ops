@@ -90,6 +90,7 @@ spec:
             namespace: kube-system
             sectionName: https
         annotations:
+          gethomepage.dev/href: https://plex.westphal.io
           gethomepage.dev/enabled: "true"
           gethomepage.dev/icon: plex.png
           gethomepage.dev/name: Plex
