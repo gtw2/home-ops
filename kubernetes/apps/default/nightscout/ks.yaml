@@ -15,6 +15,7 @@ spec:
     secretRef:
       name: sops-age
   components:
+    - ../../../../components/gatus/external
     - ../../../../components/volsync
   path: ./kubernetes/apps/default/nightscout/app
   postBuild:
