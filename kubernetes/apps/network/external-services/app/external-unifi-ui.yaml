@@ -43,13 +43,13 @@ spec:
         - name: *app
           namespace: network
           port: 443
-  annotations:
-    gethomepage.dev/enabled: "true"
-    gethomepage.dev/name: Unifi
-    gethomepage.dev/group: Network
-    gethomepage.dev/icon: unifi.png
-    gethomepage.dev/description: Home Network Portal
-    gethomepage.dev/widget.type: unifi
-    gethomepage.dev/widget.url: https://${SECRET_UNIFI_IP}:443
-    gethomepage.dev/widget.username: '{{HOMEPAGE_VAR_UNIFI_USER}}'
-    gethomepage.dev/widget.password: '{{HOMEPAGE_VAR_UNIFI_PASS}}'
+  # annotations:
+  #   gethomepage.dev/enabled: "true"
+  #   gethomepage.dev/name: Unifi
+  #   gethomepage.dev/group: Network
+  #   gethomepage.dev/icon: unifi.png
+  #   gethomepage.dev/description: Home Network Portal
+  #   gethomepage.dev/widget.type: unifi
+  #   gethomepage.dev/widget.url: https://${SECRET_UNIFI_IP}:443
+  #   gethomepage.dev/widget.username: '{{HOMEPAGE_VAR_UNIFI_USER}}'
+  #   gethomepage.dev/widget.password: '{{HOMEPAGE_VAR_UNIFI_PASS}}'

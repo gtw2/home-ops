@@ -45,13 +45,13 @@ spec:
         - name: nas
           namespace: network
           port: 443
-  annotations:
-    gethomepage.dev/enabled: "true"
-    gethomepage.dev/icon: truenas-scale.png
-    gethomepage.dev/name: TrueNAS
-    gethomepage.dev/group: Infrastructure
-    gethomepage.dev/description: Primary Network Attached Storage
-    gethomepage.dev/widget.type: truenas
-    gethomepage.dev/widget.url: https://${SECRET_NFS_SERVER}
-    gethomepage.dev/widget.key: '{{HOMEPAGE_VAR_TRUENAS_KEY}}'
-    gethomepage.dev/widget.enablePools: true
+  # annotations:
+  #   gethomepage.dev/enabled: "true"
+  #   gethomepage.dev/icon: truenas-scale.png
+  #   gethomepage.dev/name: TrueNAS
+  #   gethomepage.dev/group: Infrastructure
+  #   gethomepage.dev/description: Primary Network Attached Storage
+  #   gethomepage.dev/widget.type: truenas
+  #   gethomepage.dev/widget.url: https://${SECRET_NFS_SERVER}
+  #   gethomepage.dev/widget.key: '{{HOMEPAGE_VAR_TRUENAS_KEY}}'
+  #   gethomepage.dev/widget.enablePools: true

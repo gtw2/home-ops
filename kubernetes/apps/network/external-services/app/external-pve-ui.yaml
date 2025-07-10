@@ -44,13 +44,13 @@ spec:
         - name: *app
           namespace: network
           port: 443
-  annotations:
-    gethomepage.dev/enabled: "true"
-    gethomepage.dev/icon: proxmox.png
-    gethomepage.dev/name: Proxmox
-    gethomepage.dev/group: Infrastructure
-    gethomepage.dev/description: Cluster Hypervisor
-    gethomepage.dev/widget.type: proxmox
-    gethomepage.dev/widget.url: https://${SECRET_HOST_IP}:8006
-    gethomepage.dev/widget.username: '{{HOMEPAGE_VAR_PROXMOX_USER}}'
-    gethomepage.dev/widget.password: '{{HOMEPAGE_VAR_PROXMOX_PASS}}'
+  # annotations:
+  #   gethomepage.dev/enabled: "true"
+  #   gethomepage.dev/icon: proxmox.png
+  #   gethomepage.dev/name: Proxmox
+  #   gethomepage.dev/group: Infrastructure
+  #   gethomepage.dev/description: Cluster Hypervisor
+  #   gethomepage.dev/widget.type: proxmox
+  #   gethomepage.dev/widget.url: https://${SECRET_HOST_IP}:8006
+  #   gethomepage.dev/widget.username: '{{HOMEPAGE_VAR_PROXMOX_USER}}'
+  #   gethomepage.dev/widget.password: '{{HOMEPAGE_VAR_PROXMOX_PASS}}'
