@@ -11,7 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    # - ../../../../components/gatus/external
+    - ../../../../components/gatus/external
     - ../../../../components/volsync
   interval: 10m
   path: "./kubernetes/apps/storage/ocis/app"
@@ -32,3 +32,4 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 25Gi
+      GATUS_SUBDOMAIN: cloud
