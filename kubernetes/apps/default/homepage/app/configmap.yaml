@@ -26,9 +26,9 @@ data:
         - kubesearch:
             - icon: kubernetes-dashboard.png
               href: https://kubesearch.dev
-        - homeops:
+        - home-ops:
             - icon: github.png
-              href: https://github.com/gtw2/homeops
+              href: https://github.com/gtw2/home-ops
   docker.yaml: ""
   kubernetes.yaml: |
     mode: cluster
@@ -36,15 +36,45 @@ data:
     ingress: false
     traefik: false
   services.yaml: |
+    - Infrastructure:
+        - Proxmox:
+            href: https://proxmox.internal:8006
+            icon: proxmox.png
+            description: Cluster Hypervisor
+            widget:
+              type: proxmox
+              url: https://proxmox.internal:8006
+              username: "{{HOMEPAGE_VAR_PROXMOX_USER}}"
+              password: "{{HOMEPAGE_VAR_PROXMOX_PASS}}"
+        - TrueNAS:
+            href: https://nas.internal
+            icon: truenas-scale.png
+            description: Primary Network Attached Storage
+            widget:
+              type: truenas
+              url: https://nas.internal
+              key: "{{HOMEPAGE_VAR_TRUENAS_KEY}}"
+              enablePools: true
+
     - Network:
         - Cloudflared:
             href: https://dash.cloudflare.com
             icon: cloudflare-zero-trust.png
+            description: Cloudflare Dashboard
             widget:
               type: cloudflared
               accountid: "{{HOMEPAGE_VAR_CLOUDFLARED_ACCOUNTID}}"
               tunnelid: "{{HOMEPAGE_VAR_CLOUDFLARED_TUNNELID}}"
               key: "{{HOMEPAGE_VAR_CLOUDFLARED_API_TOKEN}}"
+        - Unifi:
+            href: https://unifi.internal
+            icon: unifi.png
+            description: Home Network Portal
+            widget:
+              type: unifi
+              url: https://unifi.internal
+              username: "{{HOMEPAGE_VAR_UNIFI_USER}}"
+              password: "{{HOMEPAGE_VAR_UNIFI_PASS}}"
     - Observability:
         - Nightscout:
             href: https://nightscout.westphal.io
