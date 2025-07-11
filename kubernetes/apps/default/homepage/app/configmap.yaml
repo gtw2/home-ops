@@ -77,7 +77,7 @@ data:
               password: "{{HOMEPAGE_VAR_UNIFI_PASS}}"
     - Observability:
         - Nightscout:
-            href: https://nightscout.westphal.io
+            href: https://nightscout.${SECRET_DOMAIN}
             icon: nightscout.png
             siteMonitor: http://nightscout.default:1337
             widget:

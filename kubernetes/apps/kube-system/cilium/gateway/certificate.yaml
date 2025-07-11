@@ -9,5 +9,5 @@ spec:
   issuerRef:
     name: letsencrypt-production
     kind: ClusterIssuer
-  commonName: "westphal.io"
-  dnsNames: ["westphal.io", "*.westphal.io"]
+  commonName: "${SECRET_DOMAIN}"
+  dnsNames: ["${SECRET_DOMAIN}", "*.${SECRET_DOMAIN}"]

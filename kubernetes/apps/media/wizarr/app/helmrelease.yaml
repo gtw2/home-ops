@@ -58,7 +58,7 @@ spec:
     route:
       app:
         enabled: true
-        hostnames: ["join.westphal.io"]
+        hostnames: ["join.${SECRET_DOMAIN}"]
         parentRefs:
           - name: external
             namespace: kube-system

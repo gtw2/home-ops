@@ -57,7 +57,7 @@ spec:
     route:
       app:
         enabled: true
-        hostnames: ["requests.westphal.io"]
+        hostnames: ["requests.${SECRET_DOMAIN}"]
         parentRefs:
           - name: external
             namespace: kube-system

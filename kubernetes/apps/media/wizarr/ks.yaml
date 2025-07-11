@@ -13,6 +13,10 @@ spec:
   components:
     - ../../../../components/gatus/external
     - ../../../../components/volsync
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
   dependsOn:
     - name: plex
     # - name: overseerr
@@ -27,6 +31,9 @@ spec:
   retryInterval: 1m
   timeout: 5m
   postBuild:
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 2Gi

@@ -13,6 +13,10 @@ spec:
   components:
     - ../../../../components/gatus/external
     - ../../../../components/volsync
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
   interval: 10m
   path: "./kubernetes/apps/storage/ocis/app"
   prune: true
@@ -29,6 +33,9 @@ spec:
     - name: external-secrets-stores
       namespace: kube-system
   postBuild:
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 25Gi

@@ -47,7 +47,7 @@ spec:
               ALARM_TIMEAGO_URGENT: "off"
               ALARM_TIMEAGO_WARN: "off"
               ALARM_TYPES: " "
-              BASE_URL: "https://{{ .Release.Name }}.westphal.io"
+              BASE_URL: "https://{{ .Release.Name }}.${SECRET_DOMAIN}"
               DEVICESTATUS_ADVANCED: "true"
               DISABLE: "simplealarms upbat"
               ENABLE: "ar2 careportal connect cors delta"
@@ -77,7 +77,7 @@ spec:
 
     route:
       app:
-        hostnames: ["{{ .Release.Name }}.westphal.io"]
+        hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
         parentRefs:
           - name: internal
             namespace: kube-system

@@ -29,7 +29,7 @@ spec:
               tag: 1.41.8.9834@sha256:40e620ffcdc65331a0c2a7ed9a95700da7d527244f33c21bd35fc30aa25f19ea
             env:
               TZ: America/New_York
-              PLEX_ADVERTISE_URL: https://plex.westphal.io:443,http://10.10.40.100:32400
+              PLEX_ADVERTISE_URL: https://plex.${SECRET_DOMAIN}:443,http://10.10.40.100:32400
               PLEX_NO_AUTH_NETWORKS: 10.42.0.0/16
             envFrom:
               - secretRef:
@@ -84,13 +84,13 @@ spec:
     route:
       app:
         hostnames:
-          - "{{ .Release.Name }}.westphal.io"
+          - "{{ .Release.Name }}.${SECRET_DOMAIN}"
         parentRefs:
           - name: external
             namespace: kube-system
             sectionName: https
         annotations:
-          gethomepage.dev/href: https://plex.westphal.io
+          gethomepage.dev/href: https://plex.${SECRET_DOMAIN}
           gethomepage.dev/enabled: "true"
           gethomepage.dev/icon: plex.png
           gethomepage.dev/name: Plex
