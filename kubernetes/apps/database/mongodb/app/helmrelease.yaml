@@ -49,6 +49,18 @@ spec:
         - "${NIGHTSCOUT_MONGODB_PASSWORD}"
       databases:
         - "nightscout"
+    readinessProbe:
+      initialDelaySeconds: 10  # Increase if needed for auth/database creation
+      timeoutSeconds: 10
+      periodSeconds: 15
+      successThreshold: 1
+      failureThreshold: 8
+    livenessProbe:
+      initialDelaySeconds: 45
+      timeoutSeconds: 15
+      periodSeconds: 20
+      successThreshold: 1
+      failureThreshold: 8
     persistence:
       enabled: true
       existingClaim: *app
