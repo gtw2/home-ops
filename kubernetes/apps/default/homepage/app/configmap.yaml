@@ -274,11 +274,6 @@ data:
     - unifi_console:
         url: https://192.168.1.1:443
         key: "{{HOMEPAGE_VAR_UNIFI_KEY}}"
-    # - resources:
-    #     backend: kubernetes
-    #     cpu: true
-    #     expanded: true
-    #     memory: true
     - kubernetes:
         cluster:
           cpu: true
@@ -295,9 +290,10 @@ data:
         provider: ["duckduckgo"]
         focus: false
         target: _blank
-    - greeting:
-        text_size: xl
-        text: "Welcome!"
+    - openmeteo:
+        latitude: {{HOMEPAGE_VAR_HASS_LATITUDE}}
+        longitude: {{HOMEPAGE_VAR_HASS_LONGITUDE}}
+        units: imperial
     - datetime:
         text_size: l
         format:
