@@ -49,6 +49,8 @@ spec:
           enabled: true
         dashboards:
           enabled: true
+          annotations:
+            grafana_folder: Network
       relay:
         enabled: true
         rollOutPods: true
