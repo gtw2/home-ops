@@ -303,4 +303,4 @@ data:
         format:
           dateStyle: short
           timeStyle: short
-          hourCycle: h23
+          hour12: true
