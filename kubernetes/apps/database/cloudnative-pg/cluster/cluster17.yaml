@@ -3,11 +3,11 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: postgres17
+  name: postgres16
 spec:
   instances: 3
   # CNPG Offical Image
-  imageName: ghcr.io/cloudnative-pg/postgresql:17.4-13@sha256:a950d7c3b3571f7f9530e3842c48e4e673104929e3c323225b6f290004f2065c
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.8
   primaryUpdateStrategy: unsupervised
   storage:
     size: 20Gi
@@ -50,7 +50,7 @@ spec:
       endpointURL: http://minio.storage.svc.cluster.local:9000
       # Note: serverName version needs to be incremented
       # when recovering from an existing cnpg cluster
-      serverName: &currentCluster postgres17-v1
+      serverName: &currentCluster postgres16-v3
       s3Credentials:
         accessKeyId:
           name: cloudnative-pg-secret
@@ -62,7 +62,7 @@ spec:
   # cluster when recovering from an existing cnpg cluster
   bootstrap:
     recovery:
-      source: &previousCluster postgres16-v3
+      source: &previousCluster postgres16-v2
   # Note: externalClusters is needed when recovering from an existing cnpg cluster
   externalClusters:
     - name: *previousCluster
