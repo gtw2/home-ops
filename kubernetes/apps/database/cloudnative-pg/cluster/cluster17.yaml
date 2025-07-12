@@ -7,7 +7,7 @@ metadata:
 spec:
   instances: 3
   # CNPG Offical Image
-  imageName: ghcr.io/cloudnative-pg/postgresql:16.3-7@sha256:6cceae503023b991d9a12d6e6a13599ae6955279951b80454213f072486d6967
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.2@sha256:b17d21f8ec36add9b3c0ea3fb354d05f62a8fddf8ba65ae94e63ba77bc42202e
   primaryUpdateStrategy: unsupervised
   storage:
     size: 20Gi
