@@ -72,9 +72,8 @@ data:
             description: Home Network Portal
             widget:
               type: unifi
-              url: https://unifi.internal
-              username: "{{HOMEPAGE_VAR_UNIFI_USER}}"
-              password: "{{HOMEPAGE_VAR_UNIFI_PASS}}"
+              url: https://unifi.internal:443
+              key: "{{HOMEPAGE_VAR_UNIFI_KEY}}"
     - Observability:
         - Nightscout:
             href: https://nightscout.${SECRET_DOMAIN}
@@ -274,8 +273,7 @@ data:
   widgets.yaml: |
     - unifi_console:
         url: https://192.168.1.1:443
-        username: "{{HOMEPAGE_VAR_UNIFI_USER}}"
-        password: "{{HOMEPAGE_VAR_UNIFI_PASS}}"
+        key: "{{HOMEPAGE_VAR_UNIFI_KEY}}"
     # - resources:
     #     backend: kubernetes
     #     cpu: true
