@@ -23,8 +23,8 @@ spec:
       shared_buffers: 2048MB
       pg_stat_statements.max: "10000"
       pg_stat_statements.track: all
-    # shared_preload_libraries:
-    #   - "vectors.so"
+    shared_preload_libraries:
+      - "vectors.so"
   nodeMaintenanceWindow:
     inProgress: false
     reusePVC: true
