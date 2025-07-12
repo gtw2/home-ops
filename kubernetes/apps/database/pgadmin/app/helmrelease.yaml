@@ -55,26 +55,20 @@ spec:
         ports:
           http:
             port: 80
-    ingress:
-      app:
+    route:
+      main:
         enabled: true
-        className: internal
+        hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
+        parentRefs:
+          - name: internal
+            namespace: kube-system
+            sectionName: https
         annotations:
           gethomepage.dev/enabled: "true"
           gethomepage.dev/name: pgAdmin
           gethomepage.dev/description: PostgreSQL management tool
           gethomepage.dev/group: Storage
           gethomepage.dev/icon: pgadmin.png
-        hosts:
-          - host: &host "{{ .Release.Name }}.${SECRET_DOMAIN}"
-            paths:
-              - path: /
-                service:
-                  identifier: app
-                  port: http
-        tls:
-          - hosts:
-              - *host
     persistence:
       config:
         enabled: true
