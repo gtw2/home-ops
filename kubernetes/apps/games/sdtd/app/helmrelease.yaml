@@ -39,8 +39,8 @@ spec:
               LINUXGSM_VERSION: v24.3.4
               START_MODE: 0
               VERSION: stable
-              PUID: 0
-              PGID: 0
+              PUID: 1000
+              PGID: 1000
               TimeZone: ${TIMEZONE}
               TEST_ALERT: NO
               UPDATE_MODS: NO
@@ -75,6 +75,9 @@ spec:
     defaultPodOptions:
       automountServiceAccountToken: false
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
         fsGroup: 1000
         supplementalGroups: [1000]
         fsGroupChangePolicy: OnRootMismatch
