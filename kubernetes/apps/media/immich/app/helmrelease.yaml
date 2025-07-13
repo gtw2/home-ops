@@ -200,7 +200,7 @@ spec:
         rules:
           - backendRefs:
               - identifier: server
-                port: *port
+                port: *serverport
         annotations:
           gethomepage.dev/enabled: "true"
           gethomepage.dev/group: Media
