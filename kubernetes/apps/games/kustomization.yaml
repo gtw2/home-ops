@@ -8,5 +8,5 @@ components:
 resources:
   - ./minecraft/ks.yaml
   - ./romm/ks.yaml
-  # - ./sdtd/ks.yaml
+  - ./sdtd/ks.yaml
   - ./valheim/ks.yaml

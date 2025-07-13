@@ -34,23 +34,8 @@ spec:
               tag: latest
               pullPolicy: IfNotPresent
             tty: true
-            # probes:
-            #   liveness:
-            #     enabled: true
-            #     type: TCP
-            #     port: 26900
-            #   readiness:
-            #     enabled: true
-            #     type: TCP
-            #     port: 26900
-            #   startup:
-            #     enabled: true
-            #     type: TCP
-            #     port: 26900
-            #     spec:
-            #       failureThreshold: 30
-            #       periodSeconds: 10
             env:
+              CHANGE_CONFIG_DIR_OWNERSHIP: NO
               LINUXGSM_VERSION: v24.3.4
               START_MODE: 1
               VERSION: stable
