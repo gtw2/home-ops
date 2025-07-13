@@ -10,7 +10,7 @@ data:
     endpoints:
       - name: immich-db
         group: infrastructure
-        url: tcp://immich17-lb.media.svc.cluster.local:5432
+        url: tcp://immich-lb.media.svc.cluster.local:5432
         interval: 1m
         conditions: ["[CONNECTED] == true"]
         alerts:
