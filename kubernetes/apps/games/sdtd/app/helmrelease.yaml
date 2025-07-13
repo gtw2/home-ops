@@ -119,18 +119,20 @@ spec:
                 subPath: 7DaysToDie
               - path: /home/sdtdserver/lgsm/config-lgsm/sdtdserver
                 subPath: sdtdserver
+              - path: /home/sdtdserver/serverfiles
+                subPath: serverfiles
       # config:
       #   existingClaim: sdtd-config
       #   advancedMounts:
       #     sdtd:
       #       app:
       #         - path: /home/sdtdserver/lgsm/config-lgsm/sdtdserver
-      serverfiles:
-        existingClaim: sdtd-serverfiles
-        advancedMounts:
-          sdtd:
-            app:
-              - path: /home/sdtdserver/serverfiles
+      # serverfiles:
+      #   existingClaim: sdtd-serverfiles
+      #   advancedMounts:
+      #     sdtd:
+      #       app:
+      #         - path: /home/sdtdserver/serverfiles
       log:
         type: emptyDir
         advancedMounts:
