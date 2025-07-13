@@ -122,3 +122,9 @@ spec:
           sdtd:
             app:
               - path: /home/sdtdserver/lgsm/config-lgsm/sdtdserver
+      serverfiles:
+        existingClaim: sdtd-serverfiles
+        advancedMounts:
+          sdtd:
+            app:
+              - path: /home/sdtdserver/serverfiles
