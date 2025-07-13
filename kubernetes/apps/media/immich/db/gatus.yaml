@@ -8,7 +8,7 @@ metadata:
 data:
   config.yaml: |
     endpoints:
-      - name: cloudnative-pg
+      - name: immich-db
         group: infrastructure
         url: tcp://immich-lb.media.svc.cluster.local:5432
         interval: 1m
