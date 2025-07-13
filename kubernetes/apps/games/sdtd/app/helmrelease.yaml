@@ -37,10 +37,10 @@ spec:
             env:
               CHANGE_CONFIG_DIR_OWNERSHIP: NO
               LINUXGSM_VERSION: v24.3.4
-              START_MODE: 1
+              START_MODE: 0
               VERSION: stable
-              PUID: 0
-              PGID: 0
+              PUID: 1000
+              PGID: 1000
               TimeZone: ${TIMEZONE}
               TEST_ALERT: NO
               UPDATE_MODS: NO
