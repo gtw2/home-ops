@@ -64,8 +64,6 @@ spec:
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
-              # capabilities:
-              #   drop: [ALL]
             resources:
               requests:
                 cpu: 500m
@@ -75,11 +73,7 @@ spec:
     defaultPodOptions:
       automountServiceAccountToken: false
       securityContext:
-        # runAsNonRoot: true
-        # runAsUser: 1000
-        # runAsGroup: 1000
         fsGroup: 1000
-        # supplementalGroups: [1000]
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile: { type: RuntimeDefault }
     service:
@@ -121,18 +115,6 @@ spec:
                 subPath: sdtdserver
               - path: /home/sdtdserver/serverfiles
                 subPath: serverfiles
-      # config:
-      #   existingClaim: sdtd-config
-      #   advancedMounts:
-      #     sdtd:
-      #       app:
-      #         - path: /home/sdtdserver/lgsm/config-lgsm/sdtdserver
-      # serverfiles:
-      #   existingClaim: sdtd-serverfiles
-      #   advancedMounts:
-      #     sdtd:
-      #       app:
-      #         - path: /home/sdtdserver/serverfiles
       log:
         type: emptyDir
         advancedMounts:
