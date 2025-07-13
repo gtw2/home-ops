@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/postgresql.cnpg.io/cluster_v1.json
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: immich
+spec:
+  instances: 3
+  # Vectorchord Image
+  imageName: ghcr.io/tensorchord/cloudnative-vectorchord:17.5-0.3.0
+  primaryUpdateStrategy: unsupervised
+  storage:
+    size: 20Gi
+    storageClass: openebs-hostpath
+  superuserSecret:
+    name: cloudnative-pg-secret
+  enableSuperuserAccess: true
+  postgresql:
+    parameters:
+      auto_explain.log_min_duration: '10s'
+      max_connections: "300"
+      max_wal_size: 512MB
+      shared_buffers: 2048MB
+      pg_stat_statements.max: "10000"
+      pg_stat_statements.track: all
+    shared_preload_libraries:
+      - "vchord.so"
+  nodeMaintenanceWindow:
+    inProgress: false
+    reusePVC: true
+  resources:
+    requests:
+      cpu: 500m
+    limits:
+      memory: 4Gi
+  monitoring:
+    enablePodMonitor: true
+    podMonitorMetricRelabelings:
+      - { sourceLabels: ["cluster"], targetLabel: cnpg_cluster, action: replace }
+      - { regex: cluster, action: labeldrop }
+  backup:
+    retentionPolicy: 30d
+    barmanObjectStore: &barmanObjectStore
+      data:
+        compression: bzip2
+      wal:
+        compression: bzip2
+        maxParallel: 8
+      destinationPath: s3://postgresql/
+      endpointURL: http://minio.storage.svc.cluster.local:9000
+      # Note: serverName version needs to be incremented
+      # when recovering from an existing cnpg cluster
+      serverName: &currentCluster immich-v1
+      s3Credentials:
+        accessKeyId:
+          name: cloudnative-pg-secret
+          key: aws-access-key-id
+        secretAccessKey:
+          name: cloudnative-pg-secret
+          key: aws-secret-access-key
+  # Note: previousCluster needs to be set to the name of the previous
+  # cluster when recovering from an existing cnpg cluster
+  bootstrap:
+    initdb:
+      postInitSQL:
+        - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
+  #   recovery:
+  #     source: &previousCluster immich-v1
+  # # Note: externalClusters is needed when recovering from an existing cnpg cluster
+  # externalClusters:
+  #   - name: *previousCluster
+  #     barmanObjectStore:
+  #       <<: *barmanObjectStore
+  #       serverName: *previousCluster
