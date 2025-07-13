@@ -48,9 +48,9 @@ spec:
     provider: sops
     secretRef:
       name: sops-age
-  components:
+  # components:
     # - ../../../../components/gatus/external
-    - ../../../../components/volsync
+    # - ../../../../components/volsync
   dependsOn:
     - name: dragonfly-cluster
       namespace: database
