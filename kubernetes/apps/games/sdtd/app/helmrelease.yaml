@@ -39,8 +39,8 @@ spec:
               LINUXGSM_VERSION: v24.3.4
               START_MODE: 0
               VERSION: stable
-              PUID: 1000
-              PGID: 1000
+              PUID: 0
+              PGID: 0
               TimeZone: ${TIMEZONE}
               TEST_ALERT: NO
               UPDATE_MODS: NO
