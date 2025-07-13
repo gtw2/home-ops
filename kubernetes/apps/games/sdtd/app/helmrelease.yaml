@@ -128,3 +128,15 @@ spec:
           sdtd:
             app:
               - path: /home/sdtdserver/serverfiles
+      log:
+        type: emptyDir
+        advancedMounts:
+          sdtd:
+            app:
+              - path: /home/sdtdserver/log
+      backup:
+        type: emptyDir
+        advancedMounts:
+          sdtd:
+            app:
+              - path: /home/sdtdserver/lgsm/backup
