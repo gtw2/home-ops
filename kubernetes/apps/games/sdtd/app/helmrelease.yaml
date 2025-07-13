@@ -35,9 +35,9 @@ spec:
               pullPolicy: IfNotPresent
             tty: true
             env:
-              CHANGE_CONFIG_DIR_OWNERSHIP: NO
+              CHANGE_CONFIG_DIR_OWNERSHIP: YES
               LINUXGSM_VERSION: v24.3.4
-              START_MODE: 1
+              START_MODE: 0
               VERSION: stable
               PUID: 1000
               PGID: 1000
