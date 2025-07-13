@@ -34,7 +34,7 @@ spec:
               pullPolicy: IfNotPresent
             env:
                 BACKUPS: "false"
-                BEPINEX: "true"
+                BEPINEX: "false"
                 CONFIG_DIRECTORY_PERMISSIONS: "755"
                 WORLDS_DIRECTORY_PERMISSIONS: "755"
                 WORLDS_FILE_PERMISSIONS: "644"
