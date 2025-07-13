@@ -10,7 +10,7 @@ data:
   IMMICH_SERVER_URL: http://immich-server.media.svc.cluster.local:3001
   LOG_LEVEL: verbose
   NODE_ENV: "production"
-  REDIS_HOSTNAME: dragonfly.databases.svc.cluster.local
+  REDIS_HOSTNAME: dragonfly.database.svc.cluster.local
   REDIS_PORT: "6379"
   REDIS_DBINDEX: "3"
   IMMICH_PORT: "3001"
