@@ -11,7 +11,7 @@ resources:
 configMapGenerator:
   - name: immich-config-tpl
     files:
-      - ./config/immich.config.json
+      - ./config/immich-config.yaml
 generatorOptions:
   disableNameSuffixHash: true
 labels:
