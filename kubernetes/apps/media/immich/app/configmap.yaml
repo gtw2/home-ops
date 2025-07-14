@@ -6,8 +6,6 @@ metadata:
   namespace: media
 data:
   DB_PORT: "5432"
-  IMMICH_WEB_URL: http://immich-web.media:3000
-  PUBLIC_IMMICH_SERVER_URL: https://photos.${SECRET_DOMAIN}
   IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning.media.svc.cluster.local:3003
   IMMICH_SERVER_URL: http://immich-server.media.svc.cluster.local:3001
   LOG_LEVEL: verbose
