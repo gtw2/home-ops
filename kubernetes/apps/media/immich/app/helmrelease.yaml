@@ -177,13 +177,13 @@ spec:
         ports:
           http:
             port: *serverport
-          metrics:
-            port: 8081
-      microservices:
-        controller: microservices
-        ports:
-          metrics:
-            port: 8081
+      #     metrics:
+      #       port: 8081
+      # microservices:
+      #   controller: microservices
+      #   ports:
+      #     metrics:
+      #       port: 8081
       machine-learning:
         controller: machine-learning
         ports:
