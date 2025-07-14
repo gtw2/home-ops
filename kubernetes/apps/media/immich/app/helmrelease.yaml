@@ -177,13 +177,15 @@ spec:
         ports:
           http:
             port: *serverport
-      #     metrics:
-      #       port: 8081
-      # microservices:
-      #   controller: microservices
-      #   ports:
-      #     metrics:
-      #       port: 8081
+          metrics:
+            port: 8081
+      microservices:
+        controller: microservices
+        ports:
+          http:
+            port: *serverport
+          metrics:
+            port: 8081
       machine-learning:
         controller: machine-learning
         ports:
@@ -202,6 +204,7 @@ spec:
               - identifier: server
                 port: *serverport
         annotations:
+          external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
           gethomepage.dev/enabled: "true"
           gethomepage.dev/group: Media
           gethomepage.dev/name: Immich
