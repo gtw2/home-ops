@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: immich-lb
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: immich.${SECRET_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: immich-db.${SECRET_DOMAIN}
     io.cilium/lb-ipam-ips: 10.10.40.91
 spec:
   type: LoadBalancer
