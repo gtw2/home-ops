@@ -1,0 +1,86 @@
+---
+server:
+  externalDomain: "https://photos.${SECRET_DOMAIN}"
+trash:
+  enabled: true
+  days: 30
+ffmpeg:
+  preset: ultrafast
+  crf: 23
+  bframes: -1
+  refs: 0
+  gopSize: 0
+  twoPass: false
+  preferredHwDevice: auto
+  accel: "qsv"
+  accelDecode: false
+  tonemap: "hable"
+  temporalAQ: false
+  targetResolution: "720"
+
+job:
+  backgroundTask:
+    concurrency: 5
+  smartSearch:
+    concurrency: 3
+  metadataExtraction:
+    concurrency: 5
+  faceDetection:
+    concurrency: 2
+  search:
+    concurrency: 5
+  sidecar:
+    concurrency: 5
+  library:
+    concurrency: 5
+  migration:
+    concurrency: 5
+  thumbnailGeneration:
+    concurrency: 4
+  videoConversion:
+    concurrency: 1
+  notifications:
+    concurrency: 5
+
+machineLearning:
+  urls: ["http://immich-machine-learning.media:3003"]
+  clip:
+    modelName: ViT-B-32__openai
+  facialRecognition:
+    modelName: buffalo_l
+    minFaces: 5
+  duplicateDetection:
+    enabled: true
+    maxDistance: 0.01
+
+oauth:
+  enabled: true
+  issuerUrl: "https://sso.${SECRET_DOMAIN}/application/o/immich/.well-known/openid-configuration"
+  autoLaunch: false
+  autoRegister: true
+  buttonText: Login with Authentik
+  clientId: "{{ .IMMICH_CLIENT_ID}}"
+  clientSecret: "{{ .IMMICH_CLIENT_SECRET }}"
+  scope: "openid email profile"
+
+passwordLogin:
+  enabled: true
+
+notifications:
+  smtp:
+    enabled: true
+    from: "{{ .SMTP_SENDER }}"
+    transport:
+      host: "{{ .SMTP_HOST }}"
+      username: "{{ .SMTP_USERNAME }}"
+      password: "{{ .SMTP_PASSWORD }}"
+      port: 587
+
+storageTemplate:
+  enabled: true
+  hashVerificationEnabled: true
+  template: "{{`{{y}}/{{y}}-{{MM}}-{{dd}}/{{filename}}`}}"
+
+backup:
+  database:
+    enabled: false
