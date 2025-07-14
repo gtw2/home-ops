@@ -13,5 +13,5 @@ data:
   REDIS_HOSTNAME: dragonfly.database.svc.cluster.local
   REDIS_PORT: "6379"
   REDIS_DBINDEX: "3"
-  IMMICH_PORT: "3001"
+  # IMMICH_PORT: "3001"
   TZ: "${TIMEZONE}"

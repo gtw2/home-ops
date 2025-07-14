@@ -208,7 +208,7 @@ spec:
           gethomepage.dev/icon: immich.png
           gethomepage.dev/weight: "20"
           gethomepage.dev/widget.type: immich
-          gethomepage.dev/widget.url: http://immich-server.media:3001
+          gethomepage.dev/widget.url: http://immich-server.media:2283
           gethomepage.dev/widget.key: "{{`{{HOMEPAGE_VAR_IMMICH_TOKEN}}`}}"
           gethomepage.dev/widget.version: "2"
 
