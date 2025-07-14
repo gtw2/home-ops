@@ -201,7 +201,7 @@ spec:
             sectionName: https
         rules:
           - backendRefs:
-              - identifier: server
+              - identifier: immich-server
                 port: *serverport
         annotations:
           external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
