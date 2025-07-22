@@ -35,7 +35,7 @@ spec:
               MINIO_PROMETHEUS_AUTH_TYPE: public
               MINIO_BROWSER_REDIRECT_URL: https://minio.${SECRET_DOMAIN}
               # This breaks all login attempts to the webpage
-              # MINIO_SERVER_URL: https://s3.${SECRET_DOMAIN}
+              MINIO_SERVER_URL: https://s3.${SECRET_DOMAIN}
               MINIO_API_CORS_ALLOW_ORIGIN: https://minio.${SECRET_DOMAIN},https://s3.${SECRET_DOMAIN}
             envFrom:
               - secretRef:
