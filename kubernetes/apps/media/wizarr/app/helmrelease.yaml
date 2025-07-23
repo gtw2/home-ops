@@ -33,7 +33,10 @@ spec:
               repository:  ghcr.io/wizarrrr/wizarr
               tag: 2025.7.6
             env:
-              TZ: America/New_York
+              TZ: ${TIMEZONE}
+            envFrom:
+              - secretRef:
+                  name: wizarr-secret
             resources:
               requests:
                 cpu: 15m
