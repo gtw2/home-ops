@@ -22,6 +22,11 @@ spec:
   components:
     - ../../../../components/gatus/guarded
     - ../../../../components/volsync
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+      kind: HelmRelease
+      name: sparkyfitness
+      namespace: default
   path: ./kubernetes/apps/default/sparkyfitness/app
   postBuild:
     substituteFrom:
