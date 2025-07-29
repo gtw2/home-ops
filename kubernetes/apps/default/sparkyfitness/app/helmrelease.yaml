@@ -7,9 +7,14 @@ metadata:
 spec:
   interval: 30m
   timeout: 15m
-  chartRef:
-    kind: OCIRepository
-    name: app-template
+  chart:
+    spec:
+      chart: app-template
+      version: 4.1.2
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
   install:
     remediation:
       retries: 3
@@ -32,17 +37,16 @@ spec:
               tag: 17.5@sha256:e0c87ce7df39d06b93f27cf2cc6a056611f13faaa88cc07ab4dc8bf7a85d0b11
             envFrom: &envFrom
               - secretRef:
-                  name: sparkyfitness-secret
+                  name: *app
 
         containers:
           app:
             image:
               repository: codewithcj/sparkyfitness_server
-              tag: latest
+              tag: v0.14.9
             envFrom: *envFrom
             env:
-              TZ: ${TIMEZONE}
-              SPARKY_FITNESS_SERVER_HOST: "localhost"
+              SPARKY_FITNESS_SERVER_HOST: "0.0.0.0"
               SPARKY_FITNESS_SERVER_PORT: &server-port 3010
             probes:
               liveness:
@@ -50,7 +54,7 @@ spec:
                 custom: true
                 spec:
                   httpGet:
-                    path: /
+                    path: /health
                     port: *server-port
                   initialDelaySeconds: 60
                   periodSeconds: 30
@@ -61,7 +65,7 @@ spec:
                 custom: true
                 spec:
                   httpGet:
-                    path: /
+                    path: /health
                     port: *server-port
                   initialDelaySeconds: 30
                   periodSeconds: 10
@@ -72,7 +76,7 @@ spec:
                 custom: true
                 spec:
                   httpGet:
-                    path: /
+                    path: /health
                     port: *server-port
                   initialDelaySeconds: 30
                   periodSeconds: 10
@@ -94,9 +98,9 @@ spec:
           app:
             image:
               repository: codewithcj/sparkyfitness
-              tag: latest
+              tag: v0.14.9
             env:
-              TZ: ${TIMEZONE}
+              TZ: Europe/Lisbon
             probes:
               liveness:
                 enabled: true
@@ -170,7 +174,7 @@ spec:
           gethomepage.dev/group: Home
           gethomepage.dev/icon: mdi-dumbbell
           gethomepage.dev/name: SparkyFitness
-          gethomepage.dev/description: Self-hosted fitness tracking
+          gethomepage.dev/description: Self-hosted fitness tracking alternative to MyFitnessPal
           gethomepage.dev/siteMonitor: &url http://sparkyfitness-frontend.default:80
         hostnames: ["fitness.${SECRET_DOMAIN}"]
         parentRefs:
