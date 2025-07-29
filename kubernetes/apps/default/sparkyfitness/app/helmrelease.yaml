@@ -95,7 +95,7 @@ spec:
               repository: codewithcj/sparkyfitness
               tag: v0.14.9
             env:
-              TZ: Europe/Lisbon
+              TZ: ${TIMEZONE}
             probes:
               liveness:
                 enabled: true
