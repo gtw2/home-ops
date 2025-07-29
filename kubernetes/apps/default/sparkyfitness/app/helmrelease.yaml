@@ -104,7 +104,7 @@ spec:
                 spec:
                   httpGet:
                     path: /health
-                    port: &frontend-port 8080
+                    port: &frontend-port 80
                   initialDelaySeconds: 30
                   periodSeconds: 10
                   timeoutSeconds: 5
