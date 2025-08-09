@@ -22,7 +22,7 @@ nodes:
   - hostname: "talos-1"
     ipAddress: "10.10.40.11"
     installDiskSelector:
-      serial: "S6S1NS0T700975B"
+      serial: "S7M3NL0X923685W"
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
