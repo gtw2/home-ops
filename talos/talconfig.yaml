@@ -20,7 +20,7 @@ cniConfig:
 
 nodes:
   - hostname: "talos-1"
-    ipAddress: "10.10.40.11"
+    ipAddress: "10.10.40.21"
     installDiskSelector:
       serial: "S7M3NL0X923685W"
     machineSpec:
@@ -54,7 +54,7 @@ nodes:
         #   - { vlanId: 20, dhcp: false, mtu: 9000 }
           # - { vlanId: 30, dhcp: false, mtu: 9000 }
   - hostname: "talos-2"
-    ipAddress: "10.10.40.12"
+    ipAddress: "10.10.40.22"
     installDiskSelector:
       serial: "S6S1NS0T907444Z"
     machineSpec:
@@ -88,7 +88,7 @@ nodes:
         #   - { vlanId: 20, dhcp: false, mtu: 9000 }
           # - { vlanId: 30, dhcp: false, mtu: 9000 }
   - hostname: "talos-3"
-    ipAddress: "10.10.40.13"
+    ipAddress: "10.10.40.23"
     installDiskSelector:
       serial: "S6S1NS0T700972J"
     machineSpec:
@@ -122,7 +122,7 @@ nodes:
         #   - { vlanId: 20, dhcp: false, mtu: 9000 }
           # - { vlanId: 30, dhcp: false, mtu: 9000 }
   - hostname: "talos-4"
-    ipAddress: "10.10.40.14"
+    ipAddress: "10.10.40.24"
     installDiskSelector:
       serial: "24504CC28631"
     machineSpec:
