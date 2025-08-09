@@ -20,84 +20,147 @@ cniConfig:
 
 nodes:
   - hostname: "talos-1"
-    ipAddress: "10.10.40.21"
-    installDisk: "/dev/sda"
+    ipAddress: "10.10.40.11"
+    installDiskSelector:
+      serial: "S6S1NS0T700975B"
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/97349bd8a02320e952ef34bdc1369278958bf77fb1b1cbddb62ec6719777a7b6
+    talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
     controlPlane: true
     networkInterfaces:
-      - deviceSelector:
-          hardwareAddr: "bc:24:11:a3:5f:a8"
+      - # 2.5G ignore for WoL/vPro
+        deviceSelector:
+          hardwareAddr: 58:47:ca:76:*
+          driver: igc
+        ignore: true
+      - # 10G
+        interface: bond0
+        bond:
+          deviceSelectors: [{ hardwareAddr: "58:47:ca:76:*", driver: i40e }]
+          mode: 802.3ad
+          xmitHashPolicy: layer3+4
+          lacpRate: fast
+          miimon: 1000
         dhcp: false
         addresses:
           - "10.10.40.21/24"
         routes:
           - network: "0.0.0.0/0"
             gateway: "10.10.40.1"
-        mtu: 1500
+        mtu: 9000
         vip:
           ip: "10.10.40.20"
+        # vlans:
+        #   - { vlanId: 20, dhcp: false, mtu: 9000 }
+          # - { vlanId: 30, dhcp: false, mtu: 9000 }
   - hostname: "talos-2"
-    ipAddress: "10.10.40.22"
-    installDisk: "/dev/sda"
+    ipAddress: "10.10.40.12"
+    installDiskSelector:
+      serial: "S6S1NS0T907444Z"
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/97349bd8a02320e952ef34bdc1369278958bf77fb1b1cbddb62ec6719777a7b6
+    talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
     controlPlane: true
     networkInterfaces:
-      - deviceSelector:
-          hardwareAddr: "bc:24:11:ef:77:1e"
+      - # 2.5G ignore for WoL/vPro
+        deviceSelector:
+          hardwareAddr: 58:47:ca:77:*
+          driver: igc
+        ignore: true
+      - # 10G
+        interface: bond0
+        bond:
+          deviceSelectors: [{ hardwareAddr: "58:47:ca:77:*", driver: i40e }]
+          mode: 802.3ad
+          xmitHashPolicy: layer3+4
+          lacpRate: fast
+          miimon: 1000
         dhcp: false
         addresses:
           - "10.10.40.22/24"
         routes:
           - network: "0.0.0.0/0"
             gateway: "10.10.40.1"
-        mtu: 1500
+        mtu: 9000
         vip:
           ip: "10.10.40.20"
+        # vlans:
+        #   - { vlanId: 20, dhcp: false, mtu: 9000 }
+          # - { vlanId: 30, dhcp: false, mtu: 9000 }
   - hostname: "talos-3"
-    ipAddress: "10.10.40.23"
-    installDisk: "/dev/sda"
+    ipAddress: "10.10.40.13"
+    installDiskSelector:
+      serial: "S6S1NS0T700972J"
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/97349bd8a02320e952ef34bdc1369278958bf77fb1b1cbddb62ec6719777a7b6
+    talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
     controlPlane: true
     networkInterfaces:
-      - deviceSelector:
-          hardwareAddr: "bc:24:11:09:7a:1c"
+      - # 2.5G ignore for WoL/vPro
+        deviceSelector:
+          hardwareAddr: 58:47:ca:77:*
+          driver: igc
+        ignore: true
+      - # 10G
+        interface: bond0
+        bond:
+          deviceSelectors: [{ hardwareAddr: "58:47:ca:77:*", driver: i40e }]
+          mode: 802.3ad
+          xmitHashPolicy: layer3+4
+          lacpRate: fast
+          miimon: 1000
         dhcp: false
         addresses:
           - "10.10.40.23/24"
         routes:
           - network: "0.0.0.0/0"
             gateway: "10.10.40.1"
-        mtu: 1500
+        mtu: 9000
         vip:
           ip: "10.10.40.20"
+        # vlans:
+        #   - { vlanId: 20, dhcp: false, mtu: 9000 }
+          # - { vlanId: 30, dhcp: false, mtu: 9000 }
   - hostname: "talos-4"
-    ipAddress: "10.10.40.24"
-    installDisk: "/dev/sda"
+    ipAddress: "10.10.40.14"
+    installDiskSelector:
+      serial: "24504CC28631"
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/97349bd8a02320e952ef34bdc1369278958bf77fb1b1cbddb62ec6719777a7b6
+    talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
     controlPlane: false
     networkInterfaces:
-      - deviceSelector:
-          hardwareAddr: "bc:24:11:ab:f2:da"
+      - # 2.5G ignore for WoL/vPro
+        deviceSelector:
+          hardwareAddr: 58:47:ca:76:*
+          driver: igc
+        ignore: true
+      - # 10G
+        interface: bond0
+        bond:
+          deviceSelectors: [{ hardwareAddr: "58:47:ca:76:*", driver: i40e }]
+          mode: 802.3ad
+          xmitHashPolicy: layer3+4
+          lacpRate: fast
+          miimon: 1000
         dhcp: false
         addresses:
           - "10.10.40.24/24"
         routes:
           - network: "0.0.0.0/0"
             gateway: "10.10.40.1"
-        mtu: 1500
+        mtu: 9000
+        vip:
+          ip: "10.10.40.20"
+        # vlans:
+        #   - { vlanId: 20, dhcp: false, mtu: 9000 }
+          # - { vlanId: 30, dhcp: false, mtu: 9000 }
 
 # Global patches
 patches:
   - "@./patches/global/machine-files.yaml"
   - "@./patches/global/machine-kubelet.yaml"
+  - "@./patches/global/local-dns.yaml"
   - "@./patches/global/machine-network.yaml"
   - "@./patches/global/machine-sysctls.yaml"
   - "@./patches/global/machine-time.yaml"
