@@ -8,6 +8,6 @@ components:
 resources:
   # - ./immich/ks.yaml
   - ./overseerr/ks.yaml
-  # - ./plex/ks.yaml
-  # - ./tautulli/ks.yaml
+  - ./plex/ks.yaml
+  - ./tautulli/ks.yaml
   - ./wizarr/ks.yaml
