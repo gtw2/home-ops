@@ -6,6 +6,7 @@ namespace: downloads
 components:
   - ../../components/common
 resources:
+  - ./flaresolverr/ks.yaml
   - ./prowlarr/ks.yaml
   - ./radarr/ks.yaml
   - ./recyclarr/ks.yaml
