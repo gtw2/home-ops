@@ -6,6 +6,7 @@ namespace: games
 components:
   - ../../components/common
 resources:
+  - ./icarus/ks.yaml
   # - ./minecraft/ks.yaml
   - ./romm/ks.yaml
   # - ./sdtd/ks.yaml
