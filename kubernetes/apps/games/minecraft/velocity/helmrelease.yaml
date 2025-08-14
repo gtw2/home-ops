@@ -56,7 +56,7 @@ spec:
               GID: "1000"
               TYPE: VELOCITY
               # TODO renovate
-              MINECRAFT_VERSION: 1.21.4
+              MINECRAFT_VERSION: 1.21.5
               # VELOCITY_VERSION: "3.4.0-SNAPSHOT"
               OVERRIDE_ICON: "true"
               # PLUGINS_FILE: /config/plugins.txt
@@ -69,8 +69,7 @@ spec:
               # REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
-                luckperms:ACa3exrC
-                maintenance
+                luckperms
                 mckotlin
                 minimotd
                 miniplaceholders
