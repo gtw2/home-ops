@@ -56,7 +56,7 @@ spec:
               GID: "1000"
               TYPE: VELOCITY
               # TODO renovate
-              MINECRAFT_VERSION: 1.21.5
+              MINECRAFT_VERSION: 1.21.4
               # VELOCITY_VERSION: "3.4.0-SNAPSHOT"
               OVERRIDE_ICON: "true"
               # PLUGINS_FILE: /config/plugins.txt
@@ -66,7 +66,7 @@ spec:
               JVM_XX_OPTS: "-XX:+UseG1GC -XX:G1HeapRegionSize=4M -XX:+UnlockExperimentalVMOptions -XX:+ParallelRefProcEnabled -XX:+AlwaysPreTouch -XX:MaxInlineLevel=15"
               ENABLE_RCON: "false"
               REPLACE_ENV_VARIABLES: "TRUE"
-              # REMOVE_OLD_MODS: "true"
+              REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
                 luckperms
