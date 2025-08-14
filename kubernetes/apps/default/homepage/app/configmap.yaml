@@ -37,15 +37,15 @@ data:
     traefik: false
   services.yaml: |
     - Infrastructure:
-        - Proxmox:
-            href: https://proxmox.internal:8006
-            icon: proxmox.png
-            description: Cluster Hypervisor
-            widget:
-              type: proxmox
-              url: https://proxmox.internal:8006
-              username: "{{HOMEPAGE_VAR_PROXMOX_USER}}"
-              password: "{{HOMEPAGE_VAR_PROXMOX_PASS}}"
+        # - Proxmox:
+        #     href: https://proxmox.internal:8006
+        #     icon: proxmox.png
+        #     description: Cluster Hypervisor
+        #     widget:
+        #       type: proxmox
+        #       url: https://proxmox.internal:8006
+        #       username: "{{HOMEPAGE_VAR_PROXMOX_USER}}"
+        #       password: "{{HOMEPAGE_VAR_PROXMOX_PASS}}"
         - TrueNAS:
             href: https://nas.internal
             icon: truenas-scale.png
@@ -74,53 +74,53 @@ data:
               type: unifi
               url: https://unifi.internal:443
               key: "{{HOMEPAGE_VAR_UNIFI_KEY}}"
-    - Observability:
-        - Nightscout:
-            href: https://nightscout.${SECRET_DOMAIN}
-            icon: nightscout.png
-            siteMonitor: http://nightscout.default:1337
-            widget:
-              type: customapi
-              url: http://nightscout.default:1337/api/v2/properties
-              mappings:
-                - field:
-                    bgnow:
-                      sgvs:
-                        0: mgdl
-                  label: mg/dl
-                - field:
-                    delta: display
-                  label: Delta
-                - field:
-                    bgnow:
-                      sgvs:
-                        0: direction
-                  label: Trend
-                  remap:
-                    - value: NONE
-                      to: ⇼
-                    - value: TripleUp
-                      to: ⤊
-                    - value: DoubleUp
-                      to: ⇈
-                    - value: SingleUp
-                      to: ↑
-                    - value: FortyFiveUp
-                      to: ↗
-                    - value: Flat
-                      to: →
-                    - value: FortyFiveDown
-                      to: ↘
-                    - value: SingleDown
-                      to: ↓
-                    - value: DoubleDown
-                      to: ⇊
-                    - value: TripleDown
-                      to: ⤋
-                - field:
-                    bgnow: mills
-                  label: Last Reading
-                  format: relativeDate
+    # - Observability:
+    #     - Nightscout:
+    #         href: https://nightscout.${SECRET_DOMAIN}
+    #         icon: nightscout.png
+    #         siteMonitor: http://nightscout.default:1337
+    #         widget:
+    #           type: customapi
+    #           url: http://nightscout.default:1337/api/v2/properties
+    #           mappings:
+    #             - field:
+    #                 bgnow:
+    #                   sgvs:
+    #                     0: mgdl
+    #               label: mg/dl
+    #             - field:
+    #                 delta: display
+    #               label: Delta
+    #             - field:
+    #                 bgnow:
+    #                   sgvs:
+    #                     0: direction
+    #               label: Trend
+    #               remap:
+    #                 - value: NONE
+    #                   to: ⇼
+    #                 - value: TripleUp
+    #                   to: ⤊
+    #                 - value: DoubleUp
+    #                   to: ⇈
+    #                 - value: SingleUp
+    #                   to: ↑
+    #                 - value: FortyFiveUp
+    #                   to: ↗
+    #                 - value: Flat
+    #                   to: →
+    #                 - value: FortyFiveDown
+    #                   to: ↘
+    #                 - value: SingleDown
+    #                   to: ↓
+    #                 - value: DoubleDown
+    #                   to: ⇊
+    #                 - value: TripleDown
+    #                   to: ⤋
+    #             - field:
+    #                 bgnow: mills
+    #               label: Last Reading
+    #               format: relativeDate
     - Calendar:
         - Upcoming Releases:
             widget:
@@ -137,81 +137,6 @@ data:
                 # - type: readarr # active widget type that is currently enabled on homepage - possible values: radarr, sonar>
                 #   service_group: Downloads # group name where widget exists
                 #   service_name: Readarr # service name for that widget
-    - PVE1:
-      - Info:
-          widget:
-            type: glances
-            url: http://10.10.40.11:61208
-            version: 4
-            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
-            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
-            metric: info
-      - CPU Temp:
-          widget:
-            type: glances
-            url: http://10.10.40.11:61208
-            version: 4
-            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
-            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
-            metric: sensor:Package id 0
-      - Memory Usage:
-          widget:
-            type: glances
-            url: http://10.10.40.11:61208
-            version: 4
-            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
-            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
-            metric: memory
-    - PVE2:
-      - Info:
-          widget:
-            type: glances
-            url: http://10.10.40.12:61208
-            version: 4
-            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
-            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
-            metric: info
-      - CPU Temp:
-          widget:
-            type: glances
-            url: http://10.10.40.12:61208
-            version: 4
-            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
-            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
-            metric: sensor:Package id 0
-      - Memory Usage:
-          widget:
-            type: glances
-            url: http://10.10.40.12:61208
-            version: 4
-            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
-            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
-            metric: memory
-    - PVE3:
-      - Info:
-          widget:
-            type: glances
-            url: http://10.10.40.13:61208
-            version: 4
-            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
-            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
-            metric: info
-      - CPU Temp:
-          widget:
-            type: glances
-            url: http://10.10.40.13:61208
-            version: 4
-            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
-            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
-            metric: sensor:Package id 0
-      - Memory Usage:
-          widget:
-            type: glances
-            url: http://10.10.40.13:61208
-            version: 4
-            # username: "{{HOMEPAGE_VAR_GLANCES_USERNAME}}"
-            # password: "{{HOMEPAGE_VAR_GLANCES_PASSWORD}}"
-            metric: memory
 
   settings.yaml: |
     instanceName: internal
@@ -246,21 +171,6 @@ data:
         style: column
         # columns: 4
         icon: mdi-projector-screen
-      PVE1:
-        tab: Stats
-        style: column
-        # columns: 4
-        icon: mdi-chart-line
-      PVE2:
-        tab: Stats
-        style: column
-        # columns: 4
-        # icon: mdi-chart-line
-      PVE3:
-        tab: Stats
-        style: column
-        # columns: 4
-        # icon: mdi-chart-line
       Downloads:
         tab: Schedule
         style: column
