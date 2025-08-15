@@ -81,9 +81,10 @@ spec:
             gethomepage.dev/widget.url: http://authentik-server.security
             gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_AUTHENTIK_TOKEN}}"
     worker:
-      autoscaling:
-        enabled: true
-        minReplicas: 1
+      replicas: 2
+      # autoscaling:
+      #   enabled: true
+      #   minReplicas: 1
       resources:
         requests:
           cpu: 100m
