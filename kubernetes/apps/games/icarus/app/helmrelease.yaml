@@ -49,7 +49,7 @@ spec:
                 memory: 16Gi
 
     service:
-      app:
+      icarus:
         controller: *app
         type: LoadBalancer
         loadBalancerIP: 10.10.40.143
