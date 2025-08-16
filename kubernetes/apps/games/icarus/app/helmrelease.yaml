@@ -52,7 +52,7 @@ spec:
       app:
         controller: *app
         type: LoadBalancer
-        loadBalancerIP: 10.10.40.142
+        loadBalancerIP: 10.10.40.143
         ports:
           steam1:
             port: *port
