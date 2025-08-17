@@ -48,7 +48,7 @@ spec:
             nameOverride: *app
             image:
               repository: itzg/mc-proxy
-              tag: java21@sha256:c56e7df8bb3c24e8a79b8da37b99aa5129c48b888bec53daf985552c7d4ac0fd
+              tag: java24@sha256:b070d8014827cd30757f28b687dff6b6d2d208bb956de699fc676cd2a92508fb
             tty: true
             env:
               TZ: ${TIMEZONE}
@@ -58,7 +58,7 @@ spec:
               # TODO renovate
               MINECRAFT_VERSION: 1.21.4
               VELOCITY_VERSION: "3.4.0-SNAPSHOT"
-              VELOCITY_BUILD_ID: 498
+              VELOCITY_BUILD_ID: 528
               OVERRIDE_ICON: "true"
               # PLUGINS_FILE: /config/plugins.txt
               INIT_MEMORY: 128M
