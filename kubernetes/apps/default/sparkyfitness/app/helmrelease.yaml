@@ -93,7 +93,7 @@ spec:
           app:
             image:
               repository: codewithcj/sparkyfitness
-              tag: v0.14.9
+              tag: v0.15.2
             env:
               TZ: ${TIMEZONE}
             probes:
