@@ -9,5 +9,5 @@ resources:
   - ./discordgsm/ks.yaml
   - ./echo/ks.yaml
   - ./homepage/ks.yaml
-  - ./nightscout/ks.yaml
+  # - ./nightscout/ks.yaml
   - ./sparkyfitness/ks.yaml
