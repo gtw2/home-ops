@@ -182,7 +182,7 @@ data:
         icon: mdi-calendar
   widgets.yaml: |
     - unifi_console:
-        url: https://192.168.1.1:443
+        url: https://unifi.internal:443
         key: "{{HOMEPAGE_VAR_UNIFI_KEY}}"
     - kubernetes:
         cluster:
