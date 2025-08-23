@@ -48,7 +48,7 @@ spec:
             nameOverride: *app
             image:
               repository: itzg/mc-proxy
-              tag: java24@sha256:b070d8014827cd30757f28b687dff6b6d2d208bb956de699fc676cd2a92508fb
+              tag: java24@sha256:ad64b67e66caf63e937263993f3ac93dea27f3cce6a10607f8894ea9a64c21eb
             tty: true
             env:
               TZ: ${TIMEZONE}
