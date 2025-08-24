@@ -33,48 +33,48 @@
 #     substitute:
 #       APP: *app
 #       VOLSYNC_CAPACITY: 1Gi
-# ---
-# # yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
-# apiVersion: kustomize.toolkit.fluxcd.io/v1
-# kind: Kustomization
-# metadata:
-#   name: &app minecraft-velocity
-#   namespace: &namespace games
-# spec:
-#   targetNamespace: *namespace
-#   commonMetadata:
-#     labels:
-#       app.kubernetes.io/name: *app
-#   components:
-#     - ../../../../components/volsync
-#   decryption:
-#     provider: sops
-#     secretRef:
-#       name: sops-age
-#   dependsOn:
-#     - name: external-secrets
-#       namespace: kube-system
-#     - name: rook-ceph-cluster
-#       namespace: rook-ceph
-#     - name: volsync
-#       namespace: storage
-#   path: ./kubernetes/apps/games/minecraft/velocity
-#   prune: true
-#   sourceRef:
-#     kind: GitRepository
-#     name: flux-system
-#     namespace: flux-system
-#   wait: true
-#   interval: 30m
-#   retryInterval: 1m
-#   timeout: 5m
-#   postBuild:
-#     substituteFrom:
-#       - name: cluster-secrets
-#         kind: Secret
-#     substitute:
-#       APP: *app
-#       VOLSYNC_CAPACITY: 5Gi
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app minecraft-velocity
+  namespace: &namespace games
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  components:
+    - ../../../../components/volsync
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: external-secrets
+      namespace: kube-system
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+    - name: volsync
+      namespace: storage
+  path: ./kubernetes/apps/games/minecraft/velocity
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  wait: true
+  interval: 30m
+  retryInterval: 1m
+  timeout: 5m
+  postBuild:
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+    substitute:
+      APP: *app
+      VOLSYNC_CAPACITY: 5Gi
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
