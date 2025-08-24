@@ -58,7 +58,7 @@ spec:
               # TODO renovate
               MINECRAFT_VERSION: 1.21.8
               VELOCITY_VERSION: "3.4.0-SNAPSHOT"
-              VELOCITY_BUILD_ID: 528
+              # VELOCITY_BUILD_ID: 528
               OVERRIDE_ICON: "true"
               # PLUGINS_FILE: /config/plugins.txt
               INIT_MEMORY: 128M
@@ -70,7 +70,6 @@ spec:
               REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
-                luckperms:ACa3exrC
                 mckotlin
                 minimotd
                 miniplaceholders
@@ -83,6 +82,7 @@ spec:
                 vpacketevents:Kz7ttviZ
               PLUGINS: |-
                 https://github.com/FeuSalamander/Vmessage/releases/download/1.6.2/Vmessage.jar
+                https://download.luckperms.net/1596/velocity/LuckPerms-Velocity-5.5.11.jar
             envFrom: *envFrom
             securityContext:
               allowPrivilegeEscalation: false
