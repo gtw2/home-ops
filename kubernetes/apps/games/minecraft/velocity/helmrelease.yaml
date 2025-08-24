@@ -70,7 +70,7 @@ spec:
               # REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
-                luckperms:ACa3exrC
+                luckperms:vtXGoeps
                 mckotlin
                 minimotd
                 miniplaceholders
