@@ -98,8 +98,9 @@ spec:
               liveness: *probes
               startup:
                 <<: *probes
-                failureThreshold: 60
-                periodSeconds: 5
+                spec:
+                  failureThreshold: 60
+                  periodSeconds: 5
             resources:
               requests:
                 cpu: 250m
