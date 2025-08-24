@@ -70,10 +70,10 @@ spec:
               REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
-                mckotlin
+                mckotlin:3PY3lTnr
                 minimotd
                 miniplaceholders
-                papiproxybridge
+                papiproxybridge:jR1s02Y5
                 simple-voice-chat:NeIJv4rE
                 velocitab:OLhjLWrJ
                 viabackwards
