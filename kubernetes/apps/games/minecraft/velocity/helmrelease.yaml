@@ -56,9 +56,9 @@ spec:
               GID: "1000"
               TYPE: VELOCITY
               # TODO renovate
-              MINECRAFT_VERSION: 1.21.4
+              MINECRAFT_VERSION: 1.21.8
               VELOCITY_VERSION: "3.4.0-SNAPSHOT"
-              VELOCITY_BUILD_ID: 498
+              # VELOCITY_BUILD_ID: 498
               OVERRIDE_ICON: "true"
               # PLUGINS_FILE: /config/plugins.txt
               INIT_MEMORY: 128M
@@ -70,7 +70,7 @@ spec:
               # REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
-                luckperms:vtXGoeps
+                luckperms:ACa3exrC
                 mckotlin
                 minimotd
                 miniplaceholders
@@ -99,7 +99,7 @@ spec:
               startup:
                 <<: *probes
                 spec:
-                  failureThreshold: 60
+                  failureThreshold: 30
                   periodSeconds: 5
             resources:
               requests:
