@@ -79,8 +79,8 @@ spec:
                 velocitab:OLhjLWrJ
                 viabackwards
                 viaversion
-                vlobby
-                vpacketevents
+                vlobby:p5lOYrvy
+                vpacketevents:Kz7ttviZ
               PLUGINS: |-
                 https://github.com/FeuSalamander/Vmessage/releases/download/1.6.2/Vmessage.jar
             envFrom: *envFrom
