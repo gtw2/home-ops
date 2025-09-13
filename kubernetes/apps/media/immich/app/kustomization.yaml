@@ -6,6 +6,7 @@ resources:
   - ./configmap.yaml
   - ./externalsecret.yaml
   - ./helmrelease.yaml
+  - ./immich-ml-cache.yaml
 configMapGenerator:
   - name: immich-config-tpl
     files:

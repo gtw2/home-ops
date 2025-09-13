@@ -139,7 +139,7 @@ spec:
             main:
               - path: /usr/src/app/upload
       machine-learning-cache:
-        type: emptyDir
+        existingClaim: immich-machine-learning-cache
         advancedMounts:
           machine-learning:
             main:
