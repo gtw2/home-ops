@@ -25,172 +25,74 @@ spec:
       server:
         strategy: RollingUpdate
         annotations:
-          secret.reloader.stakater.com/reload: &secret immich-secret
-          configmap.reloader.stakater.com/reload: &configmap immich-configmap
-        initContainers:
-          01-init-db:
-            image:
-              repository: ghcr.io/home-operations/postgres-init
-              tag: 17.6
-              pullPolicy: IfNotPresent
-            envFrom:
-              - secretRef:
-                  name: *secret
-        pod:
-          securityContext:
-            runAsUser: 5000
-            runAsGroup: 5000
-            fsGroup: 5000
-            fsGroupChangePolicy: "OnRootMismatch"
-          topologySpreadConstraints:
-            - maxSkew: 1
-              topologyKey: kubernetes.io/hostname
-              whenUnsatisfiable: DoNotSchedule
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/instance: ${APP}
-                  app.kubernetes.io/component: server
-        containers:
-          server:
-            image:
-              repository: ghcr.io/immich-app/immich-server
-              tag: v1.140.1
-            envFrom:
-              - secretRef:
-                  name: *secret
-              - configMapRef:
-                  name: *configmap
-            env:
-              IMMICH_CONFIG_FILE: /config/immich-config.yaml
-              IMMICH_WORKERS_INCLUDE: api
-            resources:
-              requests:
-                cpu: 100m
-                memory: 250Mi
-              limits:
-                memory: 2000Mi
-            probes:
-              liveness: &probes
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /server-info/ping
-                    port: &serverport 2283
-                  initialDelaySeconds: 0
-                  periodSeconds: 10
-                  timeoutSeconds: 1
-                  failureThreshold: 5
-              readiness: *probes
-              startup:
-                enabled: false
-      microservices:
-        strategy: RollingUpdate
-        annotations:
-          secret.reloader.stakater.com/reload: *secret
-          configmap.reloader.stakater.com/reload: *configmap
-        pod:
-          securityContext:
-            runAsUser: 5000
-            runAsGroup: 5000
-            fsGroup: 5000
-            fsGroupChangePolicy: "OnRootMismatch"
-          topologySpreadConstraints:
-            - maxSkew: 1
-              topologyKey: kubernetes.io/hostname
-              whenUnsatisfiable: DoNotSchedule
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/instance: ${APP}
-                  app.kubernetes.io/component: microservices
-          nodeSelector:
-            intel.feature.node.kubernetes.io/gpu: "true"
-        containers:
-          microservices:
-            image:
-              repository: ghcr.io/immich-app/immich-server
-              tag: v1.140.1
-            envFrom:
-              - secretRef:
-                  name: *secret
-              - configMapRef:
-                  name: *configmap
-            env:
-              IMMICH_WORKERS_EXCLUDE: api
-            resources:
-              requests:
-                gpu.intel.com/i915: 1
-                cpu: 100m
-                memory: 250Mi
-              limits:
-                gpu.intel.com/i915: 1
-                memory: 2500Mi
-      machine-learning:
-        strategy: RollingUpdate
-        annotations:
-          configmap.reloader.stakater.com/reload: *configmap
+          secret.reloader.stakater.com/reload: immich-secret
+          configmap.reloader.stakater.com/reload: immich-configmap
         pod:
           enableServiceLinks: false
           securityContext:
             runAsUser: 5000
             runAsGroup: 5000
+            runAsNonRoot: true
             fsGroup: 5000
-            fsGroupChangePolicy: "OnRootMismatch"
-          topologySpreadConstraints:
-            - maxSkew: 1
-              topologyKey: kubernetes.io/hostname
-              whenUnsatisfiable: DoNotSchedule
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/instance: ${APP}
-                  app.kubernetes.io/component: machine-learning
+            fsGroupChangePolicy: OnRootMismatch
+        initContainers:
+          init-db:
+            image:
+              repository: ghcr.io/home-operations/postgres-init
+              tag: 17.6@sha256:86a1992d46273c58fd4ad95b626081dfaabfe16bd56944675169e406d1a660dd
+              pullPolicy: IfNotPresent
+            envFrom:
+              - secretRef:
+                  name: immich-secret
         containers:
-          machine-learning:
+          main:
+            image:
+              repository: ghcr.io/immich-app/immich-server
+              tag: v1.142.0@sha256:29f12a20fd1975c9df06d99a65658cec40bf2357fb597499c32ee50a75f250ea
+            env:
+              IMMICH_CONFIG_FILE: /config/immich-config.yaml
+            envFrom:
+              - secretRef:
+                  name: immich-secret
+              - configMapRef:
+                  name: immich-configmap
+      machine-learning:
+        strategy: RollingUpdate
+        annotations:
+          secret.reloader.stakater.com/reload: immich-secret
+          configmap.reloader.stakater.com/reload: immich-configmap
+        pod:
+          enableServiceLinks: false
+          securityContext:
+            runAsUser: 5000
+            runAsGroup: 5000
+            runAsNonRoot: true
+            fsGroup: 5000
+            fsGroupChangePolicy: OnRootMismatch
+        containers:
+          main:
             image:
               repository: ghcr.io/immich-app/immich-machine-learning
-              tag: v1.140.1
-            resources:
-              requests:
-                cpu: 100m
-                memory: 250Mi
-              limits:
-                memory: 4000Mi
-            probes:
-              liveness: &probes
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /ping
-                    port: &mlport 3003
-                  initialDelaySeconds: 0
-                  periodSeconds: 10
-                  timeoutSeconds: 1
-                  failureThreshold: 5
-              readiness: *probes
-              startup:
-                enabled: false
+              tag: v1.142.0@sha256:5e9cc6b9717e34f3cdc591aa860d6d29c990405ef87ad057ef95f73096ae6f29
+            envFrom:
+              - secretRef:
+                  name: immich-secret
+              - configMapRef:
+                  name: immich-configmap
+            env:
+              MPLCONFIGDIR: "/cache/matplotlib"
 
     service:
       server:
         controller: server
         ports:
           http:
-            port: *serverport
-          metrics:
-            port: 8081
-      microservices:
-        controller: microservices
-        ports:
-          http:
-            port: *serverport
-          metrics:
-            port: 8081
+            port: &port 2283
       machine-learning:
         controller: machine-learning
         ports:
           http:
-            port: *mlport
+            port: 3003
 
     route:
       server:
@@ -202,9 +104,8 @@ spec:
         rules:
           - backendRefs:
               - identifier: server
-                port: *serverport
+                port: *port
         annotations:
-          external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
           gethomepage.dev/enabled: "true"
           gethomepage.dev/group: Storage
           gethomepage.dev/name: Immich
@@ -221,49 +122,37 @@ spec:
         name: immich-config-secret
         advancedMounts:
           server:
-            server:
+            main:
               - path: /config
-          microservices:
-            microservices:
-              - path: /config
+      matplotlib:
+        type: emptyDir
+        advancedMounts:
+          server:
+            main:
+              - path: /config/matplotlib
       library:
         type: nfs
         server: ${SECRET_NFS_SERVER}
         path: /mnt/sega/PlexNAS/MiscMedia
         advancedMounts:
           server:
-            server:
+            main:
               - path: /usr/src/app/upload
-          microservices:
-            microservices:
-              - path: /usr/src/app/upload
-      geocoding-dump:
-        type: emptyDir
-        advancedMounts:
-          server:
-            server:
-              - path: /usr/src/app/.reverse-geocoding-dump
-          microservices:
-            microservices:
-              - path: /usr/src/app/.reverse-geocoding-dump
-      geoname-dump:
-        type: emptyDir
-        advancedMounts:
-          microservices:
-            microservices:
-              - path: /usr/src/app/node_modules/local-reverse-geocoder/geonames_dump
-      transformers-cache:
-        type: emptyDir
-        advancedMounts:
-          server:
-            server:
-              - path: /usr/src/app/.transformers_cache
-          microservices:
-            microservices:
-              - path: /usr/src/app/.transformers_cache
-      model-cache:
+      machine-learning-cache:
         type: emptyDir
         advancedMounts:
           machine-learning:
-            machine-learning:
+            main:
               - path: /cache
+                subPath: cache
+              - path: /.cache
+                subPath: dotCache
+      tmpfs:
+        type: emptyDir
+        advancedMounts:
+          server:
+            main:
+              - path: /usr/src/app/.reverse-geocoding-dump
+                subPath: geocoding
+              - path: /usr/src/app/.transformers_cache
+                subPath: transformers
