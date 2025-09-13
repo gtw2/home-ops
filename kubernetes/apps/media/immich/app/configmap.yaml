@@ -6,7 +6,7 @@ metadata:
   namespace: media
 data:
   DB_PORT: "5432"
-  # IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning.media.svc.cluster.local:3003
+  IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning.media.svc.cluster.local:3003
   IMMICH_SERVER_URL: http://immich-server.media.svc.cluster.local:2283
   IMMICH_TRUSTED_PROXIES: 10.10.40.0/24,10.42.0.0/16
   LOG_LEVEL: verbose
@@ -14,5 +14,4 @@ data:
   REDIS_HOSTNAME: dragonfly.database.svc.cluster.local
   REDIS_PORT: "6379"
   REDIS_DBINDEX: "3"
-  # IMMICH_PORT: "3001"
   TZ: "${TIMEZONE}"
