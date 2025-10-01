@@ -88,21 +88,31 @@ spec:
           gethomepage.dev/icon: sh-romm.png
           gethomepage.dev/name: Romm
     persistence:
+      config:
+        type: configMap
+        name: romm-configmap
+        globalMounts:
+          - path: /romm/config/config.yml
+            subPath: config.yml
+            readOnly: true
       data:
         existingClaim: *app
         advancedMounts:
           romm:
             app:
-              - path: /romm/config
-                subPath: config
               - path: /romm/assets
                 subPath: assets
               - path: /romm/resources
                 subPath: resources
       tmp:
         type: emptyDir
-        globalMounts:
-          - path: /tmp
+        advancedMounts:
+          romm:
+            app:
+              - path: /romm/config
+                subPath: config
+              - path: /tmp
+                subPath: tmp
       games:
         type: nfs
         server: "${SECRET_NFS_SERVER}"
@@ -111,10 +121,3 @@ spec:
           romm:
             app:
               - path: /romm/library
-      romm-config-file:
-        type: configMap
-        name: romm-config
-        globalMounts:
-          - path: /romm/config/config.yml
-            subPath: config.yml
-        defaultMode: 0664
