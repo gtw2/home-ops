@@ -56,7 +56,7 @@ spec:
               GID: "1000"
               TYPE: VELOCITY
               # TODO renovate
-              MINECRAFT_VERSION: 1.21.9
+              MINECRAFT_VERSION: 1.21.8
               VELOCITY_VERSION: "3.4.0-SNAPSHOT"
               VELOCITY_BUILD_ID: 539
               OVERRIDE_ICON: "true"
