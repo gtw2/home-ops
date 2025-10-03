@@ -48,7 +48,7 @@ spec:
             nameOverride: *app
             image:
               repository: itzg/mc-proxy
-              tag: java21@sha256:366f639f51178bb97426a65b4ac2885bb86b697a299e0a418bc464551296d808
+              tag: java21@sha256:424cf939853419a061b14e9914b90d875c21d48f097164c21a741f29be15c2cb
             tty: true
             env:
               TZ: ${TIMEZONE}
@@ -75,7 +75,7 @@ spec:
                 miniplaceholders
                 papiproxybridge:jR1s02Y5
                 simple-voice-chat:NeIJv4rE
-                velocitab:OLhjLWrJ
+                velocitab
                 viabackwards
                 viaversion
                 vlobby:p5lOYrvy
