@@ -56,7 +56,7 @@ spec:
               GID: "1000"
               TYPE: VELOCITY
               # TODO renovate
-              MINECRAFT_VERSION: 1.21.8
+              MINECRAFT_VERSION: 1.21.9
               VELOCITY_VERSION: "3.4.0-SNAPSHOT"
               VELOCITY_BUILD_ID: 539
               OVERRIDE_ICON: "true"
@@ -70,19 +70,19 @@ spec:
               REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
-                mckotlin:3PY3lTnr
+                mckotlin
                 minimotd
                 miniplaceholders
-                papiproxybridge:jR1s02Y5
-                simple-voice-chat:NeIJv4rE
+                papiproxybridge
+                simple-voice-chat
                 velocitab
                 viabackwards
                 viaversion
-                vlobby:p5lOYrvy
-                vpacketevents:Kz7ttviZ
+                vlobby
+                vpacketevents
               PLUGINS: |-
                 https://github.com/FeuSalamander/Vmessage/releases/download/1.6.2/Vmessage.jar
-                https://download.luckperms.net/1596/velocity/LuckPerms-Velocity-5.5.11.jar
+                https://download.luckperms.net/1602/velocity/LuckPerms-Velocity-5.5.15.jar
             envFrom: *envFrom
             securityContext:
               allowPrivilegeEscalation: false
