@@ -69,7 +69,7 @@ spec:
               VERSION: 1.20.4
               OVERRIDE_SERVER_PROPERTIES: "true"
               MOTD: "Our long term persistent vanilla server"
-              DIFFICULTY: hard
+              DIFFICULTY: normal
               SEED: "722314537282636262"
               LEVEL: "vanilla"
               MODE: "survival"
