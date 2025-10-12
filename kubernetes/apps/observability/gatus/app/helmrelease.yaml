@@ -90,6 +90,15 @@ spec:
           - port: http
     route:
       app:
+        annotations:
+          gethomepage.dev/href: "https://{{ .Release.Name }}.${SECRET_DOMAIN}"
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Observability
+          gethomepage.dev/icon: gatus
+          gethomepage.dev/name: Gatus
+          gethomepage.dev/description: Service uptime monitor
+          gethomepage.dev/widget.type: gatus
+          gethomepage.dev/widget.url: http://gatus.observability:80
         hostnames:
           - "{{ .Release.Name }}.${SECRET_DOMAIN}"
           - status.${SECRET_DOMAIN}
