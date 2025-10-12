@@ -103,7 +103,7 @@ spec:
                 port: *port
         annotations:
           gethomepage.dev/enabled: "true"
-          gethomepage.dev/group: Infrastructure
+          gethomepage.dev/group: Home
           gethomepage.dev/name: Home-Assistant
           gethomepage.dev/icon: home-assistant.png
           gethomepage.dev/app: home-assistant
