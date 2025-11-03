@@ -15,7 +15,6 @@ spec:
     secretRef:
       name: sops-age
   components:
-    - ../../../../components/gatus/external
     - ../../../../components/volsync
   path: ./kubernetes/apps/media/overseerr/app
   prune: true
@@ -34,4 +33,3 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 2Gi
-      GATUS_SUBDOMAIN: requests

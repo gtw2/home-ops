@@ -15,7 +15,6 @@ spec:
     secretRef:
       name: sops-age
   components:
-    - ../../../../components/gatus/external
     - ../../../../components/volsync
   dependsOn:
     - name: intel-device-plugin-gpu
@@ -42,6 +41,5 @@ spec:
         kind: Secret
     substitute:
       APP: *app
-      GATUS_PATH: /web/index.html
       VOLSYNC_CAPACITY: 20Gi
       VOLSYNC_CACHE_CAPACITY: 20Gi

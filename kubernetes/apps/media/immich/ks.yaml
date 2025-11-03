@@ -48,9 +48,6 @@ spec:
     provider: sops
     secretRef:
       name: sops-age
-  components:
-    - ../../../../components/gatus/external
-    # - ../../../../components/volsync
   dependsOn:
     - name: dragonfly-cluster
       namespace: database
@@ -74,4 +71,3 @@ spec:
         kind: Secret
     substitute:
       APP: *app
-      GATUS_SUBDOMAIN: photos

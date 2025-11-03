@@ -71,6 +71,8 @@ spec:
               namespace: kube-system
               sectionName: https
           annotations:
+            gatus.home-operations.com/endpoint: |-
+              conditions: ["[STATUS] == 401"]
             gethomepage.dev/enabled: "true"
             gethomepage.dev/icon: authentik.png
             gethomepage.dev/name: Authentik

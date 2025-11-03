@@ -20,7 +20,6 @@ spec:
     - name: external-secrets
       namespace: kube-system
   components:
-    - ../../../../components/gatus/guarded
     - ../../../../components/volsync
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2beta1
