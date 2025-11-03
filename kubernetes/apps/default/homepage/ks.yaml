@@ -13,8 +13,6 @@ spec:
     provider: sops
     secretRef:
       name: sops-age
-  components:
-    - ../../../../components/gatus/guarded
   path: ./kubernetes/apps/default/homepage/app
   postBuild:
     substituteFrom:
