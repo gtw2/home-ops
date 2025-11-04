@@ -92,7 +92,7 @@ spec:
           - status.${SECRET_DOMAIN}
         parentRefs:
           - name: external
-            namespace: networking
+            namespace: kube-system
             sectionName: https
     rbac:
       roles:
