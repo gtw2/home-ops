@@ -12,7 +12,6 @@ spec:
   values:
     controllers:
       gatus:
-        type: statefulset
         annotations:
           reloader.stakater.com/auto: "true"
         initContainers:
@@ -22,8 +21,6 @@ spec:
               tag: 0.0.9@sha256:31a52dd0e579c1f865b2580a4bb715d2a893deb1351fedeaba73598e9a578cbe
             args:
               - --auto-httproute
-              - --enable-httproute
-              - --enable-service
             resources:
               requests:
                 cpu: 10m
@@ -37,11 +34,9 @@ spec:
               tag: v5.30.0@sha256:bab5a31cb3cfde7fd9913a5ff97652883e4db08f3b429a62a7a188c746df4219
             env:
               GATUS_CONFIG_PATH: /config
+              GATUS_DELAY_START_SECONDS: 5
               GATUS_WEB_PORT: &port 80
               TZ: America/New_York
-            # envFrom:
-            #   - secretRef:
-            #       name: "{{ .Release.Name }}-secret"
             probes:
               liveness: &probes
                 enabled: true
@@ -58,20 +53,17 @@ spec:
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
-              capabilities: {add: ["NET_RAW"], drop: ["ALL"]}
+              capabilities: {drop: ["ALL"]}
             resources:
               requests:
                 cpu: 100m
               limits:
                 memory: 256Mi
-        statefulset:
-          volumeClaimTemplates:
-            - name: config
-              storageClass: ceph-block
-              accessMode: ReadWriteOnce
-              size: 5Gi
     defaultPodOptions:
-      hostUsers: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
     service:
       app:
         ports:
@@ -92,13 +84,15 @@ spec:
           gethomepage.dev/description: Service uptime monitor
           gethomepage.dev/widget.type: gatus
           gethomepage.dev/widget.url: http://gatus.observability:80
-          gatus.home-operations.com/enabled: "false"
+          gatus.home-operations.com/enabled: "true"
+          gatus.home-operations.com/endpoint: |-
+            conditions: ["[STATUS] == 200"]
         hostnames:
           - "{{ .Release.Name }}.${SECRET_DOMAIN}"
           - status.${SECRET_DOMAIN}
         parentRefs:
           - name: external
-            namespace: kube-system
+            namespace: networking
             sectionName: https
     rbac:
       roles:
@@ -122,6 +116,14 @@ spec:
                 - get
                 - watch
                 - list
+            - apiGroups:
+                - networking.k8s.io
+              resources:
+                - ingresses
+              verbs:
+                - get
+                - watch
+                - list
       bindings:
         gatus:
           type: ClusterRoleBinding
@@ -132,6 +134,8 @@ spec:
     serviceAccount:
       gatus: {}
     persistence:
+      config:
+        type: emptyDir
       config-file:
         type: configMap
         name: "{{ .Release.Name }}-configmap"
