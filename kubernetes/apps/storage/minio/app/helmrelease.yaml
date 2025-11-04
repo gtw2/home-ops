@@ -113,6 +113,9 @@ spec:
                   type: PathPrefix
                   value: /
       s3:
+        annotations:
+          gatus.home-operations.com/endpoint: |-
+            conditions: ["[STATUS] == 403"]
         enabled: true
         kind: HTTPRoute
         parentRefs:
