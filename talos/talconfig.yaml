@@ -53,6 +53,8 @@ nodes:
         # vlans:
         #   - { vlanId: 20, dhcp: false, mtu: 9000 }
           # - { vlanId: 30, dhcp: false, mtu: 9000 }
+    nodeLabels:
+      node.kubernetes.io/gpu: "true"
   - hostname: "talos-2"
     ipAddress: "10.10.40.22"
     installDiskSelector:
@@ -87,6 +89,8 @@ nodes:
         # vlans:
         #   - { vlanId: 20, dhcp: false, mtu: 9000 }
           # - { vlanId: 30, dhcp: false, mtu: 9000 }
+    nodeLabels:
+      node.kubernetes.io/gpu: "true"
   - hostname: "talos-3"
     ipAddress: "10.10.40.23"
     installDiskSelector:
@@ -121,6 +125,8 @@ nodes:
         # vlans:
         #   - { vlanId: 20, dhcp: false, mtu: 9000 }
           # - { vlanId: 30, dhcp: false, mtu: 9000 }
+    nodeLabels:
+      node.kubernetes.io/gpu: "true"
   - hostname: "talos-4"
     ipAddress: "10.10.40.24"
     installDiskSelector:
@@ -153,6 +159,8 @@ nodes:
         # vlans:
         #   - { vlanId: 20, dhcp: false, mtu: 9000 }
           # - { vlanId: 30, dhcp: false, mtu: 9000 }
+    nodeLabels:
+      node.kubernetes.io/gpu: "true"
 
 # Global patches
 patches:
