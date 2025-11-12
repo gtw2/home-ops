@@ -76,6 +76,9 @@ spec:
             namespace: kube-system
             sectionName: https
         annotations:
+          gatus.home-operations.com/endpoint: |-
+            url: "{{ .Release.Name }}.${SECRET_DOMAIN}/status"
+            conditions: ["[STATUS] == 200"]
           gethomepage.dev/enabled: "true"
           gethomepage.dev/icon: tautulli.png
           gethomepage.dev/name: Tautulli
