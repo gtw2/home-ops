@@ -43,10 +43,10 @@ spec:
           name: "rook.${SECRET_DOMAIN}"
           path: /
           pathType: PathPrefix
-      parentRefs:
-        - name: internal
-          namespace: kube-system
-          sectionName: https
+        parentRefs:
+          - name: internal
+            namespace: kube-system
+            sectionName: https
     cephClusterSpec:
       cephConfig:
         global:
