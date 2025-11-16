@@ -64,8 +64,14 @@ spec:
           - path: /home/steam/enshrouded/savegame
             readOnly: false
       config:
-        type: secret
-        name: enshrouded-secret
-        globalMounts:
-          - path: /home/steam/enshrouded/enshrouded_server.json
-            subPath: enshrouded_server.json
+        type: emptyDir
+        advancedMounts:
+          enshrouded:
+            app:
+              - path: /home/steam/enshrouded
+      # config:
+      #   type: secret
+      #   name: enshrouded-secret
+      #   globalMounts:
+      #     - path: /home/steam/enshrouded/enshrouded_server.json
+      #       subPath: enshrouded_server.json
