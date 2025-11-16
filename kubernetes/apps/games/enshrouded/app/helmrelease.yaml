@@ -23,7 +23,7 @@ spec:
           app:
             image:
               repository: sknnr/enshrouded-dedicated-server
-              tag: proton-latest@sha256:acd5f2e6fb440216f4e46c4c5a72038fc3ed751590516e9a0e376c04efc0fba7
+              tag: proton-latest
             env:
               SERVER_NAME: "BustedRNG"
               GAME_PORT: &game_port 15636
