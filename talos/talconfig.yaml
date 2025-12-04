@@ -23,6 +23,12 @@ nodes:
     ipAddress: "10.10.40.21"
     installDiskSelector:
       serial: "S7M3NL0X923685W"
+    userVolumes:
+      - name: local-hostpath
+        provisioning:
+          diskSelector:
+            match: disk.serial == "24474C4BDEB2"
+          minSize: 1TB
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
@@ -59,6 +65,12 @@ nodes:
     ipAddress: "10.10.40.22"
     installDiskSelector:
       serial: "S6S1NS0T907444Z"
+    userVolumes:
+      - name: local-hostpath
+        provisioning:
+          diskSelector:
+            match: disk.serial == "24074716150C"
+          minSize: 1TB
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
@@ -95,6 +107,12 @@ nodes:
     ipAddress: "10.10.40.23"
     installDiskSelector:
       serial: "S6S1NS0T700972J"
+    userVolumes:
+      - name: local-hostpath
+        provisioning:
+          diskSelector:
+            match: disk.serial == "240747160C9F"
+          minSize: 1TB
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
@@ -131,6 +149,12 @@ nodes:
     ipAddress: "10.10.40.24"
     installDiskSelector:
       serial: "24504CC28631"
+    userVolumes:
+      - name: local-hostpath
+        provisioning:
+          diskSelector:
+            match: disk.serial == "24504CC286F6"
+          minSize: 1TB
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
@@ -169,23 +193,10 @@ patches:
   - "@./patches/global/machine-network.yaml"
   - "@./patches/global/machine-sysctls.yaml"
   - "@./patches/global/machine-time.yaml"
-  - "@./patches/global/openebs-local.yaml"
 
 # Controller patches
 controlPlane:
   patches:
-    - "@./patches/controller/admission-controller-patch.yaml"
+    - "@./patches/controller/api-access.yaml"
     - "@./patches/controller/cluster.yaml"
-
-    # Enable K8s Talos API Access
-    - |-
-      machine:
-        features:
-          kubernetesTalosAPIAccess:
-            enabled: true
-            allowedRoles:
-              - os:admin
-            allowedKubernetesNamespaces:
-              - actions-runner-system
-              - system-upgrade
 
