@@ -27,8 +27,9 @@ nodes:
       - name: local-hostpath
         provisioning:
           diskSelector:
-            match: disk.serial == "24474C4BDEB2"
-          minSize: 1TB
+            match: disk.model == "CT1000P3SSD8" && !system_disk
+          minSize: 100GB
+          grow: true
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
@@ -69,8 +70,9 @@ nodes:
       - name: local-hostpath
         provisioning:
           diskSelector:
-            match: disk.serial == "24074716150C"
-          minSize: 1TB
+            match: disk.model == "CT1000P3SSD8" && !system_disk
+          minSize: 100GB
+          grow: true
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
@@ -111,8 +113,9 @@ nodes:
       - name: local-hostpath
         provisioning:
           diskSelector:
-            match: disk.serial == "240747160C9F"
-          minSize: 1TB
+            match: disk.model == "CT1000P3SSD8" && !system_disk
+          minSize: 100GB
+          grow: true
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
@@ -153,8 +156,9 @@ nodes:
       - name: local-hostpath
         provisioning:
           diskSelector:
-            match: disk.serial == "24504CC286F6"
-          minSize: 1TB
+            match: disk.model == "CT1000P3SSD8" && !system_disk
+          minSize: 100GB
+          grow: true
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
