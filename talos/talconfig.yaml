@@ -28,8 +28,7 @@ nodes:
         provisioning:
           diskSelector:
             match: disk.model == "CT1000P3SSD8" && !system_disk
-          minSize: 100GB
-          grow: true
+          minSize: 1TB
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
@@ -71,8 +70,7 @@ nodes:
         provisioning:
           diskSelector:
             match: disk.model == "CT1000P3SSD8" && !system_disk
-          minSize: 100GB
-          grow: true
+          minSize: 1TB
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
@@ -114,8 +112,7 @@ nodes:
         provisioning:
           diskSelector:
             match: disk.model == "CT1000P3SSD8" && !system_disk
-          minSize: 100GB
-          grow: true
+          minSize: 1TB
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
@@ -157,8 +154,7 @@ nodes:
         provisioning:
           diskSelector:
             match: disk.model == "CT1000P3SSD8" && !system_disk
-          minSize: 100GB
-          grow: true
+          minSize: 1TB
     machineSpec:
       secureboot: false
     talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
