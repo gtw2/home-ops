@@ -5,8 +5,8 @@ kind: Kustomization
 metadata:
   name: &app sparkyfitness-frontend
   namespace: &namespace default
-  labels:
-    substitution.flux.home.arpa/enabled: "true"
+  # labels:
+  #   substitution.flux.home.arpa/enabled: "true"
 spec:
   dependsOn:
     - name: sparkyfitness-server
@@ -47,8 +47,8 @@ kind: Kustomization
 metadata:
   name: &app sparkyfitness-server
   namespace: &namespace default
-  labels:
-    substitution.flux.home.arpa/enabled: "true"
+  # labels:
+  #   substitution.flux.home.arpa/enabled: "true"
 spec:
   dependsOn:
     - name: cloudnative-pg-cluster
