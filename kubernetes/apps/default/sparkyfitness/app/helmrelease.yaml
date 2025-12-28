@@ -24,7 +24,7 @@ spec:
               TZ: "${TIMEZONE}"
               PROMETHEUS_ENABLED: "true"
               SPARKY_FITNESS_LOG_LEVEL: debug
-              SPARKY_FITNESS_SERVER_HOST: sparkyfitness-server.default
+              SPARKY_FITNESS_SERVER_HOST: sparkyfitness-server.default.svc.cluster.local
               SPARKY_FITNESS_SERVER_PORT: 3010
             resources:
               requests:
