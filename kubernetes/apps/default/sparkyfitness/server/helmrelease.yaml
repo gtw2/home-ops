@@ -43,7 +43,7 @@ spec:
               SPARKY_FITNESS_LOG_LEVEL: debug
               SPARKY_FITNESS_DB_HOST: postgres17-rw.database.svc.cluster.local
               SPARKY_FITNESS_DB_PORT: 5432
-              SPARKY_FITNESS_FRONTEND_URL: fitness.${SECRET_DOMAIN}
+              SPARKY_FITNESS_FRONTEND_URL: "fitness.${SECRET_DOMAIN}"
               SPARKY_FITNESS_DISABLE_SIGNUP: false
             resources:
               requests:

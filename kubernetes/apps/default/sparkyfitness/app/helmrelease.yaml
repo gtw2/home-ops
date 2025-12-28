@@ -52,7 +52,7 @@ spec:
           gethomepage.dev/description: Self-hosted fitness tracking alternative to MyFitnessPal
           gethomepage.dev/pod-selector: app.kubernetes.io/controller=frontend
         hostnames:
-          - fitness.${SECRET_DOMAIN}
+          - "fitness.${SECRET_DOMAIN}"
         parentRefs:
           - name: external
             namespace: kube-system
