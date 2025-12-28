@@ -39,6 +39,7 @@ spec:
               tag: v0.15.9.9@sha256:616df7065d08cd31d6142d23180908206d98bb8b55360294f116d785d802825d
             envFrom: *envFrom
             env:
+              TZ: "${TIMEZONE}"
               SPARKY_FITNESS_LOG_LEVEL: debug
               SPARKY_FITNESS_DB_HOST: postgres17-rw.database.svc.cluster.local
               SPARKY_FITNESS_DB_PORT: 5432
