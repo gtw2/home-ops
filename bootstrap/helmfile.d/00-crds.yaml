@@ -3,7 +3,7 @@
 
 # This helmfile is for extracting and installing Custom Resource Definitions (CRDs) from Helm charts.
 # It is not intended to be used with helmfile apply or helmfile sync.
-# Command: helmfile --file bootstrap/helmfile.d/00-crds.yaml template | kubectl apply --server-side --file name -
+# Command: helmfile --file bootstrap/helmfile.d/00-crds.yaml template | kubectl apply --server-side --field-manager bootstrap --force-conflicts -f -
 
 helmDefaults:
   args: ['--include-crds', '--no-hooks'] # Prevent helmfile apply or sync
