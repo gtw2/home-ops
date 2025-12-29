@@ -54,6 +54,5 @@ spec:
         hostnames:
           - "fitness.${SECRET_DOMAIN}"
         parentRefs:
-          - name: external
-            namespace: kube-system
-            sectionName: https
+          - name: envoy-external
+            namespace: network

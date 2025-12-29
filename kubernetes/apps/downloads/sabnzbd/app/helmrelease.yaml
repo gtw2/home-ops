@@ -115,9 +115,8 @@ spec:
       app:
         hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
         parentRefs:
-          - name: internal
-            namespace: kube-system
-            sectionName: https
+          - name: envoy-internal
+            namespace: network
         annotations:
           gethomepage.dev/enabled: "true"
           gethomepage.dev/group: Downloads

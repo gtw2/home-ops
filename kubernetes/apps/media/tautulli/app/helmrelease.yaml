@@ -72,9 +72,8 @@ spec:
         enabled: true
         hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
         parentRefs:
-          - name: internal
-            namespace: kube-system
-            sectionName: https
+          - name: envoy-internal
+            namespace: network
         annotations:
           gatus.home-operations.com/endpoint: |-
             url: https://{{ .Release.Name }}.${SECRET_DOMAIN}/status

@@ -65,9 +65,8 @@ spec:
         enabled: true
         hostnames: ["join.${SECRET_DOMAIN}"]
         parentRefs:
-          - name: external
-            namespace: kube-system
-            sectionName: https
+          - name: envoy-external
+            namespace: network
         annotations:
           gethomepage.dev/enabled: "true"
           gethomepage.dev/group: Media
