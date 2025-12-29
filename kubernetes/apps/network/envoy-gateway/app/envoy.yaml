@@ -122,7 +122,7 @@ metadata:
   name: envoy
 spec:
   compression:
-    - type: Zstd
+    # - type: Zstd
     - type: Brotli
     - type: Gzip
   connection:
