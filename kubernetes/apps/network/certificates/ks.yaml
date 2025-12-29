@@ -1,4 +1,20 @@
 ---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: certificate
+spec:
+  interval: 1h
+  path: ./kubernetes/apps/network/certificates/certificate
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: network
+  wait: true
+---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -22,7 +38,7 @@ metadata:
   name: certificates-export
 spec:
   dependsOn:
-    - name: certificates-import
+    - name: certificate
   interval: 1h
   path: ./kubernetes/apps/network/certificates/export
   prune: true
