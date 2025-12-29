@@ -58,6 +58,10 @@ spec:
             provider: sops
             secretRef:
               name: sops-age
+          postBuild:
+            substituteFrom:
+              - name: cluster-secrets
+                kind: Secret
           deletionPolicy: WaitForTermination
           patches:
             - patch: |-
