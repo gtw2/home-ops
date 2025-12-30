@@ -13,6 +13,7 @@ resources:
   - ./irqbalance/ks.yaml
   - ./intel-gpu-resource-driver/ks.yaml
   - ./metrics-server/ks.yaml
+  - ./multus/ks.yaml
   - ./onepassword-connect/ks.yaml
   - ./reloader/ks.yaml
   - ./spegel/ks.yaml
