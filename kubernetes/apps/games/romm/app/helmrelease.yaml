@@ -84,6 +84,7 @@ spec:
           - name: envoy-external
             namespace: network
         annotations:
+          external-dns.alpha.kubernetes.io/target: external.${SECRET_DOMAIN}
           gethomepage.dev/enabled: "true"
           gethomepage.dev/description: Rom emulator
           gethomepage.dev/group: Media
