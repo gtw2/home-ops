@@ -41,8 +41,6 @@ spec:
     route:
       app:
         annotations:
-          gatus.home-operations.com/endpoint: |-
-            conditions: ["[STATUS] == 200"]
           gethomepage.dev/href: "https://fitness.${SECRET_DOMAIN}"
           gethomepage.dev/enabled: "true"
           gethomepage.dev/app: SparkyFitness
