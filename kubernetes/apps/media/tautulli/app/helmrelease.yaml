@@ -75,9 +75,9 @@ spec:
           - name: envoy-internal
             namespace: network
         annotations:
-          gatus.home-operations.com/endpoint: |-
-            url: https://{{ .Release.Name }}.${SECRET_DOMAIN}/status
-            conditions: ["[STATUS] == 200"]
+          # gatus.home-operations.com/endpoint: |-
+          #   url: https://{{ .Release.Name }}.${SECRET_DOMAIN}/status
+          #   conditions: ["[STATUS] == 200"]
           gethomepage.dev/enabled: "true"
           gethomepage.dev/icon: tautulli.png
           gethomepage.dev/name: Tautulli
