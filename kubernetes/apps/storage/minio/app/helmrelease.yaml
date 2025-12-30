@@ -93,8 +93,6 @@ spec:
           - name: envoy-internal
             namespace: network
         annotations:
-          gatus.home-operations.com/endpoint: |-
-            conditions: ["[STATUS] == 200"]
           gethomepage.dev/enabled: "true"
           gethomepage.dev/group: Storage
           gethomepage.dev/name: Minio
@@ -112,9 +110,6 @@ spec:
                   type: PathPrefix
                   value: /
       s3:
-        annotations:
-          gatus.home-operations.com/endpoint: |-
-            conditions: ["[STATUS] == 403"]
         enabled: true
         kind: HTTPRoute
         parentRefs:

@@ -84,9 +84,7 @@ spec:
           gethomepage.dev/description: Service uptime monitor
           gethomepage.dev/widget.type: gatus
           gethomepage.dev/widget.url: http://gatus.observability:80
-          gatus.home-operations.com/enabled: "true"
-          gatus.home-operations.com/endpoint: |-
-            conditions: ["[STATUS] == 200"]
+          gatus.home-operations.com/enabled: "false"
         hostnames:
           - "{{ .Release.Name }}.${SECRET_DOMAIN}"
           - status.${SECRET_DOMAIN}

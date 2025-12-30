@@ -101,8 +101,6 @@ spec:
               - name: *app
                 port: *port
         annotations:
-          gatus.home-operations.com/endpoint: |-
-            conditions: ["[STATUS] == 200"]
           gethomepage.dev/enabled: "true"
           gethomepage.dev/group: Home
           gethomepage.dev/name: Home-Assistant
