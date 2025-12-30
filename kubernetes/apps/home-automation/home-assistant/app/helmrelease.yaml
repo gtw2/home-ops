@@ -94,6 +94,15 @@ spec:
             port: &codeserverPort 12321
     route:
       app:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Home
+          gethomepage.dev/name: Home-Assistant
+          gethomepage.dev/icon: home-assistant.png
+          gethomepage.dev/app: home-assistant
+          gethomepage.dev/widget.type: homeassistant
+          gethomepage.dev/widget.url: http://home-assistant.home-automation:8123
+          gethomepage.dev/widget.key: "{{`{{HOMEPAGE_VAR_HASS_TOKEN}}`}}"
         hostnames: ["hass.${SECRET_DOMAIN}"]
         parentRefs:
           - name: envoy-external
