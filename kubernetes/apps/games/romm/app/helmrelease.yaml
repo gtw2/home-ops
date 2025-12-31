@@ -41,6 +41,20 @@ spec:
               tag: 4.5.0
             env:
               TZ: ${TIMEZONE}
+              DISABLE_DOWNLOAD_ENDPOINT_AUTH: true
+              DISABLE_USERPASS_LOGIN: false
+              ENABLE_RESCAN_ON_FILESYSTEM_CHANGE: "true"
+              ENABLE_SCHEDULED_CONVERT_IMAGES_TO_WEBP: "true"
+              ENABLE_SCHEDULED_RESCAN: "true"
+              ENABLE_SCHEDULED_RETROACHIEVEMENTS_PROGRESS_SYNC: "true"
+              ENABLE_SCHEDULED_UPDATE_LAUNCHBOX_METADATA: "true" #chron set to 5m by default
+              ENABLE_SCHEDULED_UPDATE_MAME_XML: "false"
+              ENABLE_SCHEDULED_UPDATE_SWITCH_TITLEDB: "false"
+              HASHEOUS_API_ENABLED: true
+              PLAYMATCH_API_ENABLED: true
+              RESCAN_ON_FILESYSTEM_CHANGE_DELAY: 5
+              SCHEDULED_RESCAN_CRON: "0 3 * * *"
+              LAUNCHBOX_API_ENABLED: "true"
               ROMM_DB_DRIVER: postgresql
               REDIS_HOST: dragonfly.database.svc.cluster.local
               REDIS_PORT: 6379
