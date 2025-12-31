@@ -90,6 +90,11 @@ spec:
             namespace: network
     service:
       app:
+        controller: "{{ .Release.Name }}"
+        type: LoadBalancer
+        annotations:
+          io.cilium/lb-ipam-ips: 10.10.40.81
+        externalTrafficPolicy: Local
         ports:
           http:
             port: *port
