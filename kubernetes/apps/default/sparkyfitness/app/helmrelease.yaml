@@ -19,7 +19,7 @@ spec:
             image:
               # renovate: datasource=docker depName=ghcr.io/codewithcj/sparkyfitness-frontend
               repository: ghcr.io/codewithcj/sparkyfitness-frontend
-              tag: v0.16.2@sha256:dd0352eece67be8a6db5ee23acfa887622fe127e0b45563bd0d6564609e1c4e4
+              tag: v0.16.2@sha256:f6c8950af4ab3dfcd496ef92b47fa4b8dca8f14cf8b99c2e91f67cef14a88433
             env:
               TZ: "${TIMEZONE}"
               PROMETHEUS_ENABLED: "true"
