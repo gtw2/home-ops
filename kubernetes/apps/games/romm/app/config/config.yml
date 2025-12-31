@@ -9,6 +9,7 @@ exclude:
   - '*.Stfolder'
   - '*.txt'
   - '*syncthing*'
+  - '*:Zone.Identifier'
   roms:
     multi_file:
       names:
@@ -26,6 +27,7 @@ exclude:
       - '*manuals'
       - .Stfolder
       - '*syncthing*'
+      - '*:Zone.Identifier'
       parts:
         extensions:
         - txt
@@ -39,6 +41,7 @@ exclude:
         - .Stfolder
         - '*syncthing*'
         - syncthing
+        - '*:Zone.Identifier'
         names:
         - data.xml
         - ._*
@@ -48,6 +51,7 @@ exclude:
         - '*manuals'
         - syncthing
         - '*syncthing*'
+        - '*:Zone.Identifier'
     single_file:
       extensions:
       - xml
@@ -62,6 +66,7 @@ exclude:
       - '*.Stfolder'
       - '*syncthing*'
       - syncthing
+      - '*:Zone.Identifier'
       names:
       - info.txt
       - ._*
@@ -77,6 +82,7 @@ exclude:
       - '*manuals'
       - '*.Stfolder'
       - syncthing
+      - '*:Zone.Identifier'
 filesystem: { }
 system:
   platforms:
