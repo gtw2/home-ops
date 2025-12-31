@@ -1,19 +1,17 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: zigbee
+  name: zigbee2mqtt
 spec:
   chartRef:
     kind: OCIRepository
     name: app-template
-  dependsOn:
-    - name: mosquitto
-  interval: 15m
+    namespace: flux-system
+  interval: 1h
   values:
     controllers:
-      zigbee:
+      zigbee2mqtt:
         annotations:
           reloader.stakater.com/auto: "true"
         containers:
@@ -31,24 +29,24 @@ spec:
               ZIGBEE2MQTT_CONFIG_AVAILABILITY_ACTIVE_TIMEOUT: 60
               ZIGBEE2MQTT_CONFIG_AVAILABILITY_PASSIVE_TIMEOUT: 2000
               ZIGBEE2MQTT_CONFIG_DEVICE_OPTIONS_RETAIN: true
-              ZIGBEE2MQTT_CONFIG_EXPERIMENTAL_NEW_API: true
               ZIGBEE2MQTT_CONFIG_FRONTEND_PORT: &port 80
-              ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_DISCOVERY_TOPIC: homeassistant
               ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_ENABLED: true
+              ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_DISCOVERY_TOPIC: homeassistant
               ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_STATUS_TOPIC: homeassistant/status
+              ZIGBEE2MQTT_CONFIG_HOMEASSISTANT_EXPERIMENTAL_EVENT_ENTITIES: true
               ZIGBEE2MQTT_CONFIG_MQTT_INCLUDE_DEVICE_INFORMATION: true
               ZIGBEE2MQTT_CONFIG_MQTT_KEEPALIVE: 60
               ZIGBEE2MQTT_CONFIG_MQTT_REJECT_UNAUTHORIZED: true
-              ZIGBEE2MQTT_CONFIG_MQTT_SERVER: mqtt://mosquitto
+              ZIGBEE2MQTT_CONFIG_MQTT_SERVER: mqtt://mosquitto.default.svc.cluster.local
               ZIGBEE2MQTT_CONFIG_MQTT_VERSION: 5
               ZIGBEE2MQTT_CONFIG_PERMIT_JOIN: false
               ZIGBEE2MQTT_CONFIG_SERIAL_BAUDRATE: 115200
               ZIGBEE2MQTT_CONFIG_SERIAL_DISABLE_LED: false
               ZIGBEE2MQTT_CONFIG_SERIAL_PORT: tcp://zigbee.internal:6638
-              ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER: ember
+              ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER: zstack
             envFrom:
               - secretRef:
-                  name: "{{ .Release.Name }}-secret"
+                  name: "zigbee-secret"
             probes:
               liveness:
                 enabled: true
@@ -57,8 +55,8 @@ spec:
               startup:
                 enabled: true
                 spec:
-                  failureThreshold: 30
                   periodSeconds: 10
+                  failureThreshold: 30
             resources:
               requests:
                 cpu: 10m
@@ -72,20 +70,26 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
-        runAsGroup: 100
-        fsGroup: 100
+        runAsGroup: 1000
+        fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
+    persistence:
+      config:
+        existingClaim: "{{ .Release.Name }}"
+      config-log:
+        type: emptyDir
+        globalMounts:
+          - path: /config/log
+    route:
+      app:
+        hostnames:
+          - "{{ .Release.Name }}.${SECRET_DOMAIN}"
+          - zigbee.${SECRET_DOMAIN}
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
     service:
       app:
         ports:
           http:
             port: *port
-    route:
-      app:
-        hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
-        parentRefs:
-          - name: envoy-internal
-            namespace: network
-    persistence:
-      config:
-        existingClaim: "{{ .Release.Name }}"
