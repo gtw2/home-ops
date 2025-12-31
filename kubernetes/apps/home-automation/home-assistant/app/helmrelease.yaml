@@ -76,12 +76,11 @@ spec:
             "ips": ["192.168.20.10/24"],
             "mac": "c6:07:27:af:fb:53"
           }]
-      hostUsers: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
-        runAsGroup: 100
-        fsGroup: 100
+        runAsGroup: 1000
+        fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
     service:
       app:
