@@ -44,9 +44,9 @@ spec:
               ZIGBEE2MQTT_CONFIG_SERIAL_PORT: tcp://192.168.1.250:6638
               ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER: zstack
               # DEBUG: "zigbee-herdsman*"
-            envFrom:
-              - secretRef:
-                  name: "{{ .Release.Name }}-secret"
+            # envFrom:
+            #   - secretRef:
+            #       name: "{{ .Release.Name }}-secret"
             probes:
               liveness:
                 enabled: true
@@ -75,10 +75,10 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
     service:
       app:
-        controller: zigbee
-        type: LoadBalancer
-        annotations:
-          io.cilium/lb-ipam-ips: 10.10.40.81
+        # controller: zigbee
+        # type: LoadBalancer
+        # annotations:
+        #   io.cilium/lb-ipam-ips: 10.10.40.81
         ports:
           http:
             port: *port
