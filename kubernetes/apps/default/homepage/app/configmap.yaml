@@ -197,7 +197,8 @@ data:
           show: false
           showLabel: true
     - search:
-        provider: ["duckduckgo"]
+        provider: ["custom"]
+        url: http://search.${SECRET_DOMAIN}/search?q=<query>
         focus: false
         target: _blank
     - openmeteo:

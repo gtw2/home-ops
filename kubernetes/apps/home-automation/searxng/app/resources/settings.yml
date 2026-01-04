@@ -19,7 +19,7 @@ search:
     - json
 
 general:
-  instance_name: LDS Search
+  instance_name: West Search
 
 ui:
   default_theme: simple
