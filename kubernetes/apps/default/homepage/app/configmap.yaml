@@ -198,7 +198,7 @@ data:
           showLabel: true
     - search:
         provider: ["custom"]
-        url: http://search.${SECRET_DOMAIN}/search?q=<query>
+        url: http://search.${SECRET_DOMAIN}/search?q=
         focus: false
         target: _blank
     - openmeteo:
