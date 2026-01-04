@@ -9,6 +9,6 @@ resources:
   - ./home-assistant/ks.yaml
   - ./matter-server/ks.yaml
   - ./mosquitto/ks.yaml
-  - ./open-webui/ks.yaml
+  # - ./open-webui/ks.yaml
   - ./searxng/ks.yaml
   # - ./zigbee/ks.yaml
