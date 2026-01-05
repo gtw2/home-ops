@@ -80,6 +80,8 @@ spec:
         ports:
           http:
             port: *port
+          init:
+            port: 8080
     route:
       app:
         hostnames:
