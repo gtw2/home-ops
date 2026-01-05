@@ -14,6 +14,7 @@ spec:
       zigbee:
         annotations:
           reloader.stakater.com/auto: "true"
+        replicas: 1
         containers:
           app:
             image:
@@ -45,9 +46,9 @@ spec:
               ZIGBEE2MQTT_CONFIG_SERIAL_PORT: tcp://192.168.1.250:6638
               ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER: zstack
               # DEBUG: "zigbee-herdsman*"
-            # envFrom:
-            #   - secretRef:
-            #       name: "{{ .Release.Name }}-secret"
+            envFrom:
+              - secretRef:
+                  name: "{{ .Release.Name }}-secret"
             probes:
               liveness:
                 enabled: true
