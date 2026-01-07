@@ -22,10 +22,15 @@ spec:
         containers:
           app:
             image:
-              repository: struppinet/starrupture-dedicated-server
+              repository: rhavinx/starrupture
               tag: latest
             env:
-              SERVER_PORT: &game_port 7777
+              TZ: ${TIMEZONE}
+              PUID: 1000
+              PGID: 1000
+              ENABLE_LOG: 1
+              SKIP_UPDATE: 0
+              GAME_PORT: &port 7777
             probes:
               liveness:
                 enabled: false
@@ -43,8 +48,12 @@ spec:
         ports:
           gameport:
             enabled: true
-            port: *game_port
+            port: *port
             protocol: UDP
+          queryport:
+            enabled: true
+            port: *port
+            protocol: TCP
 
     persistence:
       data:
@@ -53,7 +62,9 @@ spec:
         advancedMounts:
           starrupture:
             app:
-              - path: /home/container/server_files/StarRupture/Saved/SaveGames
+              - path: /path/to/data:/starrupture/server/StarRupture/Saved
                 subPath: savegame
-              - path: /home/container/server_files
+              - path: /starrupture/server
                 subPath: server
+              - path: /path/to/data:/starrupture/data
+                subPath: data
