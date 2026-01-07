@@ -16,7 +16,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile: { type: RuntimeDefault }
     controllers:
-      enshrouded:
+      starrupture:
         annotations:
           reloader.stakater.com/auto: "true"
         containers:
@@ -51,7 +51,7 @@ spec:
         enabled: true
         existingClaim: *app
         advancedMounts:
-          enshrouded:
+          starrupture:
             app:
               - path: /home/container/server_files/StarRupture/Saved/SaveGames
                 subPath: savegame
