@@ -39,7 +39,12 @@ spec:
                 enabled: false
               startup:
                 enabled: false
-
+            resources:
+              requests:
+                cpu: 1000m
+                memory: 8Gi
+              limits:
+                memory: 14Gi
     service:
       app:
         controller: *app
