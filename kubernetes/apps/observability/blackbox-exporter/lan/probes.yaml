@@ -24,6 +24,8 @@ spec:
         # - kiosk.internal
         # - receiver.internal
         # - ups.internal
+        - nas.internal
+        - unifi.internal
         - zigbee-controller.internal
         # - zwave-controller.internal
   metricRelabelings:
