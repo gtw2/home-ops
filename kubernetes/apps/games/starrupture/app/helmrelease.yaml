@@ -67,9 +67,9 @@ spec:
         advancedMounts:
           starrupture:
             app:
-              - path: /path/to/data:/starrupture/server/StarRupture/Saved
-                subPath: savegame
+              # - path: /starrupture/server/StarRupture/Saved
+              #   subPath: savegame
               - path: /starrupture/server
                 subPath: server
-              - path: /path/to/data:/starrupture/data
+              - path: /starrupture/data
                 subPath: data
