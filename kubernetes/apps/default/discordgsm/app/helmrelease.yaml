@@ -35,7 +35,7 @@ spec:
           app:
             image:
               repository: discordgsm/discord-game-server-monitor
-              tag: 2.20.0@sha256:20c9fd7d96379fb4afee07122d2591e058ef7307cb921a3b4b3264b7dde8db29
+              tag: 2.20.1@sha256:c50826cb218cbd87e304e429bbf3a7272e7ee8ab84f1ea2c6ed3e036ffb942f4
             envFrom:
               - secretRef:
                   name: discordgsm-secret
