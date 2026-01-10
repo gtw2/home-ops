@@ -183,6 +183,6 @@ spec:
           - subPath: luckperms.conf
             path: /config/luckperms/luckperms.conf
           - subPath: pcf-common.toml
-            path: /config/pcf-common.toml
+            path: /config/proxy-compatible-forge.toml
           - subPath: create.toml
             path: /config/create-server.toml
