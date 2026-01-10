@@ -65,7 +65,7 @@ spec:
               TYPE: PAPER
               # ENABLE_AUTOPAUSE: TRUE
               # renovate: depName=minecraft datasource=custom.minecraft versioning=semver-coerced
-              VERSION: 1.21.4
+              VERSION: 1.21.11
               MOTD: "Lobby server"
               DIFFICULTY: normal
               SEED: "flat"
