@@ -11,10 +11,9 @@ vars:
 
 tasks:
   list:
-    desc: List snapshots for an application [CLUSTER=main] [NS=default] [APP=required]
+    desc: List snapshots for an application [NS=default] [APP=required]
     summary: |
       Args:
-        CLUSTER: Cluster to run command against (required)
         NS: Namespace the PVC is in (default: default)
         APP: Application to list snapshots for (required)
     cmds:
@@ -30,7 +29,7 @@ tasks:
       APP: '{{.APP}}'
       REPOSITORY: '{{.REPOSITORY}}'
     requires:
-      vars: [CLUSTER, APP]
+      vars: [APP]
     preconditions:
       - test -f {{.VOLSYNC_RESOURCES_DIR}}/list.yaml.j2
 
