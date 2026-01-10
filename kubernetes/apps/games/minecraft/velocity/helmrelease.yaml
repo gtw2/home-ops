@@ -82,7 +82,7 @@ spec:
                 vpacketevents
               PLUGINS: |-
                 https://github.com/FeuSalamander/Vmessage/releases/download/1.6.2/Vmessage.jar
-                https://download.luckperms.net/1602/velocity/LuckPerms-Velocity-5.5.15.jar
+                https://download.luckperms.net/1602/velocity/LuckPerms-Velocity-5.5.24.jar
             envFrom: *envFrom
             securityContext:
               allowPrivilegeEscalation: false
