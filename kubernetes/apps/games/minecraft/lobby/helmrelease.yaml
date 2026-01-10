@@ -89,7 +89,7 @@ spec:
               REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
-                luckperms
+                luckperms:OrIs0S6b
                 simple-voice-chat
                 worldedit
               # signedvelocity:TKC72r9l
