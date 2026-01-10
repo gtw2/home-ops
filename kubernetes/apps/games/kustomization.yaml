@@ -8,7 +8,7 @@ components:
 resources:
   - ./enshrouded/ks.yaml
   - ./icarus/ks.yaml
-  # - ./minecraft/ks.yaml
+  - ./minecraft/ks.yaml
   - ./romm/ks.yaml
   - ./sdtd/ks.yaml
   # - ./starrupture/ks.yaml
