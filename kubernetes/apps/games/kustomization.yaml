@@ -7,6 +7,7 @@ components:
   - ../../components/common
 resources:
   - ./enshrouded/ks.yaml
+  - ./factorio/ks.yaml
   - ./icarus/ks.yaml
   - ./minecraft/ks.yaml
   - ./romm/ks.yaml
