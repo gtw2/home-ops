@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app aska
+spec:
+  interval: 15m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  values:
+    defaultPodOptions:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+    controllers:
+      starrupture:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: struppinet/aska-dedicated-server
+              tag: latest
+            env:
+              TZ: ${TIMEZONE}
+              KEEP_WORLD_ALIVE: false
+              SERVER_PORT: &gameport 27015
+              SERVER_QUERY_PORT: &queryport 27016
+            envFrom:
+              - secretRef:
+                  name: aska-secret
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            resources:
+              requests:
+                cpu: 1000m
+                memory: 9Gi
+              limits:
+                memory: 14Gi
+    service:
+      app:
+        controller: *app
+        type: LoadBalancer
+        annotations:
+          io.cilium/lb-ipam-ips: 10.10.40.147
+        ports:
+          gameport:
+            enabled: true
+            port: *gameport
+            protocol: UDP
+          queryport:
+            enabled: true
+            port: *queryport
+            protocol: UDP
+
+    persistence:
+      data:
+        enabled: true
+        existingClaim: *app
+        advancedMounts:
+          starrupture:
+            app:
+              - path: /home/container/.wine/drive_c/users/container/AppData/LocalLow/Sand Sailor Studio/Aska/data/server
+                subPath: savegame
+              - path: /home/container/server_files
+                subPath: server
