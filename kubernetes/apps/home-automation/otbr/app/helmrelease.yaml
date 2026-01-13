@@ -26,7 +26,7 @@ spec:
               OT_THREAD_IF: wpan0
               OT_LOG_LEVEL: 7  # verbose for troubleshooting; reduce to 3-5 later
               OT_REST_LISTEN_ADDR: 0.0.0.0
-              OT_REST_LISTEN_PORT: 8081
+              OT_REST_LISTEN_PORT: &port 8081
               # OT_BACKBONE_ROUTER: 1  # optional: enable if needed for backbone
             args:
               - --radio-url
@@ -41,10 +41,10 @@ spec:
     defaultPodOptions:
       # hostNetwork: true  # critical: full host networking for IPv6, mDNS, routing
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
         fsGroupChangePolicy: OnRootMismatch
       annotations:
         k8s.v1.cni.cncf.io/networks: |
@@ -62,13 +62,10 @@ spec:
       #     value: "0"
     service:
       app:
-        enabled: true
         ports:
-          rest:
-            port: 8081
-            protocol: TCP
+          http:
+            port: *port
     persistence:
       data:
         enabled: true
-        type: pvc
         existingClaim: *app
