@@ -16,7 +16,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile: { type: RuntimeDefault }
     controllers:
-      starrupture:
+      aska:
         annotations:
           reloader.stakater.com/auto: "true"
         containers:
