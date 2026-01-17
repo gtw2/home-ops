@@ -58,7 +58,7 @@ nodes:
           ip: "10.10.40.20"
         vlans:
           - { vlanId: 20, dhcp: false, mtu: 9000 }
-          # - { vlanId: 30, dhcp: false, mtu: 9000 }
+          - { vlanId: 90, dhcp: false, mtu: 9000 }
     nodeLabels:
       node.kubernetes.io/gpu: "true"
   - hostname: "talos-2"
@@ -100,7 +100,7 @@ nodes:
           ip: "10.10.40.20"
         vlans:
           - { vlanId: 20, dhcp: false, mtu: 9000 }
-          # - { vlanId: 30, dhcp: false, mtu: 9000 }
+          - { vlanId: 90, dhcp: false, mtu: 9000 }
     nodeLabels:
       node.kubernetes.io/gpu: "true"
   - hostname: "talos-3"
@@ -142,7 +142,7 @@ nodes:
           ip: "10.10.40.20"
         vlans:
           - { vlanId: 20, dhcp: false, mtu: 9000 }
-          # - { vlanId: 30, dhcp: false, mtu: 9000 }
+          - { vlanId: 90, dhcp: false, mtu: 9000 }
     nodeLabels:
       node.kubernetes.io/gpu: "true"
   - hostname: "talos-4"
@@ -182,7 +182,7 @@ nodes:
         mtu: 9000
         vlans:
           - { vlanId: 20, dhcp: false, mtu: 9000 }
-          # - { vlanId: 30, dhcp: false, mtu: 9000 }
+          - { vlanId: 90, dhcp: false, mtu: 9000 }
     nodeLabels:
       node.kubernetes.io/gpu: "true"
 
