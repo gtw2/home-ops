@@ -20,16 +20,6 @@ tasks:
       - kubectl browse-pvc --version
       - which kubectl
 
-  privileged:
-    desc: Run a privileged pod
-    cmd: |
-      kubectl run privileged-{{.node}} -i --rm --image=null \
-        --overrides="$(yq {{.KUBERNETES_RESOURCES_DIR}}/privileged-pod.tmpl.yaml -o=json | envsubst)"
-    env:
-      node: "{{.node}}"
-    preconditions:
-      - test -f {{.KUBERNETES_RESOURCES_DIR}}/privileged-pod.tmpl.yaml
-
   node-shell:
     desc: Open a shell to a node [NODE=required]
     interactive: true
