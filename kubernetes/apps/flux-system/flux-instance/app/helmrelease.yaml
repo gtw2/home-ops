@@ -22,10 +22,9 @@ spec:
         - notification-controller
       sync:
         kind: GitRepository
-        url: https://github.com/onedr0p/home-ops
-        ref: refs/heads/main
+        url: "https://github.com/gtw2/home-ops.git"
+        ref: "refs/heads/main"
         path: kubernetes/flux/cluster
-        interval: 1h
       kustomize:
         patches:
           - # Increase the number of workers
