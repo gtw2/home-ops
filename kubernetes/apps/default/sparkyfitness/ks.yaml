@@ -54,7 +54,7 @@ spec:
     - name: cloudnative-pg-cluster
       namespace: database
     - name: external-secrets
-      namespace: kube-system
+      namespace: external-secrets
   decryption:
     provider: sops
     secretRef:

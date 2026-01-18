@@ -18,7 +18,7 @@ spec:
     - name: cloudnative-pg-cluster
       namespace: database
     - name: external-secrets
-      namespace: kube-system
+      namespace: external-secrets
   path: ./kubernetes/apps/downloads/sonarr/app
   prune: true
   sourceRef:

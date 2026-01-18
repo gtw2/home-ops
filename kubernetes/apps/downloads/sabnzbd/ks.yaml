@@ -22,7 +22,7 @@ spec:
     - name: volsync
       namespace: storage
     - name: external-secrets
-      namespace: kube-system
+      namespace: external-secrets
   path: ./kubernetes/apps/downloads/sabnzbd/app
   prune: true
   sourceRef:

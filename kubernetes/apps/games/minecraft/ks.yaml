@@ -18,7 +18,7 @@ spec:
       name: sops-age
   dependsOn:
     - name: external-secrets
-      namespace: kube-system
+      namespace: external-secrets
     - name: rook-ceph-cluster
       namespace: rook-ceph
     - name: volsync
@@ -61,7 +61,7 @@ spec:
   dependsOn:
     # - name: minecraft-velocity
     - name: external-secrets
-      namespace: kube-system
+      namespace: external-secrets
     - name: rook-ceph-cluster
       namespace: rook-ceph
     - name: volsync
@@ -104,7 +104,7 @@ spec:
   dependsOn:
     # - name: minecraft-velocity
     - name: external-secrets
-      namespace: kube-system
+      namespace: external-secrets
     - name: rook-ceph-cluster
       namespace: rook-ceph
     - name: volsync
@@ -147,7 +147,7 @@ spec:
   dependsOn:
     # - name: minecraft-velocity
     - name: external-secrets
-      namespace: kube-system
+      namespace: external-secrets
     - name: rook-ceph-cluster
       namespace: rook-ceph
     - name: volsync

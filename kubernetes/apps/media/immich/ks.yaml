@@ -18,7 +18,7 @@ spec:
     - name: cloudnative-pg
       namespace: database
     - name: external-secrets
-      namespace: kube-system
+      namespace: external-secrets
   path: ./kubernetes/apps/media/immich/db
   postBuild:
     substituteFrom:
@@ -54,7 +54,7 @@ spec:
     - name: immich-database
       namespace: media
     - name: external-secrets-stores
-      namespace: kube-system
+      namespace: external-secrets
   path: ./kubernetes/apps/media/immich/app
   prune: true
   sourceRef:
