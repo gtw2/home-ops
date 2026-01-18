@@ -96,7 +96,7 @@ releases:
           - postsync
         showlogs: true
     needs:
-      - external-secrets/external-secrets
+      - kube-system/external-secrets
 
   - name: flux-operator
     namespace: flux-system

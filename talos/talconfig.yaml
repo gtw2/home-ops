@@ -31,7 +31,7 @@ nodes:
           minSize: 1TB
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
+    talosImageURL: factory.talos.dev/installer/dbb157561721a3fc1c6634ddee4990915ba9d968b955d970ca4e97c05b298385
     controlPlane: true
     networkInterfaces:
       - # 2.5G ignore for WoL/vPro
@@ -73,7 +73,7 @@ nodes:
           minSize: 1TB
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
+    talosImageURL: factory.talos.dev/installer/dbb157561721a3fc1c6634ddee4990915ba9d968b955d970ca4e97c05b298385
     controlPlane: true
     networkInterfaces:
       - # 2.5G ignore for WoL/vPro
@@ -115,7 +115,7 @@ nodes:
           minSize: 1TB
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
+    talosImageURL: factory.talos.dev/installer/dbb157561721a3fc1c6634ddee4990915ba9d968b955d970ca4e97c05b298385
     controlPlane: true
     networkInterfaces:
       - # 2.5G ignore for WoL/vPro
@@ -157,7 +157,7 @@ nodes:
           minSize: 1TB
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/bde2c118445316ba838855f502f78dabe0623edfa8988c02fefeb2a7808fb5a7
+    talosImageURL: factory.talos.dev/installer/dbb157561721a3fc1c6634ddee4990915ba9d968b955d970ca4e97c05b298385
     controlPlane: false
     networkInterfaces:
       - # 2.5G ignore for WoL/vPro
@@ -192,7 +192,7 @@ patches:
   - "@./patches/global/machine-kubelet.yaml"
   - "@./patches/global/machine-network.yaml"
   - "@./patches/global/machine-sysctls.yaml"
-  - "@./patches/global/machine-time.yaml"
+  # - "@./patches/global/machine-time.yaml"
 
 # Controller patches
 controlPlane:
