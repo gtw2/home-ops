@@ -10,10 +10,6 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   dependsOn:
     - name: cloudnative-pg-cluster
       namespace: database
@@ -31,8 +27,5 @@ spec:
   interval: 30m
   timeout: 5m
   postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
     substitute:
       APP: *app
