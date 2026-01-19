@@ -31,7 +31,7 @@ nodes:
           minSize: 1TB
     machineSpec:
       secureboot: false
-    # talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
+    talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
     controlPlane: true
     networkInterfaces:
       - # 2.5G ignore for WoL/vPro
@@ -73,7 +73,7 @@ nodes:
           minSize: 1TB
     machineSpec:
       secureboot: false
-    # talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
+    talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
     controlPlane: true
     networkInterfaces:
       - # 2.5G ignore for WoL/vPro
@@ -115,7 +115,7 @@ nodes:
           minSize: 1TB
     machineSpec:
       secureboot: false
-    # talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
+    talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
     controlPlane: true
     networkInterfaces:
       - # 2.5G ignore for WoL/vPro
@@ -157,7 +157,7 @@ nodes:
           minSize: 1TB
     machineSpec:
       secureboot: false
-    # talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
+    talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
     controlPlane: false
     networkInterfaces:
       - # 2.5G ignore for WoL/vPro
@@ -186,30 +186,6 @@ nodes:
     nodeLabels:
       node.kubernetes.io/gpu: "true"
 
-schematic:
-  customization:
-  extraKernelArgs:
-    - -init_on_alloc # Less security, faster puter
-    - -init_on_free # Less security, faster puter
-    - -selinux # Less security, faster puter
-    - apparmor=0 # Less security, faster puter
-    - i915.enable_guc=3 # Meteor Lake CPU & Intel iGPU
-    - init_on_alloc=0 # Less security, faster puter
-    - init_on_free=0 # Less security, faster puter
-    - intel_iommu=on # PCI Passthrough
-    - iommu=pt # PCI Passthrough
-    - mitigations=off # Less security, faster puter
-    - security=none # Less security, faster puter
-    - sysctl.kernel.kexec_load_disabled=1 # Meteor Lake CPU & Intel iGPU
-    - talos.auditd.disabled=1 # Less security, faster puter
-  systemExtensions:
-    officialExtensions:
-      - siderolabs/i915 # Intel iGPU
-      - siderolabs/intel-ucode # Intel iGPU
-      - siderolabs/mei # Intel iGPU
-      - siderolabs/thunderbolt # Thunderbolt NICs
-      - siderolabs/nfsrahead
-
 # Global patches
 patches:
   - "@./patches/global/machine-files.yaml"
@@ -223,4 +199,3 @@ controlPlane:
   patches:
     - "@./patches/controller/api-access.yaml"
     - "@./patches/controller/cluster.yaml"
-
