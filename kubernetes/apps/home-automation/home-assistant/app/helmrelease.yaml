@@ -83,7 +83,7 @@ spec:
         ports:
           http:
             appProtocol: kubernetes.io/ws
-            port: 8123
+            port: &port 8123
           codeserver:
             port: &codeserverPort 12321
     route:
@@ -105,6 +105,10 @@ spec:
         parentRefs:
           - name: envoy-external
             namespace: network
+        rules:
+          - backendRefs:
+              - name: "{{ .Release.Name }}"
+                port: *port
       codeserver:
         hostnames: ["hass-code.${SECRET_DOMAIN}"]
         parentRefs:
