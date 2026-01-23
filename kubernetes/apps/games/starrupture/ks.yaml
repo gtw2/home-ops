@@ -11,7 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/nfs-scaler
+    # - ../../../../components/nfs-scaler
     - ../../../../components/volsync
   path: ./kubernetes/apps/games/starrupture/app
   prune: true

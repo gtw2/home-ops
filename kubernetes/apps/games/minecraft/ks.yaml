@@ -11,7 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/nfs-scaler
+    # - ../../../../components/nfs-scaler
     - ../../../../components/volsync
   dependsOn:
     - name: external-secrets
@@ -47,7 +47,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/nfs-scaler
+    # - ../../../../components/nfs-scaler
     - ../../../../components/volsync
   decryption:
     provider: sops
@@ -88,7 +88,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/nfs-scaler
+    # - ../../../../components/nfs-scaler
     - ../../../../components/volsync
   dependsOn:
     # - name: minecraft-velocity
@@ -125,7 +125,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/nfs-scaler
+    # - ../../../../components/nfs-scaler
     - ../../../../components/volsync
   dependsOn:
     # - name: minecraft-velocity
