@@ -54,7 +54,7 @@ spec:
     secretRef:
       name: sops-age
   dependsOn:
-    - name: minecraft-velocity
+    # - name: minecraft-velocity
     - name: external-secrets
       namespace: external-secrets
     - name: rook-ceph-cluster
@@ -91,7 +91,7 @@ spec:
     - ../../../../components/nfs-scaler
     - ../../../../components/volsync
   dependsOn:
-    - name: minecraft-velocity
+    # - name: minecraft-velocity
     - name: external-secrets
       namespace: external-secrets
     - name: rook-ceph-cluster
@@ -128,7 +128,7 @@ spec:
     - ../../../../components/nfs-scaler
     - ../../../../components/volsync
   dependsOn:
-    - name: minecraft-velocity
+    # - name: minecraft-velocity
     - name: external-secrets
       namespace: external-secrets
     - name: rook-ceph-cluster

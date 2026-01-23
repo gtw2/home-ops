@@ -7,7 +7,6 @@ metadata:
   namespace: home-automation
 spec:
   components:
-    - ../../../../components/nfs-scaler
     - ../../../../components/volsync
   dependsOn:
     - name: rook-ceph-cluster
