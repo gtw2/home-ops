@@ -72,5 +72,4 @@ spec:
       VOLSYNC_CAPACITY: 2Gi
       GATUS_SUBDOMAIN: fitness
   components:
-    # - ../../../../components/nfs-scaler
     - ../../../../components/volsync
