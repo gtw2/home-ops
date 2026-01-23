@@ -9,16 +9,11 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
+  components:
+    - ../../../../components/nfs-scaler
   interval: 1h
   path: ./kubernetes/apps/observability/grafana/app
   postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
     substitute:
       APP: *app
   prune: true

@@ -11,11 +11,8 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
+    - ../../../../components/nfs-scaler
     - ../../../../components/volsync
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   dependsOn:
     - name: external-secrets
       namespace: external-secrets
@@ -34,9 +31,6 @@ spec:
   retryInterval: 1m
   timeout: 5m
   postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 5Gi
@@ -53,13 +47,14 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
+    - ../../../../components/nfs-scaler
     - ../../../../components/volsync
   decryption:
     provider: sops
     secretRef:
       name: sops-age
   dependsOn:
-    # - name: minecraft-velocity
+    - name: minecraft-velocity
     - name: external-secrets
       namespace: external-secrets
     - name: rook-ceph-cluster
@@ -77,9 +72,6 @@ spec:
   retryInterval: 1m
   timeout: 5m
   postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 20Gi
@@ -96,13 +88,10 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
+    - ../../../../components/nfs-scaler
     - ../../../../components/volsync
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   dependsOn:
-    # - name: minecraft-velocity
+    - name: minecraft-velocity
     - name: external-secrets
       namespace: external-secrets
     - name: rook-ceph-cluster
@@ -120,9 +109,6 @@ spec:
   retryInterval: 1m
   timeout: 5m
   postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 10Gi
@@ -139,13 +125,10 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
+    - ../../../../components/nfs-scaler
     - ../../../../components/volsync
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   dependsOn:
-    # - name: minecraft-velocity
+    - name: minecraft-velocity
     - name: external-secrets
       namespace: external-secrets
     - name: rook-ceph-cluster
@@ -163,9 +146,6 @@ spec:
   retryInterval: 1m
   timeout: 5m
   postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 20Gi

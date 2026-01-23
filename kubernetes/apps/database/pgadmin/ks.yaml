@@ -11,11 +11,8 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
+    - ../../../../components/nfs-scaler
     - ../../../../components/volsync
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   path: ./kubernetes/apps/database/pgadmin/app
   prune: true
   sourceRef:
@@ -39,6 +36,3 @@ spec:
       VOLSYNC_CAPACITY: 2Gi
       VOLSYNC_UID: "5050"
       VOLSYNC_GID: "5050"
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret

@@ -10,10 +10,6 @@ metadata:
 spec:
   dependsOn:
     - name: sparkyfitness-server
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   path: ./kubernetes/apps/default/sparkyfitness/app
   prune: true
   sourceRef:
@@ -33,9 +29,6 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 2Gi
@@ -55,10 +48,6 @@ spec:
       namespace: database
     - name: external-secrets
       namespace: external-secrets
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   path: ./kubernetes/apps/default/sparkyfitness/server
   prune: true
   sourceRef:
@@ -78,12 +67,10 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 2Gi
       GATUS_SUBDOMAIN: fitness
   components:
+    - ../../../../components/nfs-scaler
     - ../../../../components/volsync

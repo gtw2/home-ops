@@ -11,11 +11,8 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
+    - ../../../../components/nfs-scaler
     - ../../../../components/volsync
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   interval: 10m
   path: "./kubernetes/apps/storage/ocis/app"
   prune: true
@@ -32,9 +29,6 @@ spec:
     - name: external-secrets-stores
       namespace: external-secrets
   postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 25Gi

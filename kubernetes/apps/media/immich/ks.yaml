@@ -20,10 +20,6 @@ spec:
     - name: external-secrets
       namespace: external-secrets
   path: ./kubernetes/apps/media/immich/db
-  postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -44,10 +40,6 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
   dependsOn:
     - name: dragonfly-cluster
       namespace: database
@@ -66,8 +58,5 @@ spec:
   retryInterval: 1m
   timeout: 5m
   postBuild:
-    substituteFrom:
-      - name: cluster-secrets
-        kind: Secret
     substitute:
       APP: *app
