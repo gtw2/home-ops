@@ -27,8 +27,25 @@ spec:
             env:
               TZ: ${TIMEZONE}
               KEEP_WORLD_ALIVE: false
+              SAVE_ID: ff9d3_120126205021
               SERVER_PORT: &gameport 27015
               SERVER_QUERY_PORT: &queryport 27016
+              # Server Properties
+              ASKA_MODE: custom
+              ASKA_TERRAIN_ASPECT: normal
+              ASKA_TERRAIN_HEIGHT: normal
+              ASKA_STARTING_SEASON: spring
+              ASKA_YEAR_LENGTH: default
+              ASKA_PRECIPITATION: 2
+              ASKA_DAY_LENGTH: extended
+              ASKA_STRUCTURE_DECAY: low
+              ASKA_CLOTHING_DECAY: low
+              ASKA_INVASION_DIFICULTY: normal # they mispelled difficulty, check on this later
+              ASKA_MONSTER_DENSITY: medium
+              ASKA_MONSTER_POPULATION: medium
+              ASKA_WULFAR_POPULATION: medium
+              ASKA_HERBIVORE_POPULATION: medium
+              ASKA_BEAR_POPULATION: medium
             envFrom:
               - secretRef:
                   name: aska-secret
