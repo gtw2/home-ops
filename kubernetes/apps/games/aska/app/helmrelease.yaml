@@ -23,7 +23,7 @@ spec:
           app:
             image:
               repository: struppinet/aska-dedicated-server
-              tag: latest
+              tag: latest@sha256:ec4b0f4c5381377c89a31d42452fa89f8e1949dd74cc499d787e73bb0b77941c
             env:
               TZ: ${TIMEZONE}
               AUTOSAVE_STYLE: "every 20 minutes"
