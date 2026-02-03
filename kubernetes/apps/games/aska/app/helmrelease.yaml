@@ -54,30 +54,32 @@ spec:
             probes:
               liveness:
                 enabled: true
-                type: exec
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - '! grep -Eq "Uploading Crash Report|A crash has been intercepted by the crash handler" /tmp/app.stdout || exit 1'
-                initialDelaySeconds: 60
-                periodSeconds: 10
-                timeoutSeconds: 5
-                failureThreshold: 3
-                successThreshold: 1
+                custom: true                          # <-- Required to use a fully custom probe
+                spec:                                 # <-- Full Kubernetes Probe spec goes here
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - '! grep -Eq "Uploading Crash Report|A crash has been intercepted by the crash handler" /tmp/app.stdout || exit 1'
+                  initialDelaySeconds: 60
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+                  successThreshold: 1
               readiness:
-                enabled: true
-                type: exec
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - 'grep -q "The session is now open!" /tmp/app.stdout'
-                initialDelaySeconds: 120
-                periodSeconds: 30
-                timeoutSeconds: 10
-                failureThreshold: 10
-                successThreshold: 1
+               enabled: true
+               custom: true
+               spec:
+                 exec:
+                   command:
+                     - /bin/sh
+                     - -c
+                     - 'grep -q "The session is now open!" /tmp/app.stdout'
+                 initialDelaySeconds: 120
+                 periodSeconds: 30
+                 timeoutSeconds: 10
+                 failureThreshold: 10
+                 successThreshold: 1
               startup:
                 enabled: false
             resources:
