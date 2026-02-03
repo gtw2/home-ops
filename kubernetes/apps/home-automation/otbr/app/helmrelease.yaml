@@ -37,7 +37,7 @@ spec:
             command: ["/bin/sh", "-c"]
             args:
               - |
-                sleep 10 && exec /entrypoint.sh   # ← Delay 10s for Multus interface to attach/come up
+                sleep 10
             securityContext:
               privileged: true
             resources:
