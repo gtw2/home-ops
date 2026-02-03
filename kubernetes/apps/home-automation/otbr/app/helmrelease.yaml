@@ -22,15 +22,17 @@ spec:
               tag: latest  # Or pin e.g. a commit hash/tag from GitHub if you want stability
             env:
               TZ: ${TIMEZONE}
-              RCP_HOST: 192.168.1.253          # Your SLZB-MR2 IP
-              RCP_PORT: 6638                   # Confirm in SLZB web UI (Thread/Matter socket port)
-              RCP_TTY: /tmp/ttyOTBR            # Internal PTY path (default in the image)
-              RCP_BAUDRATE: 460800             # Standard for SLZB EFR32 RCP
-              OT_INFRA_IF: net1                # Your backbone interface
+              RCP_HOST: 192.168.1.253
+              RCP_PORT: 6638
+              RCP_TTY: /tmp/ttyOTBR
+              RCP_BAUDRATE: 460800
+              OT_INFRA_IF: eth0               # ← Change to the correct name from ip link (try eth0, net1, or whatever has your IP)
               OT_THREAD_IF: wpan0
-              OT_LOG_LEVEL: 7                  # Verbose for initial debug
+              OT_LOG_LEVEL: 7
               OT_REST_LISTEN_ADDR: 0.0.0.0
               OT_REST_LISTEN_PORT: &port 8081
+              # Add this to force infra link and disable auto-selection if needed
+              OTBR_INFRA_IF_NAME: eth0        # Some builds use this variant; try if OT_INFRA_IF alone doesn't stick
               # Optional extras from image docs:
               # AUTOFLASH_FIRMWARE: "false"   # Usually not needed for SLZB (pre-flashed)
               # OTBR_ENABLE_TREL: "1"
