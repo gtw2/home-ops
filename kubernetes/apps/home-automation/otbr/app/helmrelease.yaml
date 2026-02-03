@@ -26,7 +26,7 @@ spec:
               DEVICE: /tmp/ttyOTBR                 # ← Key workaround: Force PTY path socat creates
               BAUDRATE: 460800
               FLOW_CONTROL: "0"                    # Disable for TCP/network (common fix)
-              BACKBONE_IF: eth0                    # Or your confirmed interface (from pod ip link/addr; try eth0/net1)
+              BACKBONE_IF: net1                    # Or your confirmed interface (from pod ip link/addr; try eth0/net1)
               OTBR_REST_PORT: &port 8081
               OTBR_WEB_PORT: 8080
               OTBR_WEB: "1"                        # Enable for debug[](http://<pod-ip>:8080)
