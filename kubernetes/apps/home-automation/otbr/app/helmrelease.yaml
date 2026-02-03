@@ -39,7 +39,7 @@ spec:
                 memory: 256Mi
                 cpu: 500m
     defaultPodOptions:
-      # hostNetwork: true  # critical: full host networking for IPv6, mDNS, routing
+      hostNetwork: true  # critical: full host networking for IPv6, mDNS, routing
       securityContext:
         runAsNonRoot: false
         runAsUser: 0
@@ -53,13 +53,13 @@ spec:
             "namespace": "kube-system",
             "ips": ["192.168.20.12/24"]
           }]
-      # sysctls:
-      #   - name: net.ipv6.conf.all.forwarding
-      #     value: "1"
-      #   - name: net.ipv4.conf.all.forwarding
-      #     value: "1"
-      #   - name: net.ipv6.conf.all.disable_ipv6
-      #     value: "0"
+      sysctls:
+        - name: net.ipv6.conf.all.forwarding
+          value: "1"
+        - name: net.ipv4.conf.all.forwarding
+          value: "1"
+        - name: net.ipv6.conf.all.disable_ipv6
+          value: "0"
     service:
       app:
         ports:
