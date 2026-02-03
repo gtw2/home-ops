@@ -22,17 +22,18 @@ spec:
               tag: latest  # Or pin a commit/hash like 0c7bc03 for stability if you prefer
             env:
               TZ: ${TIMEZONE}
-              NETWORK_DEVICE: 192.168.1.253:6638   # SLZB-MR2 Thread socket (IP:port) - key for TCP/network RCP
-              BAUDRATE: 460800                     # Standard for SLZB EFR32 firmware
-              FLOW_CONTROL: "0"                    # Often false for network; try "1" if init timeouts
-              BACKBONE_IF: eth0                    # ← CHANGE THIS: From pod's ip link/addr (try eth0 first, then net1/eth1 if multi-net)
-              OTBR_REST_PORT: &port 8081           # WS/REST for matter-server / HA integration
-              OTBR_WEB_PORT: 8080                  # Optional web UI port (access http://<pod-ip>:8080 if enabled)
-              OTBR_WEB: "1"                        # Enable web UI (useful for debugging Thread status)
-              OTBR_LOG_LEVEL: info                 # Or "debug"/"notice" for more verbosity
-              FIREWALL: "1"                        # Recommended: Block unnecessary traffic
-              NAT64: "1"                           # Allow Thread devices IPv4 access
-              AUTOFLASH_FIRMWARE: "0"              # Disabled (SLZB pre-flashed)
+              NETWORK_DEVICE: 192.168.1.253:6638   # Your SLZB-MR2 Thread port (confirm in web UI)
+              DEVICE: /tmp/ttyOTBR                 # ← Key workaround: Force PTY path socat creates
+              BAUDRATE: 460800
+              FLOW_CONTROL: "0"                    # Disable for TCP/network (common fix)
+              BACKBONE_IF: eth0                    # Or your confirmed interface (from pod ip link/addr; try eth0/net1)
+              OTBR_REST_PORT: &port 8081
+              OTBR_WEB_PORT: 8080
+              OTBR_WEB: "1"                        # Enable for debug[](http://<pod-ip>:8080)
+              OTBR_LOG_LEVEL: debug                # More verbose to see RCP init
+              FIREWALL: "1"
+              NAT64: "1"
+              AUTOFLASH_FIRMWARE: "0"
             securityContext:
               privileged: true  # Required for tun/tap, routing, OTBR ops
             resources:
