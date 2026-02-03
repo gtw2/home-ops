@@ -18,32 +18,30 @@ spec:
         containers:
           app:
             image:
-              repository: bnutzer/otbr-tcp
-              tag: latest  # Or pin e.g. a commit hash/tag from GitHub if you want stability
+              repository: ghcr.io/ownbee/hass-otbr-docker
+              tag: latest  # Or pin a commit/hash like 0c7bc03 for stability if you prefer
             env:
               TZ: ${TIMEZONE}
-              RCP_HOST: 192.168.1.253
-              RCP_PORT: 6638
-              RCP_TTY: /tmp/ttyOTBR
-              RCP_BAUDRATE: 460800
-              OT_INFRA_IF: net1               # ← Change to the correct name from ip link (try eth0, net1, or whatever has your IP)
-              OT_THREAD_IF: wpan0
-              OT_LOG_LEVEL: 7
-              OT_REST_LISTEN_ADDR: 0.0.0.0
-              OT_REST_LISTEN_PORT: &port 8081
-              # Add this to force infra link and disable auto-selection if needed
-              OTBR_INFRA_IF_NAME: net1        # Some builds use this variant; try if OT_INFRA_IF alone doesn't stick
-              # Optional extras from image docs:
-              # AUTOFLASH_FIRMWARE: "false"   # Usually not needed for SLZB (pre-flashed)
-              # OTBR_ENABLE_TREL: "1"
+              NETWORK_DEVICE: 192.168.1.253:6638   # SLZB-MR2 Thread socket (IP:port) - key for TCP/network RCP
+              BAUDRATE: 460800                     # Standard for SLZB EFR32 firmware
+              FLOW_CONTROL: "0"                    # Often false for network; try "1" if init timeouts
+              BACKBONE_IF: eth0                    # ← CHANGE THIS: From pod's ip link/addr (try eth0 first, then net1/eth1 if multi-net)
+              OTBR_REST_PORT: &port 8081           # WS/REST for matter-server / HA integration
+              OTBR_WEB_PORT: 8080                  # Optional web UI port (access http://<pod-ip>:8080 if enabled)
+              OTBR_WEB: "1"                        # Enable web UI (useful for debugging Thread status)
+              OTBR_LOG_LEVEL: info                 # Or "debug"/"notice" for more verbosity
+              FIREWALL: "1"                        # Recommended: Block unnecessary traffic
+              NAT64: "1"                           # Allow Thread devices IPv4 access
+              AUTOFLASH_FIRMWARE: "0"              # Disabled (SLZB pre-flashed)
             securityContext:
-              privileged: true  # Required for tun/tap, routing, PTY
+              privileged: true  # Required for tun/tap, routing, OTBR ops
             resources:
               limits:
                 memory: 256Mi
                 cpu: 500m
+        # No custom command/args needed - image uses entrypoint to start OTBR with env config
     defaultPodOptions:
-      hostNetwork: true  # Still critical for IPv6/mDNS/Thread
+      hostNetwork: true  # Essential for IPv6, mDNS, Thread backbone routing
       securityContext:
         runAsNonRoot: false
         runAsUser: 0
@@ -61,7 +59,21 @@ spec:
       app:
         ports:
           http:
-            port: *port
+            port: *port           # Exposes REST/WS on 8081
+          web:
+            enabled: true
+            port: 8080            # Optional: For OTBR web UI
+    route:
+      app:
+        hostnames:
+          - "{{ .Release.Name }}.${SECRET_DOMAIN}"
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: 8080
     persistence:
       data:
         enabled: true
