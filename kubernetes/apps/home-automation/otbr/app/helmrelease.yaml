@@ -18,35 +18,30 @@ spec:
         containers:
           app:
             image:
-              repository: openthread/border-router
-              tag: latest  # Consider pinning a specific tag like 1.3.0 or later if stable
+              repository: bnutzer/otbr-tcp
+              tag: latest  # Or pin e.g. a commit hash/tag from GitHub if you want stability
             env:
               TZ: ${TIMEZONE}
-              OT_INFRA_IF: net1  # Confirm this matches your pod's backbone interface (often eth0 or the multi-net alias)
+              RCP_HOST: 192.168.1.253          # Your SLZB-MR2 IP
+              RCP_PORT: 6638                   # Confirm in SLZB web UI (Thread/Matter socket port)
+              RCP_TTY: /tmp/ttyOTBR            # Internal PTY path (default in the image)
+              RCP_BAUDRATE: 460800             # Standard for SLZB EFR32 RCP
+              OT_INFRA_IF: net1                # Your backbone interface
               OT_THREAD_IF: wpan0
-              OT_LOG_LEVEL: 7  # Keep verbose for now to debug connection
+              OT_LOG_LEVEL: 7                  # Verbose for initial debug
               OT_REST_LISTEN_ADDR: 0.0.0.0
               OT_REST_LISTEN_PORT: &port 8081
-              # OT_BACKBONE_ROUTER: 1  # Uncomment if you need backbone router features
-              # Add these to help with network RCP stability
-              OT_RCP_DEVICE: spinel+hdlc+uart:///tmp/ttyOTBR?uart-baudrate=460800&uart-flow-control=false&uart-init-deassert
-            command: ["/bin/sh", "-c"]
-            args:
-              - |
-                socat PTY,link=/tmp/ttyOTBR,raw,echo=0,mode=777 TCP:192.168.1.253:6638 &
-                sleep 3  # Give PTY time to initialize
-                exec otbr-agent \
-                  --radio-url="${OT_RCP_DEVICE}" \
-                  --enable-rest-discovery \
-                  --log-level "${OT_LOG_LEVEL:-info}"
+              # Optional extras from image docs:
+              # AUTOFLASH_FIRMWARE: "false"   # Usually not needed for SLZB (pre-flashed)
+              # OTBR_ENABLE_TREL: "1"
             securityContext:
-              privileged: true  # Required for tun, routing, PTY creation
+              privileged: true  # Required for tun/tap, routing, PTY
             resources:
               limits:
                 memory: 256Mi
                 cpu: 500m
     defaultPodOptions:
-      hostNetwork: true  # Essential for IPv6, multicast/mDNS, Thread routing
+      hostNetwork: true  # Still critical for IPv6/mDNS/Thread
       securityContext:
         runAsNonRoot: false
         runAsUser: 0
