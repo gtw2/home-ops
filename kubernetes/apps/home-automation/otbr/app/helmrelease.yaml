@@ -22,7 +22,7 @@ spec:
               tag: latest
             env:
               TZ: ${TIMEZONE}
-              NETWORK_DEVICE: 192.168.1.253:6638
+              NETWORK_DEVICE: 192.168.20.253:6638
               DEVICE: /tmp/ttyOTBR
               BAUDRATE: 460800
               FLOW_CONTROL: "0"
@@ -34,10 +34,6 @@ spec:
               FIREWALL: "1"
               NAT64: "1"
               AUTOFLASH_FIRMWARE: "0"
-            command: ["/bin/sh", "-c"]
-            args:
-              - |
-                sleep 10
             securityContext:
               privileged: true
             resources:
