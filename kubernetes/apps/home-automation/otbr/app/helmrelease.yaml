@@ -22,7 +22,7 @@ spec:
               tag: latest  # Or pin a commit/hash like 0c7bc03 for stability if you prefer
             env:
               TZ: ${TIMEZONE}
-              NETWORK_DEVICE: 192.168.1.253:6638   # Your SLZB-MR2 Thread port (confirm in web UI)
+              NETWORK_DEVICE: 192.168.20.253:6638   # Your SLZB-MR2 Thread port (confirm in web UI)
               DEVICE: /tmp/ttyOTBR                 # ← Key workaround: Force PTY path socat creates
               BAUDRATE: 460800
               FLOW_CONTROL: "0"                    # Disable for TCP/network (common fix)
