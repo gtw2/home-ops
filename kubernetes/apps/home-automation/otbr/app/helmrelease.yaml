@@ -19,28 +19,31 @@ spec:
           app:
             image:
               repository: ghcr.io/ownbee/hass-otbr-docker
-              tag: latest  # Or pin a commit/hash like 0c7bc03 for stability if you prefer
+              tag: latest
             env:
               TZ: ${TIMEZONE}
-              NETWORK_DEVICE: 192.168.20.253:6638   # Your SLZB-MR2 Thread port (confirm in web UI)
-              DEVICE: /tmp/ttyOTBR                 # ← Key workaround: Force PTY path socat creates
+              NETWORK_DEVICE: 192.168.1.253:6638
+              DEVICE: /tmp/ttyOTBR
               BAUDRATE: 460800
-              FLOW_CONTROL: "0"                    # Disable for TCP/network (common fix)
-              BACKBONE_IF: net1                    # Or your confirmed interface (from pod ip link/addr; try eth0/net1)
+              FLOW_CONTROL: "0"
+              BACKBONE_IF: net1                    # ← CHANGE: Use confirmed name (e.g., net1, eth0, eth1)
               OTBR_REST_PORT: &port 8081
               OTBR_WEB_PORT: 8080
-              OTBR_WEB: "1"                        # Enable for debug[](http://<pod-ip>:8080)
-              OTBR_LOG_LEVEL: debug                # More verbose to see RCP init
+              OTBR_WEB: "1"
+              OTBR_LOG_LEVEL: debug
               FIREWALL: "1"
               NAT64: "1"
               AUTOFLASH_FIRMWARE: "0"
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                sleep 10 && exec /entrypoint.sh   # ← Delay 10s for Multus interface to attach/come up
             securityContext:
-              privileged: true  # Required for tun/tap, routing, OTBR ops
+              privileged: true
             resources:
               limits:
                 memory: 256Mi
                 cpu: 500m
-        # No custom command/args needed - image uses entrypoint to start OTBR with env config
     defaultPodOptions:
       hostNetwork: true  # Essential for IPv6, mDNS, Thread backbone routing
       securityContext:
