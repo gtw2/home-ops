@@ -28,7 +28,7 @@ spec:
               TZ: ${TIMEZONE}
               AUTOSAVE_STYLE: "every 20 minutes"
               KEEP_WORLD_ALIVE: false
-              SAVE_ID: testing_again
+              SAVE_ID: ff9d3_020226185135n
               SERVER_PORT: &gameport 27015
               SERVER_QUERY_PORT: &queryport 27016
               # Server Properties
