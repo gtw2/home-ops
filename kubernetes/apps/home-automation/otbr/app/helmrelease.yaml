@@ -19,27 +19,34 @@ spec:
           app:
             image:
               repository: openthread/border-router
-              tag: latest  # or pin a digest/sha if needed for stability
+              tag: latest  # Consider pinning a specific tag like 1.3.0 or later if stable
             env:
               TZ: ${TIMEZONE}
-              OT_INFRA_IF: net1  # or eth0, enp1s0, etc. — match your multi-net interface name
+              OT_INFRA_IF: net1  # Confirm this matches your pod's backbone interface (often eth0 or the multi-net alias)
               OT_THREAD_IF: wpan0
-              OT_LOG_LEVEL: 7  # verbose for troubleshooting; reduce to 3-5 later
+              OT_LOG_LEVEL: 7  # Keep verbose for now to debug connection
               OT_REST_LISTEN_ADDR: 0.0.0.0
               OT_REST_LISTEN_PORT: &port 8081
-              # OT_BACKBONE_ROUTER: 1  # optional: enable if needed for backbone
+              # OT_BACKBONE_ROUTER: 1  # Uncomment if you need backbone router features
+              # Add these to help with network RCP stability
+              OT_RCP_DEVICE: spinel+hdlc+uart:///tmp/ttyOTBR?uart-baudrate=460800&uart-flow-control=false&uart-init-deassert
+            command: ["/bin/sh", "-c"]
             args:
-              - --radio-url
-              - spinel+hdlc+uart+flow://192.168.1.253:6638?uart-baudrate=460800
-              - --enable-rest-discovery
+              - |
+                socat PTY,link=/tmp/ttyOTBR,raw,echo=0,mode=777 TCP:192.168.1.253:6638 &
+                sleep 3  # Give PTY time to initialize
+                exec otbr-agent \
+                  --radio-url="${OT_RCP_DEVICE}" \
+                  --enable-rest-discovery \
+                  --log-level "${OT_LOG_LEVEL:-info}"
             securityContext:
-              privileged: true  # required for tun + routing
+              privileged: true  # Required for tun, routing, PTY creation
             resources:
               limits:
                 memory: 256Mi
                 cpu: 500m
     defaultPodOptions:
-      hostNetwork: true  # critical: full host networking for IPv6, mDNS, routing
+      hostNetwork: true  # Essential for IPv6, multicast/mDNS, Thread routing
       securityContext:
         runAsNonRoot: false
         runAsUser: 0
@@ -53,13 +60,6 @@ spec:
             "namespace": "kube-system",
             "ips": ["192.168.20.12/24"]
           }]
-      # sysctls:
-      #   - name: net.ipv6.conf.all.forwarding
-      #     value: "1"
-      #   - name: net.ipv4.conf.all.forwarding
-      #     value: "1"
-      #   - name: net.ipv6.conf.all.disable_ipv6
-      #     value: "0"
     service:
       app:
         ports:
