@@ -64,7 +64,17 @@ spec:
                     - -c
                     - '! grep -Eq "Uploading Crash Report|A crash has been intercepted by the crash handler" /tmp/app.stdout || exit 1'
               readiness:
-                enabled: false
+                enabled: true
+                initialDelaySeconds: 120
+                periodSeconds: 30
+                timeoutSeconds: 10
+                failureThreshold: 10
+                successThreshold: 1
+                exec:
+                  command:
+                    - /bin/sh
+                    - -c
+                    - 'grep -q "The session is now open!" /tmp/app.stdout'
               startup:
                 enabled: false
             resources:
