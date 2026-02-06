@@ -11,3 +11,12 @@ spec:
     schedule: 0 */8 * * *
   repository:
     repository: volsync-maintenance-secret
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "1Gi"
+    limits:
+      memory: "12Gi"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  suspend: false
