@@ -86,8 +86,5 @@ spec:
     persistence:
       config:
         type: emptyDir
-      valheim:
+      data:
         existingClaim: valheim
-        globalMounts:
-          - path: /data/valheim
-            readOnly: false
