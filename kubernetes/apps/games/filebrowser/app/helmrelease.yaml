@@ -86,5 +86,7 @@ spec:
     persistence:
       config:
         type: emptyDir
-      data:
-        existingClaim: valheim # replace with whichever game
+      valheim:
+        existingClaim: valheim
+        globalMounts:
+          - path: /data/valheim
