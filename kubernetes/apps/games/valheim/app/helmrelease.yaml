@@ -35,8 +35,6 @@ spec:
             env:
               PUBLIC: 1
               TZ: "${TIMEZONE}"
-              NAME: "Busted RNG"
-              WORLD: "Dedicated"
               TYPE: "BepInEx"
               MODS: |
                 Advize-PlantEasily-2.0.3
