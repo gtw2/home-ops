@@ -29,22 +29,44 @@ spec:
           app:
             nameOverride: *app
             image:
-              repository: lloesche/valheim-server
-              tag: latest@sha256:8f1c5fc831c900312b4a47c1fe57bfc03b574c1433ea502f5d8f0ad301a22a83
-              pullPolicy: IfNotPresent
+              repository: docker.io/mbround18/valheim
+              # renovate: datasource=docker depName=docker.io/mbround18/valheim
+              tag: 3.5.0
             env:
-                BACKUPS: "false"
-                BEPINEX: "false"
-                CONFIG_DIRECTORY_PERMISSIONS: "755"
-                WORLDS_DIRECTORY_PERMISSIONS: "755"
-                WORLDS_FILE_PERMISSIONS: "644"
-                SERVER_PORT: "2456"
-                SERVER_PUBLIC: "true"
-                STATUS_HTTP: "true"
-                SUPERVISOR_HTTP: "true"
-                PUID: "1000"
-                PGID: "1000"
-                TZ: ${TIMEZONE}
+              PUBLIC: 1
+              TZ: "${TIMEZONE}"
+              NAME: "Busted RNG"
+              WORLD: "Dedicated"
+              TYPE: "BepInEx"
+              MODS: |
+                Advize-PlantEasily-2.0.3
+                Advize-PlantEverything-1.20.0
+                Azumatt-AzuAutoStore-3.0.11
+                Azumatt-AzuContainerSizes-1.1.4
+                Azumatt-AzuCraftyBoxes-1.8.12
+                Azumatt-AzuExtendedPlayerInventory-2.3.3
+                Azumatt-Build_Camera_Custom_Hammers_Edition-1.2.10
+                Azumatt-Official_BepInEx_ConfigurationManager-18.4.1
+                Azumatt-SleepSkip-1.2.4
+                Digitalroot-Eternal_Fire-1.0.17
+                MSchmoecker-MultiUserChest-0.6.1
+                Pineapple-DeathTweaks-1.4.1
+                Searica-ToolTweaks-1.2.1
+                TastyChickenLegs-TreesReborn-1.1.1
+                ValheimModding-Jotunn-2.27.1
+                ValheimModding-YamlDotNet-16.3.1
+              AUTO_UPDATE: 1
+              AUTO_UPDATE_SCHEDULE: "0 8 * * *" # every day at 8am
+              AUTO_UPDATE_PAUSE_WITH_PLAYERS: 1
+              SCHEDULED_RESTART: 1
+              SCHEDULED_RESTART_SCHEDULE: "0 9 * * *" # every day at 9am
+              AUTO_BACKUP: 1
+              AUTO_BACKUP_SCHEDULE: "0 */2 * * *"
+              AUTO_BACKUP_REMOVE_OLD: 1
+              AUTO_BACKUP_DAYS_TO_LIVE: 2
+              AUTO_BACKUP_ON_UPDATE: 1
+              AUTO_BACKUP_ON_SHUTDOWN: 1
+              HTTP_PORT: 80
             envFrom:
               - secretRef:
                   name: valheim-secret
@@ -54,13 +76,14 @@ spec:
                 cpu: 200m
               limits:
                 memory: 10Gi
-
     service:
       app:
         controller: *app
         type: LoadBalancer
         loadBalancerIP: 10.10.40.140
         ports:
+          http:
+            port: 80
           steam1:
             port: 2456
             protocol: UDP
@@ -68,5 +91,14 @@ spec:
             port: 2457
             protocol: UDP
     persistence:
-      config:
+      data:
         existingClaim: *app
+        advancedMounts:
+          valheim:
+            app:
+              - path: /home/steam/.config/unity3d/IronGate/Valheim/
+                subPath: saves
+              - path: /home/steam/valheim/
+                subPath: server
+              - path: /home/steam/backups/
+                subPath: backups
