@@ -87,7 +87,4 @@ spec:
       config:
         type: emptyDir
       data:
-        enabled: true
-        type: nfs
-        server: 10.10.40.4
-        path: "/mnt/sega/VolsyncKopia"
+        existingClaim: valheim
