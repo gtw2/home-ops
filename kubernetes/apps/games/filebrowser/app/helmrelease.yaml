@@ -90,3 +90,4 @@ spec:
         existingClaim: valheim
         globalMounts:
           - path: /data/valheim
+            readOnly: false
