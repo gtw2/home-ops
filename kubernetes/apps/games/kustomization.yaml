@@ -15,4 +15,4 @@ resources:
   - ./romm/ks.yaml
   # - ./sdtd/ks.yaml
   # - ./starrupture/ks.yaml
-  # - ./valheim/ks.yaml
+  - ./valheim/ks.yaml
