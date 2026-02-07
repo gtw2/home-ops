@@ -9,6 +9,7 @@ resources:
   - ./aska/ks.yaml
   - ./enshrouded/ks.yaml
   - ./factorio/ks.yaml
+  - ./filebrowser/ks.yaml
   - ./icarus/ks.yaml
   - ./minecraft/ks.yaml
   - ./romm/ks.yaml
