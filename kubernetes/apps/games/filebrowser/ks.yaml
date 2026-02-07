@@ -12,7 +12,7 @@ spec:
       app.kubernetes.io/name: *app
   dependsOn:
     # which mounts are active
-    - name: valheim
+    # - name: valheim
     # Standard depends
     - name: rook-ceph-cluster
       namespace: rook-ceph
