@@ -64,7 +64,7 @@ spec:
               AUTO_BACKUP_DAYS_TO_LIVE: 2
               AUTO_BACKUP_ON_UPDATE: 1
               AUTO_BACKUP_ON_SHUTDOWN: 1
-              HTTP_PORT: 80
+              HTTP_PORT: &port 80
             envFrom:
               - secretRef:
                   name: valheim-secret
@@ -81,13 +81,24 @@ spec:
         loadBalancerIP: 10.10.40.140
         ports:
           http:
-            port: 80
+            port: *port
           steam1:
             port: 2456
             protocol: UDP
           steam2:
             port: 2457
             protocol: UDP
+    route:
+      app:
+        hostnames:
+          - "{{ .Release.Name }}.${SECRET_DOMAIN}"
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
     persistence:
       data:
         existingClaim: *app
