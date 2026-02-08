@@ -10,6 +10,5 @@ resources:
   - ./matter-server/ks.yaml
   - ./mosquitto/ks.yaml
   - ./open-webui/ks.yaml
-  # - ./otbr/ks.yaml
   - ./searxng/ks.yaml
   - ./zigbee/ks.yaml
