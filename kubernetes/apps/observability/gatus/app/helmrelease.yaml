@@ -40,9 +40,9 @@ spec:
               GATUS_CONFIG_PATH: /config
               GATUS_WEB_PORT: &port 80
               TZ: ${TIMEZONE}
-            envFrom:
-              - secretRef:
-                  name: "{{ .Release.Name }}-secret"
+            # envFrom:
+            #   - secretRef:
+            #       name: "{{ .Release.Name }}-secret"
             probes:
               liveness: &probes
                 enabled: true
