@@ -31,8 +31,7 @@ spec:
             nameOverride: *app
             image:
               repository: vinanrra/7dtd-server
-              tag: latest
-              pullPolicy: IfNotPresent
+              tag: v0.9.3@sha256:75d1193fb2470687ee8748f27482524c170f6cbca110e15f48db8d8ff48f15ca
             tty: true
             env:
               CHANGE_CONFIG_DIR_OWNERSHIP: YES

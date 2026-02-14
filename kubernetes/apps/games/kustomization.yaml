@@ -13,6 +13,6 @@ resources:
   - ./icarus/ks.yaml
   - ./minecraft/ks.yaml
   - ./romm/ks.yaml
-  # - ./sdtd/ks.yaml
+  - ./sdtd/ks.yaml
   # - ./starrupture/ks.yaml
   - ./valheim/ks.yaml
