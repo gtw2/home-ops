@@ -115,9 +115,3 @@ spec:
                 subPath: savegame
               - path: /home/container/server_files
                 subPath: server
-      steamapps:
-        type: emptyDir
-        advancedMounts:
-          aska:
-            app:
-              - path: /home/container/server_files/steamapps
