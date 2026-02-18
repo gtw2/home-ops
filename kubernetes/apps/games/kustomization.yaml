@@ -6,7 +6,7 @@ namespace: games
 components:
   - ../../components/common
 resources:
-  # - ./aska/ks.yaml
+  - ./aska/ks.yaml
   - ./enshrouded/ks.yaml
   - ./factorio/ks.yaml
   - ./filebrowser/ks.yaml
