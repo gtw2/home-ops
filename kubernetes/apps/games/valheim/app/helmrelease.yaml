@@ -31,7 +31,7 @@ spec:
             image:
               repository: docker.io/mbround18/valheim
               # renovate: datasource=docker depName=docker.io/mbround18/valheim
-              tag: 3.5.0
+              tag: 3.6.0
             env:
               PUBLIC: 1
               TZ: "${TIMEZONE}"
@@ -44,10 +44,10 @@ spec:
                 Azumatt-AzuAutoStore-3.0.14
                 Azumatt-AzuContainerSizes-1.1.4
                 Azumatt-AzuCraftyBoxes-1.8.13
-                Azumatt-AzuExtendedPlayerInventory-2.3.6
+                Azumatt-AzuExtendedPlayerInventory-2.3.7
                 Azumatt-Build_Camera_Custom_Hammers_Edition-1.2.10
                 Azumatt-Official_BepInEx_ConfigurationManager-18.4.1
-                Azumatt-SleepSkip-1.2.4
+                Azumatt-SleepSkip-1.3.0
                 blacks7ar-OreMines-1.2.0
                 Digitalroot-Better_Wisps-1.0.42
                 Digitalroot-Eternal_Fire-1.0.17
