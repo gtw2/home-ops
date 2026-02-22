@@ -74,13 +74,6 @@ spec:
         annotations:
           gatus.home-operations.com/endpoint: |-
             conditions: ["[STATUS] == 200"]
-        hostnames:
-          - "{{ .Release.Name }}.${SECRET_DOMAIN}"
-          - requests.${SECRET_DOMAIN}
-        parentRefs:
-          - name: envoy-external
-            namespace: network
-        annotations:
           gethomepage.dev/enabled: "true"
           gethomepage.dev/group: Calendar
           gethomepage.dev/name: Overseerr
@@ -89,6 +82,12 @@ spec:
           gethomepage.dev/widget.type: overseerr
           gethomepage.dev/widget.url: https://requests.${SECRET_DOMAIN}
           gethomepage.dev/widget.key: "{{`{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}`}}"
+        hostnames:
+          - "{{ .Release.Name }}.${SECRET_DOMAIN}"
+          - requests.${SECRET_DOMAIN}
+        parentRefs:
+          - name: envoy-external
+            namespace: network
     persistence:
       config:
         existingClaim: overseerr
