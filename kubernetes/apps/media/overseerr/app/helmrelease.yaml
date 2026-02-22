@@ -86,7 +86,7 @@ spec:
           gethomepage.dev/name: Overseerr
           gethomepage.dev/icon: overseerr.png
           gethomepage.dev/description: Media Request Management
-          gethomepage.dev/widget.type: *app
+          gethomepage.dev/widget.type: overseerr
           gethomepage.dev/widget.url: https://requests.${SECRET_DOMAIN}
           gethomepage.dev/widget.key: "{{`{{HOMEPAGE_VAR_OVERSEERR_TOKEN}}`}}"
     persistence:
