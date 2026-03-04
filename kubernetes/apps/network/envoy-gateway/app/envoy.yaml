@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.envoyproxy.io/envoyproxy_v1alpha1.json
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/gateway.envoyproxy.io/envoyproxy_v1alpha1.json
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -20,8 +20,6 @@ spec:
               cpu: 100m
             limits:
               memory: 1Gi
-      envoyService:
-        externalTrafficPolicy: Local
   shutdown:
     drainTimeout: 180s
   telemetry:
@@ -30,7 +28,7 @@ spec:
         compression:
           type: Gzip
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.networking.k8s.io/gatewayclass_v1.json
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/gateway.networking.k8s.io/gatewayclass_v1.json
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
@@ -43,7 +41,7 @@ spec:
     name: envoy
     namespace: network
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.networking.k8s.io/gateway_v1.json
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/gateway.networking.k8s.io/gateway_v1.json
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -78,7 +76,7 @@ spec:
           - kind: Secret
             name: ${SECRET_DOMAIN/./-}-tls
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.networking.k8s.io/gateway_v1.json
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/gateway.networking.k8s.io/gateway_v1.json
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -115,28 +113,25 @@ spec:
           - kind: Secret
             name: ${SECRET_DOMAIN/./-}-tls
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.envoyproxy.io/backendtrafficpolicy_v1alpha1.json
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/gateway.envoyproxy.io/backendtrafficpolicy_v1alpha1.json
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
   name: envoy
 spec:
-  compression:
-    # - type: Zstd
-    - type: Brotli
-    - type: Gzip
-  # connection:
-  #   bufferLimit: 64Mi
   targetSelectors:
     - group: gateway.networking.k8s.io
       kind: Gateway
+  compression:
+    - type: Brotli
+    - type: Gzip
+    - type: Zstd
   tcpKeepalive: {}
   timeout:
     http:
       requestTimeout: 0s
-      # idleTimeout: 600s
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.envoyproxy.io/clienttrafficpolicy_v1alpha1.json
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/gateway.envoyproxy.io/clienttrafficpolicy_v1alpha1.json
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -146,29 +141,20 @@ spec:
     xForwardedFor:
       trustedCIDRs:
         - 10.42.0.0/16
-  # connection:
-    # bufferLimit: 64Mi
-    # maxAcceptPerSocketEvent: 0
   http2:
-    # initialStreamWindowSize: 2Mi
-    # initialConnectionWindowSize: 32Mi
     onInvalidMessage: TerminateStream
   http3: {}
   targetSelectors:
     - group: gateway.networking.k8s.io
       kind: Gateway
   tcpKeepalive: {}
-  timeout:
-    http:
-      requestReceivedTimeout: 0s
-      # idleTimeout: 600s
   tls:
     minVersion: "1.2"
     alpnProtocols:
       - h2
       - http/1.1
 ---
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.networking.k8s.io/httproute_v1.json
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/gateway.networking.k8s.io/httproute_v1.json
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
