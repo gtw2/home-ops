@@ -126,7 +126,7 @@ spec:
     - type: Brotli
     - type: Gzip
   connection:
-    bufferLimit: 8Mi
+    bufferLimit: 64Mi
   targetSelectors:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -134,6 +134,7 @@ spec:
   timeout:
     http:
       requestTimeout: 0s
+      idleTimeout: 600s
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.envoyproxy.io/clienttrafficpolicy_v1alpha1.json
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -146,7 +147,7 @@ spec:
       trustedCIDRs:
         - 10.42.0.0/16
   connection:
-    bufferLimit: 8Mi
+    bufferLimit: 64Mi
     maxAcceptPerSocketEvent: 0
   http2:
     initialStreamWindowSize: 2Mi
@@ -160,6 +161,7 @@ spec:
   timeout:
     http:
       requestReceivedTimeout: 0s
+      idleTimeout: 600s
   tls:
     minVersion: "1.2"
     alpnProtocols:
