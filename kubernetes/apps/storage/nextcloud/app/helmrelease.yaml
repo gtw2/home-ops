@@ -77,7 +77,19 @@ spec:
             'default_phone_region' => 'NY',
             'maintenance_window_start' => 2,
           ); ?>
-        oidc.config.php: |-
+        # redis.config.php: |-
+        #   <?php
+        #   $CONFIG = array(
+        #     'memcache.distributed' => '\OC\Memcache\Redis',
+        #     'memcache.locking' => '\OC\Memcache\Redis',
+        #     'redis' => array(
+        #       'host' => 'dragonfly.database.svc.cluster.local',
+        #       'port' => getenv('REDIS_PORT') ?: 6379,
+        #       'dbindex' => getenv('REDIS_DATABASE') ?: 10,
+        #       'password' => getenv('REDIS_PASSWORD'),
+        #     ),
+        #   );
+        sso.config.php: |-
           <?php
           $CONFIG = array (
             'allow_user_to_change_display_name' => false,
