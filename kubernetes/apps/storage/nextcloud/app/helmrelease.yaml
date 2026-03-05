@@ -53,10 +53,10 @@ spec:
           mountPath: "/games"
       mail:
         enabled: false
-      securityContext:
-        runAsGroup: 1022
-        runAsNonRoot: true
-        runAsUser: 1022
+      # securityContext:
+      #   runAsGroup: 1022
+      #   runAsNonRoot: true
+      #   runAsUser: 1022
       defaultConfigs:
         redis.config.php: false
       configs:
