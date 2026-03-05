@@ -64,14 +64,14 @@ spec:
               name: *secret
               key: OIDC_CLIENT_SECRET
       # Volumes for hooks
-      extraVolumes:
-        - name: hooks
-          configMap:
-            name: nextcloud-hooks
-            defaultMode: 0755
-      extraVolumeMounts:
-        - name: hooks
-          mountPath: /docker-entrypoint-hooks.d/before-starting
+      # extraVolumes:
+      #   - name: hooks
+      #     configMap:
+      #       name: nextcloud-hooks
+      #       defaultMode: 0755
+      # extraVolumeMounts:
+      #   - name: hooks
+      #     mountPath: /docker-entrypoint-hooks.d/before-starting
       # PHP configuration files
       configs:
         # Proxy and trusted domains
