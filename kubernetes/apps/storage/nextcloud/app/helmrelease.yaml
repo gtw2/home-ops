@@ -16,17 +16,6 @@ spec:
       flavor: fpm-alpine
     nginx:
       enabled: true
-      # type: cronjob
-      # cronjob:
-      #   successfulJobsHistoryLimit: 1
-      #   securityContext:
-      #     runAsGroup: 1022
-      #     runAsNonRoot: true
-      #     runAsUser: 1022
-    image:
-      flavor: fpm-alpine
-    nginx:
-      enabled: true
     nextcloud:
       extraInitContainers:
         - name: init-db
@@ -38,10 +27,10 @@ spec:
       datadir: /var/www/data
       # Security context (UID/GID from Volsync component)
       securityContext:
-        runAsUser: 1000
-        runAsGroup: 100
+        runAsUser: 1022
+        runAsGroup: 1022
         runAsNonRoot: true
-      # Admin credentials and SMTP from ExternalSecret
+      # Admin credentials from ExternalSecret
       existingSecret:
         enabled: true
         secretName: *secret
@@ -68,15 +57,6 @@ spec:
             secretKeyRef:
               name: *secret
               key: OIDC_CLIENT_SECRET
-      # Volumes for hooks
-      # extraVolumes:
-      #   - name: hooks
-      #     configMap:
-      #       name: nextcloud-hooks
-      #       defaultMode: 0755
-      # extraVolumeMounts:
-      #   - name: hooks
-      #     mountPath: /docker-entrypoint-hooks.d/before-starting
       # PHP configuration files
       configs:
         # Proxy and trusted domains
@@ -147,7 +127,7 @@ spec:
           post_max_size = 100G
           max_input_time = 14400
           max_execution_time = 14400
-        #  memory_limit = 512M
+          memory_limit = 512M
         # www.conf: |
         #   [www]
         #   user = www-data
@@ -179,6 +159,25 @@ spec:
         enabled: true
         existingClaim: nextcloud-nfs
         accessMode: ReadWriteMany
+    resources:
+      requests:
+        cpu: 60m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+    # Cronjob for background tasks
+    cronjob:
+      enabled: true
+      securityContext:
+        runAsGroup: 1022
+        runAsNonRoot: true
+        runAsUser: 1022
+      resources:
+        requests:
+          cpu: 10m
+          memory: 96Mi
+        limits:
+          memory: 192Mi
     # this seems to be required for nextcloud initialization which takes a long time
     startupProbe:
       enabled: true
