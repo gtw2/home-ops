@@ -52,6 +52,8 @@ spec:
             port: *port
     route:
       app:
+        annotations:
+          external-dns.alpha.kubernetes.io/cloudflare-proxied: false
         hostnames: ["share.${SECRET_DOMAIN}"]
         parentRefs:
           - name: envoy-external
