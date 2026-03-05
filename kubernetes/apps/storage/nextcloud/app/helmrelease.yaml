@@ -77,8 +77,7 @@ spec:
             'default_phone_region' => 'NY',
             'maintenance_window_start' => 2,
           ); ?>
-        sso.config.php: |-
-          oidc.config.php: |-
+        oidc.config.php: |-
           <?php
           $CONFIG = array (
             'allow_user_to_change_display_name' => false,
