@@ -12,13 +12,13 @@ spec:
   values:
     cronjob:
       enabled: true
-      type: cronjob
-      cronjob:
-        successfulJobsHistoryLimit: 1
-        securityContext:
-          runAsGroup: 1022
-          runAsNonRoot: true
-          runAsUser: 1022
+      # type: cronjob
+      # cronjob:
+      #   successfulJobsHistoryLimit: 1
+      #   securityContext:
+      #     runAsGroup: 1022
+      #     runAsNonRoot: true
+      #     runAsUser: 1022
     image:
       flavor: fpm-alpine
     nginx:
