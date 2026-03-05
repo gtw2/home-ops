@@ -24,8 +24,6 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 5Gi
-      VOLSYNC_GID: "1022"
-      VOLSYNC_UID: "1022"
   prune: true
   sourceRef:
     kind: GitRepository
