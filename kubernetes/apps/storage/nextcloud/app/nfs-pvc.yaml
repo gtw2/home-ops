@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: &name nextcloud-nfs
+spec:
+  storageClassName: *name
+  capacity:
+    storage: 1Mi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: 10.10.40.4
+    path: /mnt/sega/cloud
+  mountOptions:
+    - nfsvers=4
+    - nconnect=8
+    - hard
+    - noatime
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: &name nextcloud-nfs
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: *name
+  resources:
+    requests:
+      storage: 1Mi
