@@ -19,10 +19,10 @@ spec:
       #     runAsGroup: 1022
       #     runAsNonRoot: true
       #     runAsUser: 1022
-    image:
-      flavor: fpm-alpine
-    nginx:
-      enabled: true
+    # image:
+    #   flavor: fpm-alpine
+    # nginx:
+    #   enabled: true
     nextcloud:
       extraInitContainers:
         - name: init-db
