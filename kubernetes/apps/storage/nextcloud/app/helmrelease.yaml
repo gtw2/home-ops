@@ -57,6 +57,8 @@ spec:
         runAsGroup: 1022
         runAsNonRoot: true
         runAsUser: 1022
+      defaultConfigs:
+        redis.config.php: false
       configs:
         proxy.config.php: |-
           <?php
@@ -77,18 +79,17 @@ spec:
             'default_phone_region' => 'NY',
             'maintenance_window_start' => 2,
           ); ?>
-        # redis.config.php: |-
-        #   <?php
-        #   $CONFIG = array(
-        #     'memcache.distributed' => '\OC\Memcache\Redis',
-        #     'memcache.locking' => '\OC\Memcache\Redis',
-        #     'redis' => array(
-        #       'host' => 'dragonfly.database.svc.cluster.local',
-        #       'port' => getenv('REDIS_PORT') ?: 6379,
-        #       'dbindex' => getenv('REDIS_DATABASE') ?: 10,
-        #       'password' => getenv('REDIS_PASSWORD'),
-        #     ),
-        #   );
+        redis.config.php: |-
+          <?php
+          $CONFIG = array(
+            'memcache.distributed' => '\OC\Memcache\Redis',
+            'memcache.locking' => '\OC\Memcache\Redis',
+            'redis' => array(
+              'host' => 'dragonfly.database.svc.cluster.local',
+              'port' => getenv('REDIS_PORT') ?: 6379,
+              'dbindex' => getenv('REDIS_DATABASE') ?: 10,
+            ),
+          );
         sso.config.php: |-
           <?php
           $CONFIG = array (
