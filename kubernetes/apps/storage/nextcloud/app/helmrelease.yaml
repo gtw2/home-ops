@@ -13,7 +13,7 @@ spec:
     podAnnotations:
       reloader.stakater.com/search: "true"
     image:
-      flavor: fpm
+      flavor: fpm-alpine
     nginx:
       enabled: true
     nextcloud:
