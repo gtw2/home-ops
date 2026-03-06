@@ -14,8 +14,8 @@ spec:
       reloader.stakater.com/search: "true"
     image:
       flavor: fpm-alpine
-    nginx:
-      enabled: true
+    # nginx:
+    #   enabled: true
     nextcloud:
       extraInitContainers:
         - name: init-db
