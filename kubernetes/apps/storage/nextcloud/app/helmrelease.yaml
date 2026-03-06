@@ -12,10 +12,10 @@ spec:
   values:
     podAnnotations:
       reloader.stakater.com/search: "true"
-    # image:
-    #   flavor: fpm-alpine
-    # nginx:
-    #   enabled: true
+    image:
+      flavor: fpm
+    nginx:
+      enabled: true
     nextcloud:
       extraInitContainers:
         - name: init-db
