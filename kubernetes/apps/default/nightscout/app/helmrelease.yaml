@@ -38,7 +38,7 @@ spec:
           app:
             image:
               repository: nightscout/cgm-remote-monitor
-              tag: 15.0.4
+              tag: 15.0.6
               pullPolicy: IfNotPresent
             env:
               TZ: "America/New_York"
