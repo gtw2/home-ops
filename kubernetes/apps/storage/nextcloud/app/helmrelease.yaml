@@ -16,6 +16,8 @@ spec:
       flavor: fpm-alpine
     nginx:
       enabled: true
+      config:
+        client_max_body_size: "0"
     nextcloud:
       extraInitContainers:
         - name: init-db
