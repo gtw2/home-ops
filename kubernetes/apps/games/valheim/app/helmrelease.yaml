@@ -43,8 +43,8 @@ spec:
                 ASharpPen-Custom_Raids-1.8.1
                 Azumatt-AzuAutoStore-3.0.14
                 Azumatt-AzuContainerSizes-1.1.4
-                Azumatt-AzuCraftyBoxes-1.8.13
-                Azumatt-AzuExtendedPlayerInventory-2.3.7
+                Azumatt-AzuCraftyBoxes-1.8.14
+                Azumatt-AzuExtendedPlayerInventory-2.4.1
                 Azumatt-Build_Camera_Custom_Hammers_Edition-1.2.10
                 Azumatt-Official_BepInEx_ConfigurationManager-18.4.1
                 Azumatt-SleepSkip-1.3.0
@@ -58,7 +58,7 @@ spec:
                 Smoothbrain-PackHorse-1.0.4
                 Smoothbrain-Sailing-1.1.8
                 TastyChickenLegs-TreesReborn-1.1.1
-                ValheimModding-Jotunn-2.27.1
+                ValheimModding-Jotunn-2.29.0
                 ValheimModding-YamlDotNet-16.3.1
               AUTO_UPDATE: 1
               AUTO_UPDATE_SCHEDULE: "0 8 * * *" # every day at 8am
