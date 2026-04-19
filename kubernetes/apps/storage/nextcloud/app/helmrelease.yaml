@@ -28,10 +28,10 @@ spec:
       host: files.${SECRET_DOMAIN}
       datadir: /var/www/data
       # Security context (UID/GID from Volsync component)
-      securityContext:
-        runAsUser: 1022
-        runAsGroup: 1022
-        runAsNonRoot: true
+      #securityContext:
+      #  runAsUser: 1022
+      #  runAsGroup: 1022
+      #  runAsNonRoot: true
       # Admin credentials from ExternalSecret
       existingSecret:
         enabled: true
@@ -195,3 +195,18 @@ spec:
       timeoutSeconds: 5
       failureThreshold: 30
       successThreshold: 1
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: nextcloud
+            patch: |-
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: nextcloud
+              spec:
+                template:
+                  spec:
+                    hostUsers: false
