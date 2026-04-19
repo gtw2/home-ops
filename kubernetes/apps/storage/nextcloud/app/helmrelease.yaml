@@ -48,7 +48,7 @@ spec:
            readOnly: false
       extraVolumeMounts:
        - name: games-nfs
-         mountPath: "/games"
+         mountPath: "/mnt/sega/PlexNAS/Games"
       extraEnv:
         # Redis connection (Dragonfly)
         - name: REDIS_HOST
