@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app dragonwilds
+spec:
+  interval: 15m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  values:
+    defaultPodOptions:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+    controllers:
+      dragonwilds:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: andyaltsys/dragonwilds-dedicated-server
+              tag: latest
+            env:
+              TZ: ${TIMEZONE}
+              SERVER_PORT: &gameport 7777
+              ENABLE_AUTO_UPDATE: "true"
+              UPDATE_TIME: "3600"
+              BACKUP_DAILY: "true"
+              BACKUP_TIME: "3:00 AM"
+              BACKUP_AFTER_UPDATE: "true"
+              BACKUP_RETENTION_DAYS: "30"
+              ENABLE_DISCORD_NOTIF: "false"
+            envFrom:
+              - secretRef:
+                  name: dragonwilds-secret
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            resources:
+              requests:
+                cpu: 500m
+                memory: 4Gi
+              limits:
+                memory: 8Gi
+    service:
+      app:
+        controller: *app
+        type: LoadBalancer
+        annotations:
+          io.cilium/lb-ipam-ips: 10.10.40.148
+        ports:
+          gameport:
+            enabled: true
+            port: *gameport
+            protocol: UDP
+    persistence:
+      data:
+        enabled: true
+        existingClaim: *app
+        globalMounts:
+          - path: /home/ubuntu/Steam

@@ -7,6 +7,7 @@ components:
   - ../../components/common
 resources:
   - ./aska/ks.yaml
+  - ./dragonwilds/ks.yaml
   - ./enshrouded/ks.yaml
   - ./factorio/ks.yaml
   - ./filebrowser/ks.yaml
