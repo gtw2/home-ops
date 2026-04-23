@@ -34,9 +34,6 @@ spec:
               BACKUP_AFTER_UPDATE: "true"
               BACKUP_RETENTION_DAYS: "30"
               ENABLE_DISCORD_NOTIF: "false"
-            envFrom:
-              - secretRef:
-                  name: dragonwilds-secret
             probes:
               liveness:
                 enabled: false
