@@ -17,3 +17,4 @@ resources:
   # - ./sdtd/ks.yaml
   # - ./starrupture/ks.yaml
   - ./valheim/ks.yaml
+  - ./windrose/ks.yaml
