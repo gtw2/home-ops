@@ -26,7 +26,7 @@ spec:
               tag: latest
             env:
               TZ: ${TIMEZONE}
-              SERVER_PORT: &gameport 7777
+              SERVER_PORT: &gameport 7778
               ENABLE_AUTO_UPDATE: "true"
               UPDATE_TIME: "3600"
               BACKUP_DAILY: "true"
