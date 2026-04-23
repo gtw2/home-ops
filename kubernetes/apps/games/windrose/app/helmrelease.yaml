@@ -23,15 +23,15 @@ spec:
           app:
             image:
               repository: mornedhels/windrose-server
-              tag: stable-proton
+              tag: 0.1.0-proton@sha256:cb777e7a20d945c2cf71cf3e41b02155ce278211d793401e44de64a06faa244c
             env:
               TZ: ${TIMEZONE}
               PUID: "4711"
               PGID: "4711"
-              SERVER_NAME: windrose
+              SERVER_NAME: Confetti-Cannon
               SERVER_MAX_PLAYER_COUNT: "8"
               SERVER_USE_DIRECT_CONNECTION: "true"
-              SERVER_DIRECT_CONNECTION_SERVER_PORT: &gameport 7777
+              SERVER_DIRECT_CONNECTION_SERVER_PORT: &gameport 7779
               SERVER_DIRECT_CONNECTION_PROXY_ADDRESS: "0.0.0.0"
             envFrom:
               - secretRef:
