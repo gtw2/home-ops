@@ -23,7 +23,7 @@ spec:
           app:
             image:
               repository: andyaltsys/dragonwilds-dedicated-server
-              tag: latest
+              tag: v0.3.5@sha256:7be58525bf0a55f1039c66f35291d1af31bb058d6f04d0bbcb055565b3a005e7
             env:
               TZ: ${TIMEZONE}
               SERVER_PORT: &gameport 7778
