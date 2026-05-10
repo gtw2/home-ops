@@ -41,6 +41,8 @@ spec:
                 memory: 200M
               limits:
                 memory: 2G
+    defaultPodOptions:
+      automountServiceAccountToken: true
     service:
       app:
         controller: *app
