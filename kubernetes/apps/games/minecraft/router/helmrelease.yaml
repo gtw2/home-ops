@@ -22,10 +22,32 @@ spec:
   uninstall:
     keepHistory: false
   values:
+    serviceAccount:
+      mc-router: {}
+    rbac:
+      roles:
+        mc-router:
+          type: Role
+          rules:
+            - apiGroups: [""]
+              resources: ["services"]
+              verbs: ["get", "list", "watch"]
+            - apiGroups: ["apps"]
+              resources: ["deployments", "deployments/scale", "statefulsets", "statefulsets/scale"]
+              verbs: ["get", "list", "watch", "update", "patch"]
+            - apiGroups: [""]
+              resources: ["endpoints", "pods"]
+              verbs: ["get", "list", "watch"]
+      bindings:
+        mc-router:
+          type: RoleBinding
+          roleRef:
+            identifier: mc-router
+          subjects:
+            - identifier: mc-router
     defaultPodOptions:
       # mc-router needs the SA token to talk to the Kubernetes API
       automountServiceAccountToken: true
-      serviceAccountName: mc-router
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
