@@ -23,7 +23,8 @@ spec:
     keepHistory: false
   values:
     serviceAccount:
-      mc-router: {}
+      mc-router:
+        name: mc-router
     rbac:
       roles:
         mc-router:
