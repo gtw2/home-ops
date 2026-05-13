@@ -1,0 +1,9 @@
+---
+# Alias hostname so Velocity can reach mc-router via a distinct DNS name per backend.
+apiVersion: v1
+kind: Service
+metadata:
+  name: create-creative
+spec:
+  type: ExternalName
+  externalName: minecraft-router.games.svc.cluster.local

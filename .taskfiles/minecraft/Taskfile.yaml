@@ -1,0 +1,91 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: '3'
+
+# Tasks for managing Minecraft creative-clone worlds.
+# Assumptions:
+#   - Source Deployment: minecraft-<SOURCE>      (e.g. minecraft-vanilla)
+#   - Target Deployment: minecraft-<SOURCE>-creative
+#   - Target PVC:        minecraft-<SOURCE>-creative (RWO, ceph-block)
+#   - Source has RCON enabled (itzg default) with RCON_PASSWORD in env
+#   - Creative Deployment is scaled to 0 by default and woken by mc-router
+
+vars:
+  MC_RESOURCES_DIR: '{{.ROOT_DIR}}/.taskfiles/minecraft/resources'
+  MC_NAMESPACE: games
+
+tasks:
+
+  refresh-creative:
+    desc: Refresh a creative-clone world from its source [SOURCE=vanilla|create] [SIZE=20Gi] [FORCE=true]
+    summary: |
+      Quiesces the source via RCON, then replaces the creative PVC with a fresh
+      RBD copy-on-write clone of the source PVC. Bails if the creative Deployment
+      currently has replicas > 0 (someone is playing on it) unless FORCE=true.
+
+      Args:
+        SOURCE: vanilla | create (required)
+        SIZE:   PVC size, must be >= source size (default: 20Gi)
+        FORCE:  true to refresh even with active creative replicas (default: false)
+    requires:
+      vars: [SOURCE]
+    vars:
+      SIZE: '{{.SIZE | default "20Gi"}}'
+      FORCE: '{{.FORCE | default "false"}}'
+    env:
+      SOURCE: '{{.SOURCE}}'
+      SIZE: '{{.SIZE}}'
+      NAMESPACE: '{{.MC_NAMESPACE}}'
+    preconditions:
+      - which kubectl minijinja-cli
+      - test -f {{.MC_RESOURCES_DIR}}/creative-pvc.yaml.j2
+      - kubectl -n {{.MC_NAMESPACE}} get deploy minecraft-{{.SOURCE}}
+      - >
+        [[ "{{.FORCE}}" == "true" ]] ||
+        [[ "$(kubectl -n {{.MC_NAMESPACE}} get deploy minecraft-{{.SOURCE}}-creative -o jsonpath='{.status.replicas}' 2>/dev/null)" =~ ^(0|)$ ]]
+    cmds:
+      - echo ">> Quiescing minecraft-{{.SOURCE}}"
+      - kubectl -n {{.MC_NAMESPACE}} exec deploy/minecraft-{{.SOURCE}} -c app -- rcon-cli save-off
+      - kubectl -n {{.MC_NAMESPACE}} exec deploy/minecraft-{{.SOURCE}} -c app -- rcon-cli save-all flush
+      - sleep 3
+      - defer: kubectl -n {{.MC_NAMESPACE}} exec deploy/minecraft-{{.SOURCE}} -c app -- rcon-cli save-on
+      - echo ">> Deleting existing creative PVC (if any)"
+      - kubectl -n {{.MC_NAMESPACE}} delete pvc minecraft-{{.SOURCE}}-creative --ignore-not-found --wait=true
+      - echo ">> Cloning source PVC into minecraft-{{.SOURCE}}-creative"
+      - minijinja-cli --env {{.MC_RESOURCES_DIR}}/creative-pvc.yaml.j2 | kubectl apply -f -
+      - kubectl -n {{.MC_NAMESPACE}} wait pvc/minecraft-{{.SOURCE}}-creative --for=jsonpath='{.status.phase}'=Bound --timeout=2m
+      - echo ">> Done. Next connect will scale minecraft-{{.SOURCE}}-creative 0→1 from the fresh clone."
+
+  snapshot-creative:
+    desc: Snapshot the current creative PVC for rollback [SOURCE=vanilla|create]
+    summary: |
+      Takes a timestamped VolumeSnapshot of the creative PVC. Useful before
+      running refresh-creative if you want a rollback point for the existing
+      creative-world state.
+
+      Args:
+        SOURCE: vanilla | create (required)
+    requires:
+      vars: [SOURCE]
+    vars:
+      TIMESTAMP:
+        sh: date -u +%Y%m%d-%H%M%S
+    env:
+      SOURCE: '{{.SOURCE}}'
+      TIMESTAMP: '{{.TIMESTAMP}}'
+      NAMESPACE: '{{.MC_NAMESPACE}}'
+    preconditions:
+      - which kubectl minijinja-cli
+      - test -f {{.MC_RESOURCES_DIR}}/creative-snapshot.yaml.j2
+      - kubectl -n {{.MC_NAMESPACE}} get pvc minecraft-{{.SOURCE}}-creative
+    cmds:
+      - minijinja-cli --env {{.MC_RESOURCES_DIR}}/creative-snapshot.yaml.j2 | kubectl apply -f -
+      - kubectl -n {{.MC_NAMESPACE}} wait volumesnapshot/minecraft-{{.SOURCE}}-creative-{{.TIMESTAMP}} --for=jsonpath='{.status.readyToUse}'=true --timeout=5m
+      - echo ">> Snapshot ready: minecraft-{{.SOURCE}}-creative-{{.TIMESTAMP}}"
+
+  list-snapshots:
+    desc: List creative-PVC snapshots [SOURCE=vanilla|create]
+    requires:
+      vars: [SOURCE]
+    cmds:
+      - kubectl -n {{.MC_NAMESPACE}} get volumesnapshot -l app.kubernetes.io/name=minecraft-{{.SOURCE}}-creative

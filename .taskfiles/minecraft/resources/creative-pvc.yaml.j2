@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minecraft-{{ ENV.SOURCE }}-creative
+  namespace: {{ ENV.NAMESPACE }}
+  labels:
+    app.kubernetes.io/name: minecraft-{{ ENV.SOURCE }}-creative
+    app.kubernetes.io/component: creative-clone
+    app.kubernetes.io/instance: {{ ENV.SOURCE }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ceph-block
+  resources:
+    requests:
+      storage: {{ ENV.SIZE }}
+  dataSource:
+    apiGroup: ""
+    kind: PersistentVolumeClaim
+    name: minecraft-{{ ENV.SOURCE }}

@@ -1,0 +1,12 @@
+---
+# Alias hostname so Velocity can reach mc-router via a distinct DNS name per backend.
+# Velocity's velocity.toml entry uses "vanilla-creative.games.svc.cluster.local:25565".
+# DNS CNAMEs that to minecraft-router; the handshake hostname matches the route annotation
+# on the minecraft-vanilla-creative Service, telling mc-router which Deployment to scale.
+apiVersion: v1
+kind: Service
+metadata:
+  name: vanilla-creative
+spec:
+  type: ExternalName
+  externalName: minecraft-router.games.svc.cluster.local

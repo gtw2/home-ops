@@ -1,0 +1,13 @@
+---
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: minecraft-{{ ENV.SOURCE }}-creative-{{ ENV.TIMESTAMP }}
+  namespace: {{ ENV.NAMESPACE }}
+  labels:
+    app.kubernetes.io/name: minecraft-{{ ENV.SOURCE }}-creative
+    app.kubernetes.io/component: creative-clone-snapshot
+spec:
+  volumeSnapshotClassName: csi-ceph-blockpool
+  source:
+    persistentVolumeClaimName: minecraft-{{ ENV.SOURCE }}-creative

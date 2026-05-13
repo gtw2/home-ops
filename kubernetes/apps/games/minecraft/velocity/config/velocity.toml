@@ -76,8 +76,11 @@ enable-player-address-logging = true
 # represents the IP address of the server to connect to.
 Hub = "minecraft-lobby:25565"
 Vanilla = "minecraft-vanilla:25565"
-Creative = "minecraft-creative:25565"
 Create = "minecraft-create:25565"
+# Creative copies — routed through mc-router (ExternalName aliases), scale-from-zero on connect.
+# The handshake hostname Velocity sends is what mc-router matches against the Service annotation.
+VanillaCreative = "vanilla-creative.games.svc.cluster.local:25565"
+CreateCreative = "create-creative.games.svc.cluster.local:25565"
 
 # In what order we should try servers when a player logs in or is kicked from a server.
 try = [
@@ -94,11 +97,14 @@ try = [
 "vanilla.$${CFG_GAMING_DOMAIN}" = [
     "Vanilla"
 ]
-"creative.$${CFG_GAMING_DOMAIN}" = [
-    "Creative"
-]
 "create.$${CFG_GAMING_DOMAIN}" = [
     "Create"
+]
+"vanilla-creative.$${CFG_GAMING_DOMAIN}" = [
+    "VanillaCreative"
+]
+"create-creative.$${CFG_GAMING_DOMAIN}" = [
+    "CreateCreative"
 ]
 
 [advanced]
@@ -115,7 +121,8 @@ compression-level = -1
 login-ratelimit = 3000
 
 # Specify a custom timeout for connection timeouts here. The default is five seconds.
-connection-timeout = 5000
+# Bumped to 60s so mc-router has time to scale creative backends from 0→1 on first connect.
+connection-timeout = 60000
 
 # Specify a read timeout for connections here. The default is 30 seconds.
 read-timeout = 30000

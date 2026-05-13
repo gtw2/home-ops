@@ -1,0 +1,104 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app minecraft-router
+spec:
+  interval: 15m
+  timeout: 5m
+  maxHistory: 3
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    defaultPodOptions:
+      # mc-router needs the SA token to talk to the Kubernetes API
+      automountServiceAccountToken: true
+      serviceAccountName: mc-router
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+    controllers:
+      mc-router:
+        replicas: 1
+        strategy: RollingUpdate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: itzg/mc-router
+              # renovate: datasource=docker depName=itzg/mc-router
+              tag: 1.32.0
+            args:
+              - --in-kube-cluster
+              - --kube-namespace=games
+              - --api-binding=:25564
+              # Anything that doesn't match an annotated Service falls through to Velocity
+              - --default=minecraft-velocity.games.svc.cluster.local:25565
+              # Scale-from-zero on Deployment when an annotated Service receives a connection
+              - --auto-scale-up
+              # Scale-to-zero after the connection drains + idle period
+              - --auto-scale-down
+              - --auto-scale-down-after=10m
+            env:
+              TZ: "${TIMEZONE}"
+            probes:
+              readiness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /routes
+                    port: 25564
+                  periodSeconds: 30
+              liveness: *probes
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /routes
+                    port: 25564
+                  failureThreshold: 30
+                  periodSeconds: 2
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+              limits:
+                memory: 128Mi
+    service:
+      # In-cluster only. Velocity is the public entrypoint; creative backends point at
+      # ExternalName Service aliases of this Service so mc-router can scale them on connect.
+      app:
+        controller: mc-router
+        type: ClusterIP
+        ports:
+          minecraft:
+            port: 25565
+            protocol: TCP
+            targetPort: 25565
+          api:
+            port: 25564
+            protocol: TCP
+            targetPort: 25564

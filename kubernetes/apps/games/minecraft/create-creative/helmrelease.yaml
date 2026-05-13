@@ -1,0 +1,163 @@
+---
+# Creative copy of the create-mod world. Scaled to 0 by default; mc-router wakes it on connect.
+# World is a CoW clone of the create PVC, refreshed via `task minecraft:refresh-creative SOURCE=create`.
+# Mods/version MUST match the source — the cloned world data assumes the same mod set is loaded.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app minecraft-create-creative
+spec:
+  interval: 15m
+  timeout: 5m
+  maxHistory: 3
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    defaultPodOptions:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    controllers:
+      minecraft-create-creative:
+        replicas: 0
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/itzg/minecraft-server
+              tag: 2026.5.0@sha256:fbbcfc47bc1239b57deb655162e950bd22c87df8034a2251d1f906eb2c8d3da4
+            tty: true
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  periodSeconds: 60
+                  exec: &mc-health { command: ["mc-health"] }
+              readiness: *probes
+              startup:
+                <<: *probes
+                spec:
+                  initialDelaySeconds: 60
+                  periodSeconds: 1
+                  failureThreshold: 300
+                  exec: *mc-health
+            env:
+              EULA: "true"
+              TZ: "${TIMEZONE}"
+              TYPE: NEOFORGE
+              MAX_TICK_TIME: "-1"
+              VERSION: 1.21.1
+              MOTD: "Create — Creative Copy"
+              MODE: "creative"
+              FORCE_GAMEMODE: "true"
+              DIFFICULTY: "peaceful"
+              PVP: "false"
+              SPAWN_PROTECTION: 0
+              LEVEL: "create"
+              SEED: "-2135836821937050197"
+              FORCE_REDOWNLOAD: "true"
+              ONLINE_MODE: "false"
+              ALLOW_FLIGHT: "true"
+              REPLACE_ENV_IN_PLACE: "true"
+              ENABLE_ROLLING_LOGS: "false"
+              LOG_TIMESTAMP: "true"
+              JVM_XX_OPTS: -XX:MaxRAMPercentage=75
+              MAX_MEMORY: 6144M
+              USE_AIKAR_FLAGS: "true"
+              SNOOPER_ENABLED: "false"
+              VIEW_DISTANCE: 14
+              REMOVE_OLD_MODS: "true"
+              MODRINTH_DEFAULT_VERSION_TYPE: release
+              # Must match create's mod list exactly so the cloned world loads
+              MODRINTH_PROJECTS: |-
+                appleskin
+                builders-jetpack-mod
+                create
+                create-dragons-plus:beta
+                create-copper-zinc
+                create-enchantment-industry
+                create-power-loader
+                create-stam1o-tweaks
+                curios
+                emi
+                jade
+                jade-addons-forge
+                jei:TxS03dKM
+                simple-voice-chat
+                sleep
+                travelersbackpack
+                platform
+                proxy-compatible-forge
+                luckperms:dKAPoPGd
+                vanillabackport
+                worldedit
+              CURSEFORGE_FILES: |-
+                architectury-api
+                ftb-teams-forge
+                ftb-library-forge
+                ftb-chunks-forge
+                ftb-xmod-compat
+              ENABLE_QUERY: "true"
+              EXISTING_OPS_FILE: SYNCHRONIZE
+            envFrom:
+              - secretRef:
+                  name: minecraft-create-creative-secret
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: [ALL]
+                add: ["NET_RAW"]
+            resources:
+              requests:
+                cpu: 300m
+                memory: 3Gi
+              limits:
+                memory: 6Gi
+    service:
+      minecraft:
+        controller: *app
+        type: ClusterIP
+        annotations:
+          # mc-router matches this against the handshake hostname from Velocity.
+          mc-router.itzg.me/externalServerName: "create-creative.games.svc.cluster.local"
+        ports:
+          java:
+            port: 25565
+            protocol: TCP
+          rcon:
+            port: 25575
+    persistence:
+      data:
+        existingClaim: minecraft-create-creative
+      config:
+        enabled: true
+        type: configMap
+        name: minecraft-create-configmap
+        globalMounts:
+          - subPath: luckperms.conf
+            path: /config/luckperms/luckperms.conf
+          - subPath: pcf-common.toml
+            path: /config/proxy-compatible-forge.toml
+          - subPath: create.toml
+            path: /config/create-server.toml
