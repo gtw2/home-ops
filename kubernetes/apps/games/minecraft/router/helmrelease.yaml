@@ -23,11 +23,10 @@ spec:
     keepHistory: false
   values:
     serviceAccount:
-      mc-router:
-        name: mc-router
+      minecraft-router: {}
     rbac:
       roles:
-        mc-router:
+        minecraft-router:
           type: Role
           rules:
             - apiGroups: [""]
@@ -40,12 +39,12 @@ spec:
               resources: ["endpoints", "pods"]
               verbs: ["get", "list", "watch"]
       bindings:
-        mc-router:
+        minecraft-router:
           type: RoleBinding
           roleRef:
-            identifier: mc-router
+            identifier: minecraft-router
           subjects:
-            - identifier: mc-router
+            - identifier: minecraft-router
     defaultPodOptions:
       # mc-router needs the SA token to talk to the Kubernetes API
       automountServiceAccountToken: true
