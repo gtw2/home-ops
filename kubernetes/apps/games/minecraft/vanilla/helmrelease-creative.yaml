@@ -1,12 +1,14 @@
 ---
-# Creative copy of the create-mod world. Scaled to 0 by default; mc-router wakes it on connect.
-# World is a CoW clone of the create PVC, refreshed via `task minecraft:refresh-creative SOURCE=create`.
-# Mods/version MUST match the source — the cloned world data assumes the same mod set is loaded.
+# Creative copy of the vanilla world.
+# - Scaled 0→1 by mc-router on /server VanillaCreative; back to 0 after 30m idle.
+# - World is a CoW clone of the vanilla PVC, refreshed via `task minecraft:refresh-creative SOURCE=vanilla`.
+# - Mods + version + image MUST match the survival HR — the cloned world is version-locked.
+#   When updating vanilla, mirror the changes here.
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: &app minecraft-create-creative
+  name: &app minecraft-vanilla-creative
 spec:
   interval: 15m
   timeout: 5m
@@ -36,15 +38,16 @@ spec:
         seccompProfile:
           type: RuntimeDefault
     controllers:
-      minecraft-create-creative:
+      minecraft-vanilla-creative:
         replicas: 0
         annotations:
           reloader.stakater.com/auto: "true"
         containers:
           app:
+            # Keep in lock-step with vanilla/helmrelease.yaml
             image:
               repository: ghcr.io/itzg/minecraft-server
-              tag: 2026.5.0@sha256:fbbcfc47bc1239b57deb655162e950bd22c87df8034a2251d1f906eb2c8d3da4
+              tag: 2026.5.2@sha256:5476619d049f4c0e2764532b345da1db4c154b4294bcc16d9c3b8d5f4b0d9923
             tty: true
             probes:
               liveness: &probes
@@ -64,17 +67,23 @@ spec:
             env:
               EULA: "true"
               TZ: "${TIMEZONE}"
-              TYPE: NEOFORGE
+              TYPE: FABRIC
               MAX_TICK_TIME: "-1"
-              VERSION: 1.21.1
-              MOTD: "Create — Creative Copy"
+              # === MUST MATCH vanilla survival ===
+              VERSION: 1.21.11
+              SEED: "722314537282636262"
+              LEVEL: "vanilla"
+              # === Creative-mode overrides (the only intentional divergence from survival) ===
+              MOTD: "Vanilla — Creative Copy"
               MODE: "creative"
               FORCE_GAMEMODE: "true"
               DIFFICULTY: "peaceful"
               PVP: "false"
+              # Distinct LuckPerms context from survival vanilla
+              CFG_LUCKPERMS_SERVER: "vanilla-creative"
+              # === Same as survival ===
+              OVERRIDE_SERVER_PROPERTIES: "true"
               SPAWN_PROTECTION: 0
-              LEVEL: "create"
-              SEED: "-2135836821937050197"
               FORCE_REDOWNLOAD: "true"
               ONLINE_MODE: "false"
               ALLOW_FLIGHT: "true"
@@ -82,46 +91,30 @@ spec:
               ENABLE_ROLLING_LOGS: "false"
               LOG_TIMESTAMP: "true"
               JVM_XX_OPTS: -XX:MaxRAMPercentage=75
-              MAX_MEMORY: 6144M
+              MAX_MEMORY: 4096M
               USE_AIKAR_FLAGS: "true"
               SNOOPER_ENABLED: "false"
               VIEW_DISTANCE: 14
               REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
-              # Must match create's mod list exactly so the cloned world loads
+              # Must match vanilla's mod list so the cloned world loads cleanly
               MODRINTH_PROJECTS: |-
-                appleskin
-                builders-jetpack-mod
-                create
-                create-dragons-plus:beta
-                create-copper-zinc
-                create-enchantment-industry
-                create-power-loader
-                create-stam1o-tweaks
-                curios
-                emi
-                jade
-                jade-addons-forge
-                jei:TxS03dKM
-                simple-voice-chat
-                sleep
-                travelersbackpack
-                platform
-                proxy-compatible-forge
-                luckperms:dKAPoPGd
-                vanillabackport
+                fabric-api
+                luckperms:OrIs0S6b
                 worldedit
-              CURSEFORGE_FILES: |-
-                architectury-api
-                ftb-teams-forge
-                ftb-library-forge
-                ftb-chunks-forge
-                ftb-xmod-compat
+                krypton
+                ferrite-core
+                fabricproxy-lite
+                lithium
+                simple-voice-chat
+                vanilla-permissions
               ENABLE_QUERY: "true"
               EXISTING_OPS_FILE: SYNCHRONIZE
             envFrom:
+              # Reuse the survival Secret — RCON password, ops list, postgres creds,
+              # forwarding secret are all identical for the creative copy.
               - secretRef:
-                  name: minecraft-create-creative-secret
+                  name: minecraft-vanilla-secret
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
@@ -130,17 +123,16 @@ spec:
                 add: ["NET_RAW"]
             resources:
               requests:
-                cpu: 300m
-                memory: 3Gi
+                cpu: 200m
+                memory: 2Gi
               limits:
-                memory: 6Gi
+                memory: 4Gi
     service:
       minecraft:
         controller: *app
         type: ClusterIP
         annotations:
-          # mc-router matches this against the handshake hostname from Velocity.
-          mc-router.itzg.me/externalServerName: "create-creative.games.svc.cluster.local"
+          mc-router.itzg.me/externalServerName: "vanilla-creative.games.svc.cluster.local"
         ports:
           java:
             port: 25565
@@ -149,15 +141,15 @@ spec:
             port: 25575
     persistence:
       data:
-        existingClaim: minecraft-create-creative
+        # Created/refreshed via `task minecraft:refresh-creative SOURCE=vanilla`
+        existingClaim: minecraft-vanilla-creative
+      # Reuse vanilla's configMap so mod configs stay in sync automatically
       config:
         enabled: true
         type: configMap
-        name: minecraft-create-configmap
+        name: minecraft-vanilla-configmap
         globalMounts:
           - subPath: luckperms.conf
             path: /config/luckperms/luckperms.conf
-          - subPath: pcf-common.toml
-            path: /config/proxy-compatible-forge.toml
-          - subPath: create.toml
-            path: /config/create-server.toml
+          - subPath: fabricproxy.toml
+            path: /config/FabricProxy-Lite.toml

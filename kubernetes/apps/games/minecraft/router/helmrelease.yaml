@@ -76,7 +76,11 @@ spec:
               - --auto-scale-up
               # Scale-to-zero after the connection drains + idle period
               - --auto-scale-down
-              - --auto-scale-down-after=10m
+              # Single global value (mc-router doesn't support per-service overrides).
+              # 30m balances "survival stays up much longer than creative" vs not pinning
+              # idle creative pods forever. Tune in this one place; the README documents
+              # the trade-off.
+              - --auto-scale-down-after=30m
             env:
               TZ: "${TIMEZONE}"
             probes:

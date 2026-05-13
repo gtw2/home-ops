@@ -72,13 +72,14 @@ ping-passthrough = "disabled"
 enable-player-address-logging = true
 
 [servers]
-# Configure your servers here. Each key represents the server's name, and the value
-# represents the IP address of the server to connect to.
+# Backend addresses. Hostnames matter: mc-router uses the handshake hostname Velocity
+# sends to pick the route (and the Deployment to scale).
+#   Hub        → direct to the lobby pod (always-on, no auto-scaling).
+#   *.games.svc.cluster.local → ExternalName aliases that CNAME to mc-router, which
+#                                 then scales the backing Deployment 0→1 on connect.
 Hub = "minecraft-lobby:25565"
-Vanilla = "minecraft-vanilla:25565"
-Create = "minecraft-create:25565"
-# Creative copies — routed through mc-router (ExternalName aliases), scale-from-zero on connect.
-# The handshake hostname Velocity sends is what mc-router matches against the Service annotation.
+Vanilla = "vanilla.games.svc.cluster.local:25565"
+Create = "create.games.svc.cluster.local:25565"
 VanillaCreative = "vanilla-creative.games.svc.cluster.local:25565"
 CreateCreative = "create-creative.games.svc.cluster.local:25565"
 

@@ -4,7 +4,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ./externalsecret.yaml
-  - ./helmrelease.yaml
+  - ./helmrelease.yaml             # survival
+  - ./helmrelease-creative.yaml    # creative copy (scale-from-zero clone of survival world)
+  - ./route-services.yaml          # ExternalName aliases pointing Velocity at mc-router
 configMapGenerator:
   - name: minecraft-vanilla-configmap
     files:

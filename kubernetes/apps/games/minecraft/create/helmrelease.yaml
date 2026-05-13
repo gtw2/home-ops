@@ -34,6 +34,8 @@ spec:
           type: RuntimeDefault
     controllers:
       minecraft-create:
+        # Scaled 0→1 by mc-router on /server Create; back to 0 after 30m idle.
+        replicas: 0
         annotations:
           reloader.stakater.com/auto: "true"
         containers:
@@ -74,6 +76,9 @@ spec:
               SEED: "-2135836821937050197"
               LEVEL: "create"
               MODE: "survival"
+              # LuckPerms server-context identifier. Substituted into luckperms.conf
+              # at startup by itzg's sync-and-interpolate (CFG_ prefix).
+              CFG_LUCKPERMS_SERVER: "create"
               SPAWN_PROTECTION: 0
               FORCE_REDOWNLOAD: "true"
               ONLINE_MODE: "false"
@@ -146,6 +151,9 @@ spec:
       minecraft:
         controller: *app
         type: ClusterIP
+        annotations:
+          # Velocity reaches mc-router via the `create` ExternalName Service (see route-services.yaml).
+          mc-router.itzg.me/externalServerName: "create.games.svc.cluster.local"
         ports:
           java:
             port: 25565
@@ -156,8 +164,6 @@ spec:
           bedrock:
             port: 19132
             protocol: UDP
-          # map:
-          #   port: 8100
           rcon:
             port: 25575
           metrics:

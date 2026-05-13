@@ -3,12 +3,17 @@
 version: '3'
 
 # Tasks for managing Minecraft creative-clone worlds.
-# Assumptions:
-#   - Source Deployment: minecraft-<SOURCE>      (e.g. minecraft-vanilla)
-#   - Target Deployment: minecraft-<SOURCE>-creative
-#   - Target PVC:        minecraft-<SOURCE>-creative (RWO, ceph-block)
-#   - Source has RCON enabled (itzg default) with RCON_PASSWORD in env
-#   - Creative Deployment is scaled to 0 by default and woken by mc-router
+#
+# Naming convention (any server family that has a creative variant works, not just vanilla/create):
+#   Source Deployment: minecraft-<SOURCE>            (e.g. minecraft-vanilla)
+#   Target Deployment: minecraft-<SOURCE>-creative
+#   Target PVC:        minecraft-<SOURCE>-creative   (RWO, ceph-block, RBD CoW clone of source PVC)
+#
+# Runtime assumptions:
+#   - Source has RCON enabled (itzg default) with RCON_PASSWORD env from its secret.
+#   - Both source and target Deployments may be at replicas: 0 (mc-router scale-from-zero).
+#     The task wakes the source for the RCON dance and restores its prior replica count.
+#   - SIZE defaults to whatever the source PVC currently requests; override with SIZE=...
 
 vars:
   MC_RESOURCES_DIR: '{{.ROOT_DIR}}/.taskfiles/minecraft/resources'
@@ -17,21 +22,31 @@ vars:
 tasks:
 
   refresh-creative:
-    desc: Refresh a creative-clone world from its source [SOURCE=vanilla|create] [SIZE=20Gi] [FORCE=true]
+    desc: Refresh a creative-clone world from its source [SOURCE=<name>] [SIZE=auto] [FORCE=true]
     summary: |
       Quiesces the source via RCON, then replaces the creative PVC with a fresh
       RBD copy-on-write clone of the source PVC. Bails if the creative Deployment
       currently has replicas > 0 (someone is playing on it) unless FORCE=true.
 
+      Source servers run at replicas: 0 by default (mc-router scale-from-zero), so
+      this task wakes the source for the RCON dance and restores its prior replica
+      count when it exits.
+
       Args:
-        SOURCE: vanilla | create (required)
-        SIZE:   PVC size, must be >= source size (default: 20Gi)
-        FORCE:  true to refresh even with active creative replicas (default: false)
+        SOURCE: name of the source server family — anything with a co-located
+                helmrelease-creative.yaml in <SOURCE>/. Examples: vanilla, create.
+        SIZE:   PVC size override. Defaults to the source PVC's current request.
+        FORCE:  true to refresh even with active creative replicas (default: false).
     requires:
       vars: [SOURCE]
     vars:
-      SIZE: '{{.SIZE | default "20Gi"}}'
       FORCE: '{{.FORCE | default "false"}}'
+      # Auto-detect the source PVC size so we don't get caught out on non-20Gi servers.
+      SOURCE_PVC_SIZE:
+        sh: kubectl -n {{.MC_NAMESPACE}} get pvc minecraft-{{.SOURCE}} -o jsonpath='{.spec.resources.requests.storage}' 2>/dev/null || echo 20Gi
+      SIZE: '{{.SIZE | default .SOURCE_PVC_SIZE}}'
+      SOURCE_REPLICAS_BEFORE:
+        sh: kubectl -n {{.MC_NAMESPACE}} get deploy minecraft-{{.SOURCE}} -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 0
     env:
       SOURCE: '{{.SOURCE}}'
       SIZE: '{{.SIZE}}'
@@ -44,6 +59,20 @@ tasks:
         [[ "{{.FORCE}}" == "true" ]] ||
         [[ "$(kubectl -n {{.MC_NAMESPACE}} get deploy minecraft-{{.SOURCE}}-creative -o jsonpath='{.status.replicas}' 2>/dev/null)" =~ ^(0|)$ ]]
     cmds:
+      # Wake the source if scaled to zero. Restore the prior replica count at the end
+      # (defer runs in reverse order, so this is enqueued first to run last).
+      - defer: kubectl -n {{.MC_NAMESPACE}} scale deploy/minecraft-{{.SOURCE}} --replicas={{.SOURCE_REPLICAS_BEFORE}}
+      - |
+        if [[ "{{.SOURCE_REPLICAS_BEFORE}}" == "0" ]]; then
+          echo ">> Source minecraft-{{.SOURCE}} is scaled to 0; waking it for the RCON dance"
+          kubectl -n {{.MC_NAMESPACE}} scale deploy/minecraft-{{.SOURCE}} --replicas=1
+          kubectl -n {{.MC_NAMESPACE}} rollout status deploy/minecraft-{{.SOURCE}} --timeout=3m
+          # Wait for the JVM/mods to finish loading so rcon-cli is actually answering
+          until kubectl -n {{.MC_NAMESPACE}} exec deploy/minecraft-{{.SOURCE}} -c app -- rcon-cli list >/dev/null 2>&1; do
+            echo "   waiting for RCON to become reachable..."
+            sleep 5
+          done
+        fi
       - echo ">> Quiescing minecraft-{{.SOURCE}}"
       - kubectl -n {{.MC_NAMESPACE}} exec deploy/minecraft-{{.SOURCE}} -c app -- rcon-cli save-off
       - kubectl -n {{.MC_NAMESPACE}} exec deploy/minecraft-{{.SOURCE}} -c app -- rcon-cli save-all flush
@@ -57,14 +86,14 @@ tasks:
       - echo ">> Done. Next connect will scale minecraft-{{.SOURCE}}-creative 0→1 from the fresh clone."
 
   snapshot-creative:
-    desc: Snapshot the current creative PVC for rollback [SOURCE=vanilla|create]
+    desc: Snapshot the current creative PVC for rollback [SOURCE=<name>]
     summary: |
       Takes a timestamped VolumeSnapshot of the creative PVC. Useful before
       running refresh-creative if you want a rollback point for the existing
       creative-world state.
 
       Args:
-        SOURCE: vanilla | create (required)
+        SOURCE: server family name (required)
     requires:
       vars: [SOURCE]
     vars:
@@ -84,7 +113,7 @@ tasks:
       - echo ">> Snapshot ready: minecraft-{{.SOURCE}}-creative-{{.TIMESTAMP}}"
 
   list-snapshots:
-    desc: List creative-PVC snapshots [SOURCE=vanilla|create]
+    desc: List creative-PVC snapshots [SOURCE=<name>]
     requires:
       vars: [SOURCE]
     cmds:

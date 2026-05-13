@@ -34,6 +34,8 @@ spec:
           type: RuntimeDefault
     controllers:
       minecraft-vanilla:
+        # Scaled 0→1 by mc-router on /server Vanilla; back to 0 after 30m idle.
+        replicas: 0
         annotations:
           reloader.stakater.com/auto: "true"
         containers:
@@ -73,6 +75,10 @@ spec:
               SEED: "722314537282636262"
               LEVEL: "vanilla"
               MODE: "survival"
+              # LuckPerms server-context identifier. Substituted into luckperms.conf
+              # at startup by itzg's sync-and-interpolate (CFG_ prefix). Distinct value
+              # per HR so creative copies don't share permission contexts with survival.
+              CFG_LUCKPERMS_SERVER: "vanilla"
               SPAWN_PROTECTION: 0
               FORCE_REDOWNLOAD: "true"
               ONLINE_MODE: "false"
@@ -122,6 +128,11 @@ spec:
       minecraft:
         controller: *app
         type: ClusterIP
+        annotations:
+          # Velocity reaches mc-router via the `vanilla` ExternalName Service (see route-services.yaml),
+          # which CNAMEs to minecraft-router. The handshake hostname matches this annotation,
+          # so mc-router knows which Service's pods to scale and forward to.
+          mc-router.itzg.me/externalServerName: "vanilla.games.svc.cluster.local"
         ports:
           java:
             port: 25565
@@ -132,8 +143,6 @@ spec:
           bedrock:
             port: 19132
             protocol: UDP
-          # map:
-          #   port: 8100
           rcon:
             port: 25575
           metrics:
