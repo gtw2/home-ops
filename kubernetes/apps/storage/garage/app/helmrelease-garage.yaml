@@ -61,13 +61,6 @@ spec:
             port: 3903
     route:
       s3:
-        annotations:
-          gethomepage.dev/enabled: "true"
-          gethomepage.dev/group: Storage
-          gethomepage.dev/name: Garage
-          gethomepage.dev/icon: mdi-warehouse
-          gethomepage.dev/description: S3-compatible object storage
-          gethomepage.dev/pod-selector: app.kubernetes.io/name=garage-webui
         hostnames:
           - s3.${SECRET_DOMAIN}
         parentRefs:
