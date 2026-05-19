@@ -261,17 +261,16 @@ Each consumer is cut over independently. MinIO stays running for the entire phas
 
 ### 8a. Deploy the CNPG barman-cloud plugin operator
 
-Create `kubernetes/apps/database/cloudnative-pg-barman-plugin/`:
+Create `kubernetes/apps/database/cloudnative-pg/plugin-barman-cloud/`:
 
 ```
-ks.yaml
-app/
+plugin-barman-cloud/
 ├── kustomization.yaml
 ├── ocirepository.yaml
 └── helmrelease.yaml
 ```
 
-The HelmRelease pulls whichever chart you confirmed in §3, deployed into the `database` namespace (matching the existing `cloudnative-pg` operator). Add a `dependsOn` on `cloudnative-pg`. Add the new `ks.yaml` to `kubernetes/apps/database/kustomization.yaml`.
+The HelmRelease pulls whichever chart you confirmed in §3, deployed into the `database` namespace (matching the existing `cloudnative-pg` operator). Register the plugin as a new Flux Kustomization inside `kubernetes/apps/database/cloudnative-pg/ks.yaml` (alongside the operator + cluster Kustomizations already there), with `dependsOn: cloudnative-pg`.
 
 After Flux reconciles:
 
@@ -509,13 +508,13 @@ Already covered above; summarised here for review:
 - `kubernetes/apps/storage/garage/ks.yaml`
 - `kubernetes/apps/storage/garage/readme.md`
 - `kubernetes/apps/storage/garage/app/{kustomization,externalsecret,pvc,configmap,helmrelease-garage,helmrelease-webui,httproute,ocirepository}.yaml`
-- `kubernetes/apps/database/cloudnative-pg-barman-plugin/{ks.yaml,app/kustomization.yaml,app/ocirepository.yaml,app/helmrelease.yaml}`
+- `kubernetes/apps/database/cloudnative-pg/plugin-barman-cloud/{kustomization.yaml,ocirepository.yaml,helmrelease.yaml}`
 - `kubernetes/apps/database/cloudnative-pg/cluster/objectstore.yaml`
 - `kubernetes/apps/media/immich/db/objectstore.yaml`
 
 **Edited**:
 - `kubernetes/apps/storage/kustomization.yaml` — add garage, eventually remove minio
-- `kubernetes/apps/database/kustomization.yaml` — add cloudnative-pg-barman-plugin
+- `kubernetes/apps/database/cloudnative-pg/ks.yaml` — add a third Flux Kustomization for the barman-cloud plugin
 - `kubernetes/apps/database/cloudnative-pg/app/externalsecret.yaml` — switch to `garage-cnpg`
 - `kubernetes/apps/database/cloudnative-pg/cluster/cluster17.yaml` — drop `spec.backup`, add `spec.plugins`, bump serverName
 - `kubernetes/apps/database/cloudnative-pg/cluster/kustomization.yaml` — register objectstore.yaml
