@@ -3,21 +3,21 @@
 apiVersion: externaldns.k8s.io/v1alpha1
 kind: DNSEndpoint
 metadata:
-  name: create
+  name: vanilla
 spec:
   endpoints:
-    - dnsName: "create.${SECRET_DOMAIN}"
+    - dnsName: "vanilla.${SECRET_DOMAIN}"
       recordType: CNAME
       targets: ["mc.${SECRET_DOMAIN}"]
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: 'false'
-    - dnsName: "create.${SECRET_GAMING_DOMAIN}"
+    - dnsName: "vanilla.${SECRET_GAMING_DOMAIN}"
       recordType: CNAME
       targets: ["mc.${SECRET_GAMING_DOMAIN}"]
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: 'false'
-    - dnsName: "_minecraft._tcp.create.${SECRET_GAMING_DOMAIN}"
+    - dnsName: "_minecraft._tcp.vanilla.${SECRET_GAMING_DOMAIN}"
       recordType: SRV
       targets: ["0 5 25565 ipv4.${SECRET_GAMING_DOMAIN}"]
