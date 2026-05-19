@@ -83,3 +83,12 @@ spec:
         parentRefs:
           - name: envoy-internal
             namespace: network
+    persistence:
+      config:
+        type: configMap
+        name: garage-config
+        globalMounts:
+          - path: /etc/garage.toml
+            subPath: garage.toml
+            readOnly: true
+
