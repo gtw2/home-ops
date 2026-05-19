@@ -68,7 +68,7 @@ spec:
               PROXY_TLS: false
               PROXY_LOG_LEVEL: info
               # STORAGE_USERS_OCIS_ROOT: /data
-              TZ: America/New_York
+              TZ: ${TIMEZONE}
               # Authelia OIDC
               # Auto role assignment:
               # docs: https://doc.owncloud.com/ocis/next/deployment/services/s-list/proxy.html#automatic-role-assignments
