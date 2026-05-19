@@ -110,7 +110,7 @@ tasks:
     cmds:
       - minijinja-cli --env {{.MC_RESOURCES_DIR}}/creative-snapshot.yaml.j2 | kubectl apply -f -
       - kubectl -n {{.MC_NAMESPACE}} wait volumesnapshot/minecraft-{{.SOURCE}}-creative-{{.TIMESTAMP}} --for=jsonpath='{.status.readyToUse}'=true --timeout=5m
-      - echo ">> Snapshot ready: minecraft-{{.SOURCE}}-creative-{{.TIMESTAMP}}"
+      - 'echo ">> Snapshot ready: minecraft-{{.SOURCE}}-creative-{{.TIMESTAMP}}"'
 
   list-snapshots:
     desc: List creative-PVC snapshots [SOURCE=<name>]
