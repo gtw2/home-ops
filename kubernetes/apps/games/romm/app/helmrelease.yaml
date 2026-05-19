@@ -130,7 +130,7 @@ spec:
                 subPath: tmp
       games:
         type: nfs
-        server: "${SECRET_NFS_SERVER}"
+        server: nas.internal
         path: "/mnt/sega/PlexNAS/Games"
         advancedMounts:
           romm:

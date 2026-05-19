@@ -108,7 +108,7 @@ spec:
         type: emptyDir
       data:
         type: nfs
-        server: ${SECRET_NFS_SERVER}
+        server: nas.internal
         path: /mnt/sega/PlexNAS/DVR
         globalMounts:
         - path: /data
