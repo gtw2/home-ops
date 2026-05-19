@@ -46,7 +46,7 @@ tasks:
         sh: kubectl -n {{.MC_NAMESPACE}} get pvc minecraft-{{.SOURCE}} -o jsonpath='{.spec.resources.requests.storage}' 2>/dev/null || echo 20Gi
       SIZE: '{{.SIZE | default .SOURCE_PVC_SIZE}}'
       SOURCE_REPLICAS_BEFORE:
-        sh: kubectl -n {{.MC_NAMESPACE}} get deploy minecraft-{{.SOURCE}} -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 0
+        sh: kubectl -n {{.MC_NAMESPACE}} get sts minecraft-{{.SOURCE}} -o jsonpath='{.spec.replicas}' 2>/dev/null || echo 0
     env:
       SOURCE: '{{.SOURCE}}'
       SIZE: '{{.SIZE}}'
@@ -54,30 +54,30 @@ tasks:
     preconditions:
       - which kubectl minijinja-cli
       - test -f {{.MC_RESOURCES_DIR}}/creative-pvc.yaml.j2
-      - kubectl -n {{.MC_NAMESPACE}} get deploy minecraft-{{.SOURCE}}
+      - kubectl -n {{.MC_NAMESPACE}} get sts minecraft-{{.SOURCE}}
       - >
         [[ "{{.FORCE}}" == "true" ]] ||
-        [[ "$(kubectl -n {{.MC_NAMESPACE}} get deploy minecraft-{{.SOURCE}}-creative -o jsonpath='{.status.replicas}' 2>/dev/null)" =~ ^(0|)$ ]]
+        [[ "$(kubectl -n {{.MC_NAMESPACE}} get sts minecraft-{{.SOURCE}}-creative -o jsonpath='{.status.replicas}' 2>/dev/null)" =~ ^(0|)$ ]]
     cmds:
       # Wake the source if scaled to zero. Restore the prior replica count at the end
       # (defer runs in reverse order, so this is enqueued first to run last).
-      - defer: kubectl -n {{.MC_NAMESPACE}} scale deploy/minecraft-{{.SOURCE}} --replicas={{.SOURCE_REPLICAS_BEFORE}}
+      - defer: kubectl -n {{.MC_NAMESPACE}} scale sts/minecraft-{{.SOURCE}} --replicas={{.SOURCE_REPLICAS_BEFORE}}
       - |
         if [[ "{{.SOURCE_REPLICAS_BEFORE}}" == "0" ]]; then
           echo ">> Source minecraft-{{.SOURCE}} is scaled to 0; waking it for the RCON dance"
-          kubectl -n {{.MC_NAMESPACE}} scale deploy/minecraft-{{.SOURCE}} --replicas=1
-          kubectl -n {{.MC_NAMESPACE}} rollout status deploy/minecraft-{{.SOURCE}} --timeout=3m
+          kubectl -n {{.MC_NAMESPACE}} scale sts/minecraft-{{.SOURCE}} --replicas=1
+          kubectl -n {{.MC_NAMESPACE}} rollout status sts/minecraft-{{.SOURCE}} --timeout=3m
           # Wait for the JVM/mods to finish loading so rcon-cli is actually answering
-          until kubectl -n {{.MC_NAMESPACE}} exec deploy/minecraft-{{.SOURCE}} -c app -- rcon-cli list >/dev/null 2>&1; do
+          until kubectl -n {{.MC_NAMESPACE}} exec sts/minecraft-{{.SOURCE}} -c app -- rcon-cli list >/dev/null 2>&1; do
             echo "   waiting for RCON to become reachable..."
             sleep 5
           done
         fi
       - echo ">> Quiescing minecraft-{{.SOURCE}}"
-      - kubectl -n {{.MC_NAMESPACE}} exec deploy/minecraft-{{.SOURCE}} -c app -- rcon-cli save-off
-      - kubectl -n {{.MC_NAMESPACE}} exec deploy/minecraft-{{.SOURCE}} -c app -- rcon-cli save-all flush
+      - kubectl -n {{.MC_NAMESPACE}} exec sts/minecraft-{{.SOURCE}} -c app -- rcon-cli save-off
+      - kubectl -n {{.MC_NAMESPACE}} exec sts/minecraft-{{.SOURCE}} -c app -- rcon-cli save-all flush
       - sleep 3
-      - defer: kubectl -n {{.MC_NAMESPACE}} exec deploy/minecraft-{{.SOURCE}} -c app -- rcon-cli save-on
+      - defer: kubectl -n {{.MC_NAMESPACE}} exec sts/minecraft-{{.SOURCE}} -c app -- rcon-cli save-on
       - echo ">> Deleting existing creative PVC (if any)"
       - kubectl -n {{.MC_NAMESPACE}} delete pvc minecraft-{{.SOURCE}}-creative --ignore-not-found --wait=true
       - echo ">> Cloning source PVC into minecraft-{{.SOURCE}}-creative"

@@ -73,10 +73,10 @@ enable-player-address-logging = true
 
 [servers]
 # Backend addresses. Hostnames matter: mc-router uses the handshake hostname Velocity
-# sends to pick the route (and the Deployment to scale).
+# sends to pick the route (and the StatefulSet to scale).
 #   Hub        → direct to the lobby pod (always-on, no auto-scaling).
 #   *.games.svc.cluster.local → ExternalName aliases that CNAME to mc-router, which
-#                                 then scales the backing Deployment 0→1 on connect.
+#                                 then scales the backing StatefulSet 0→1 on connect.
 Hub = "minecraft-lobby:25565"
 Vanilla = "vanilla.games.svc.cluster.local:25565"
 Create = "create.games.svc.cluster.local:25565"

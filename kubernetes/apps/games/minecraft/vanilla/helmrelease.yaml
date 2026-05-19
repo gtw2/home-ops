@@ -35,6 +35,11 @@ spec:
     controllers:
       minecraft-vanilla:
         # Scaled 0→1 by mc-router on /server Vanilla; back to 0 after 30m idle.
+        # mc-router only knows how to scale StatefulSets, and requires
+        # metadata.name == spec.serviceName to fire the scale-up.
+        type: statefulset
+        statefulset:
+          serviceName: minecraft-vanilla
         replicas: 0
         annotations:
           reloader.stakater.com/auto: "true"

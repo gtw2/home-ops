@@ -32,8 +32,10 @@ spec:
             - apiGroups: [""]
               resources: ["services"]
               verbs: ["get", "list", "watch"]
+            # mc-router only knows how to scale StatefulSets; per upstream docs the
+            # backend's metadata.name must equal its spec.serviceName for scale-up to fire.
             - apiGroups: ["apps"]
-              resources: ["deployments", "deployments/scale", "statefulsets", "statefulsets/scale"]
+              resources: ["statefulsets", "statefulsets/scale"]
               verbs: ["get", "list", "watch", "update", "patch"]
             - apiGroups: [""]
               resources: ["endpoints", "pods"]
@@ -72,7 +74,7 @@ spec:
               - --api-binding=:25564
               # Anything that doesn't match an annotated Service falls through to Velocity
               - --default=minecraft-velocity.games.svc.cluster.local:25565
-              # Scale-from-zero on Deployment when an annotated Service receives a connection
+              # Scale-from-zero on StatefulSet when an annotated Service receives a connection
               - --auto-scale-up
               # Scale-to-zero after the connection drains + idle period
               - --auto-scale-down

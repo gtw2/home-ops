@@ -39,6 +39,11 @@ spec:
           type: RuntimeDefault
     controllers:
       minecraft-create-creative:
+        # mc-router only knows how to scale StatefulSets, and requires
+        # metadata.name == spec.serviceName to fire the scale-up.
+        type: statefulset
+        statefulset:
+          serviceName: minecraft-create-creative
         replicas: 0
         annotations:
           reloader.stakater.com/auto: "true"

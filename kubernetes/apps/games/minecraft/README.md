@@ -12,7 +12,7 @@
                                               │  (ClusterIP)    │ scale-from-zero proxy
                                               └────────┬────────┘
                                                        │ matches handshake hostname →
-                                                       │ scales Deployment 0→1 on connect
+                                                       │ scales StatefulSet 0→1 on connect
                                                        ▼
                             ┌──────────────┬───────────┴───────────┬──────────────┐
                             ▼              ▼                       ▼              ▼
@@ -36,7 +36,7 @@
 
 ## Auto-scaling behavior
 
-- mc-router scales a backend Deployment **0 → 1** when Velocity opens a TCP connection to it.
+- mc-router scales a backend StatefulSet **0 → 1** when Velocity opens a TCP connection to it. (mc-router only supports StatefulSets — backends must use `controllers.<name>.type: statefulset` with `statefulset.serviceName` set equal to the controller name.)
 - After **30 minutes** of no active connections, mc-router scales it back to **0**.
 - The 30m timeout is global — mc-router doesn't support per-service overrides. To run different timeouts (e.g. survival vs creative), deploy a second mc-router instance with its own `--auto-scale-down-after` and route each backend through the appropriate one. Today we accept the single value.
 - First-connect cold start is ~30-60s while the pod boots. Velocity's `connection-timeout=60000` covers this.
@@ -68,7 +68,7 @@ Every scaled backend needs **three** things:
    <Name> = "<server>.games.svc.cluster.local:25565"
    ```
 
-The handshake hostname Velocity sends is `<server>.games.svc.cluster.local` — which matches the `externalServerName` annotation and tells mc-router which Deployment to scale.
+The handshake hostname Velocity sends is `<server>.games.svc.cluster.local` — which matches the `externalServerName` annotation and tells mc-router which StatefulSet to scale.
 
 ## Adding a new creative copy of an existing server
 
