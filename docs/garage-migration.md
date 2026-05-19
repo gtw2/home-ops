@@ -10,8 +10,8 @@ Steps marked **`YOU →`** require human action (1Password, `kubectl exec`, `mc`
 
 | Consumer | Endpoint | Bucket | Notes |
 |---|---|---|---|
-| `cnpg/postgres17` (Barman) | `minio.storage.svc.cluster.local:9000` | `postgresql/` (serverName `postgres17-v3`) | In-tree `spec.backup.barmanObjectStore`. Uses MinIO root creds. |
-| `cnpg/immich17` (Barman) | same | `postgresql/` (serverName `immich17-v5`) | Shares bucket. Same root creds. No `ScheduledBackup` resource. |
+| `cnpg/postgres17` (Barman) | `minio.storage.svc.cluster.local:9000` | `postgresql/` (serverName `postgres17-v3`) | In-tree `spec.backup.barmanObjectStore`. Uses MinIO root creds. `ScheduledBackup` present. |
+| `cnpg/immich17` (Barman) | same | `postgresql/` (serverName `immich17-v5`) | Shares bucket. Same root creds. `ScheduledBackup` present (`@daily`). |
 | `ocis` (s3ng) | same | `ocis-data` | All file blobs. Metadata in `ocis` PVC (Rook-Ceph). |
 | `volsync/kopia` | n/a (filesystem on NFS) | n/a | **Not** on MinIO — no migration needed. |
 
@@ -24,9 +24,8 @@ The `volsync` ExternalSecret has commented-out `MINIO_*` references — dead, bu
 - **Garage** single-node, `replication_factor = 1`, replacing MinIO. Storage on `ceph-block` (metadata + data — Garage needs POSIX-compliant fsync, NFS is a footgun for `meta_dir`).
 - **Garage WebUI** (`khairul169/garage-webui`) on `garage.${SECRET_DOMAIN}` (internal only).
 - **`s3.${SECRET_DOMAIN}`** repointed to Garage at the end of the cutover window.
-- **CNPG plugin-barman-cloud** operator deployed; clusters migrated off the deprecated in-tree `barmanObjectStore` API onto `ObjectStore` CRDs + `cluster.spec.plugins`.
+- **CNPG plugin-barman-cloud** operator deployed (into the `database` namespace, alongside the existing `cloudnative-pg` operator); clusters migrated off the deprecated in-tree `barmanObjectStore` API onto `ObjectStore` CRDs + `cluster.spec.plugins`.
 - **Per-app S3 credentials**: separate Garage keys for CNPG and oCIS, stored as new 1Password items (`garage`, `garage-cnpg`, `garage-ocis`). The shared root-cred anti-pattern goes away.
-- **`ScheduledBackup`** resources for both `postgres17` and `immich17` (currently only postgres17 has one).
 
 ---
 
@@ -34,11 +33,11 @@ The `volsync` ExternalSecret has commented-out `MINIO_*` references — dead, bu
 
 These are the assumptions the rest of the plan rests on. If any of them fail, stop and revisit before proceeding.
 
-- **`YOU →`** Confirm CNPG operator version. Chart `0.28.0` from `ghcr.io/szinn/charts-mirror/cloudnative-pg` should map to operator ≥ 1.26 (required for the barman-cloud plugin):
+- **`YOU →`** Confirm CNPG operator version. As of last audit (2026-05-19) the live operator is `ghcr.io/cloudnative-pg/cloudnative-pg:1.29.0` (chart `0.28.0` from `ghcr.io/szinn/charts-mirror/cloudnative-pg`), which satisfies the ≥ 1.26 requirement for the barman-cloud plugin. Re-confirm before starting:
   ```sh
   kubectl -n database get deploy cloudnative-pg -o jsonpath='{.spec.template.spec.containers[0].image}'
   ```
-  If < 1.26, bump the chart version first in a separate PR.
+  If < 1.26, bump the chart version first in a separate PR. Note: the operator runs in the `database` namespace, not `cnpg-system`.
 
 - **`YOU →`** Confirm a chart for the barman-cloud plugin is reachable. Check both the szinn mirror and upstream:
   ```sh
@@ -50,7 +49,7 @@ These are the assumptions the rest of the plan rests on. If any of them fail, st
 - **`YOU →`** Confirm the plugin name and CRD `apiVersion` published by the version you'll install. Run after install:
   ```sh
   kubectl get crd | grep barmancloud
-  kubectl get pods -n cnpg-system | grep barman
+  kubectl get pods -n database | grep barman
   ```
   This document assumes `barmancloud.cnpg.io/v1` and plugin name `barman-cloud.cloudnative-pg.io`. Verify against the chart README before committing the cluster spec rewrite.
 
@@ -89,12 +88,23 @@ These are the assumptions the rest of the plan rests on. If any of them fail, st
    ```
    Wait for both `Last Successful Backup` timestamps to be recent.
 
-2. **`YOU →`** Snapshot the oCIS PVC (Rook-Ceph supports VolumeSnapshots). The oCIS metadata in the PVC must stay aligned with the s3 blobs; a snapshot is your rollback if Phase 4b goes wrong:
+2. **`YOU →`** Snapshot the oCIS PVC (Rook-Ceph supports VolumeSnapshots). The oCIS metadata in the PVC must stay aligned with the s3 blobs; a snapshot is your rollback if Phase 4b goes wrong. The `ocis` PVC is on `ceph-block`, so use the `csi-ceph-blockpool` VolumeSnapshotClass:
    ```sh
-   kubectl -n storage get pvc ocis -o yaml | grep -A2 storageClassName
-   # then create a VolumeSnapshot referencing the matching VolumeSnapshotClass
+   kubectl -n storage get pvc ocis -o yaml | grep -A2 storageClassName    # confirm ceph-block
+   kubectl get volumesnapshotclass csi-ceph-blockpool                     # confirm class exists
+   cat <<EOF | kubectl apply -f -
+   apiVersion: snapshot.storage.k8s.io/v1
+   kind: VolumeSnapshot
+   metadata:
+     name: ocis-pre-garage
+     namespace: storage
+   spec:
+     volumeSnapshotClassName: csi-ceph-blockpool
+     source:
+       persistentVolumeClaimName: ocis
+   EOF
+   kubectl -n storage get volumesnapshot ocis-pre-garage -w   # wait for READYTOUSE=true
    ```
-   (If snapshots are disabled per `openebs/app/helmrelease.yaml`, skip — but plan to do `mc mirror` twice during cutover instead.)
 
 3. **`YOU →`** Create three new 1Password items (do **not** populate the access keys yet — those are generated by Garage in Phase 2):
 
@@ -261,13 +271,13 @@ app/
 └── helmrelease.yaml
 ```
 
-The HelmRelease pulls whichever chart you confirmed in §3, deployed into `cnpg-system` (or wherever the CNPG operator currently runs — match it). Add a `dependsOn` on `cloudnative-pg`. Add the new `ks.yaml` to `kubernetes/apps/database/kustomization.yaml`.
+The HelmRelease pulls whichever chart you confirmed in §3, deployed into the `database` namespace (matching the existing `cloudnative-pg` operator). Add a `dependsOn` on `cloudnative-pg`. Add the new `ks.yaml` to `kubernetes/apps/database/kustomization.yaml`.
 
 After Flux reconciles:
 
 **`YOU →`**:
 ```sh
-kubectl get pods -n cnpg-system | grep barman
+kubectl get pods -n database | grep barman
 kubectl get crd barmancloud.cnpg.io 2>/dev/null \
   || kubectl get crd | grep barman    # confirm the actual CRD api group printed by your chart version
 ```
@@ -355,21 +365,7 @@ ObjectStores can't be referenced cross-namespace. Repeat 8b's pattern in `media`
 
 3. **Rewrite `kubernetes/apps/media/immich/db/cluster.yaml`**: same surgery — delete `spec.backup`, add `spec.plugins` with `barmanObjectName: immich-garage` and `serverName: immich17-v6`, update `bootstrap.recovery.source: immich17-v5`, restructure `externalClusters` to plugin form referencing `serverName: immich17-v5`.
 
-4. **Add `kubernetes/apps/media/immich/db/scheduledbackup.yaml`** — there isn't one today:
-   ```yaml
-   ---
-   apiVersion: postgresql.cnpg.io/v1
-   kind: ScheduledBackup
-   metadata:
-     name: immich
-     namespace: media
-   spec:
-     schedule: "@daily"
-     immediate: true
-     backupOwnerReference: self
-     cluster:
-       name: immich17
-   ```
+4. **No new ScheduledBackup needed** — `kubernetes/apps/media/immich/db/scheduledbackup.yaml` already exists (`@daily`, registered in `db/kustomization.yaml`). It will pick up the new backup target via the cluster automatically.
 
 5. **`YOU →`** Force a backup, verify prefix on Garage, same as 8b step 5.
 
@@ -472,7 +468,7 @@ Already covered above; summarised here for review:
 
 - **Per-cluster keys**: ✓ each cluster's secret pulls from `garage-cnpg` (still shared across the two CNPG clusters since they share the bucket — split further if you want strict isolation).
 - **Plugin migration**: ✓ moved to `barman-cloud.cloudnative-pg.io` ahead of in-tree API removal.
-- **`ScheduledBackup` for `immich17`**: ✓ added in §8c step 4.
+- **`ScheduledBackup` for `immich17`**: already exists (`@daily`); no change needed.
 - **Retention `30d`**: unchanged. **`YOU →`** verify Ceph pool capacity headroom for ~30d × WAL × 2 clusters × `bzip2`. If tight, drop to `14d` in both ObjectStores.
 - **Recovery rehearsal documented**: ✓ in §9 step 1. Capture the actual command transcript into `kubernetes/apps/database/cloudnative-pg/readme.md` after running it the first time.
 - **Backup-freshness alert** (optional, recommended): add a PrometheusRule that alerts when CNPG's `cnpg_collector_last_available_backup_timestamp` is older than 26h. There's already a `prometheusrule.yaml` in `cluster/` — extend it.
@@ -514,7 +510,6 @@ Already covered above; summarised here for review:
 - `kubernetes/apps/database/cloudnative-pg-barman-plugin/{ks.yaml,app/kustomization.yaml,app/ocirepository.yaml,app/helmrelease.yaml}`
 - `kubernetes/apps/database/cloudnative-pg/cluster/objectstore.yaml`
 - `kubernetes/apps/media/immich/db/objectstore.yaml`
-- `kubernetes/apps/media/immich/db/scheduledbackup.yaml`
 
 **Edited**:
 - `kubernetes/apps/storage/kustomization.yaml` — add garage, eventually remove minio
@@ -524,7 +519,7 @@ Already covered above; summarised here for review:
 - `kubernetes/apps/database/cloudnative-pg/cluster/kustomization.yaml` — register objectstore.yaml
 - `kubernetes/apps/media/immich/app/externalsecret.yaml` — switch to `garage-cnpg`
 - `kubernetes/apps/media/immich/db/cluster.yaml` — drop `spec.backup`, add `spec.plugins`, bump serverName
-- `kubernetes/apps/media/immich/db/kustomization.yaml` — register objectstore.yaml + scheduledbackup.yaml
+- `kubernetes/apps/media/immich/db/kustomization.yaml` — register objectstore.yaml
 - `kubernetes/apps/storage/ocis/app/helmrelease.yaml` — endpoint + s3 creds env
 - `kubernetes/apps/storage/ocis/app/externalsecret.yaml` (or new file) — `garage-ocis` keys
 - `kubernetes/components/volsync/externalsecret.yaml` — delete dead minio comments
