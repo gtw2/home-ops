@@ -85,8 +85,8 @@ spec:
               # Storage
               STORAGE_USERS_DRIVER: s3ng
               STORAGE_SYSTEM_DRIVER: ocis
-              STORAGE_USERS_S3NG_ENDPOINT: http://minio.storage.svc.cluster.local:9000
-              STORAGE_USERS_S3NG_REGION: default
+              STORAGE_USERS_S3NG_ENDPOINT: http://garage.storage.svc.cluster.local:3900
+              STORAGE_USERS_S3NG_REGION: us-east-1
               STORAGE_USERS_S3NG_BUCKET: ocis-data
             envFrom:
               - secretRef:
