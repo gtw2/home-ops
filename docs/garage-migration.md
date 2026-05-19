@@ -21,7 +21,7 @@ The `volsync` ExternalSecret has commented-out `MINIO_*` references — dead, bu
 
 ## 2. Target state
 
-- **Garage** single-node, `replication_factor = 1`, replacing MinIO. Storage on `ceph-block` (metadata + data — Garage needs POSIX-compliant fsync, NFS is a footgun for `meta_dir`).
+- **Garage** single-node, `replication_factor = 1`, replacing MinIO. Storage split: `meta_dir` on `ceph-block` (POSIX-compliant fsync — NFS is a documented footgun for Garage's LMDB index), `data_dir` on the NAS via NFS at `nas.internal:/mnt/sega/k8s-garage` (parity with MinIO's current backing; Garage supports network storage for blobs).
 - **Garage WebUI** (`khairul169/garage-webui`) on `garage.${SECRET_DOMAIN}` (internal only).
 - **`s3.${SECRET_DOMAIN}`** repointed to Garage at the end of the cutover window.
 - **CNPG plugin-barman-cloud** operator deployed (into the `database` namespace, alongside the existing `cloudnative-pg` operator); clusters migrated off the deprecated in-tree `barmanObjectStore` API onto `ObjectStore` CRDs + `cluster.spec.plugins`.
@@ -134,7 +134,7 @@ kubernetes/apps/storage/garage/
 └── app/
     ├── kustomization.yaml
     ├── externalsecret.yaml      # pulls 1P 'garage' into garage-secret
-    ├── pvc.yaml                 # meta + data PVCs (ceph-block)
+    ├── pvc.yaml                 # meta PVC (ceph-block) + data NFS PV/PVC
     ├── configmap.yaml           # garage.toml templated from secret
     ├── helmrelease-garage.yaml  # app-template, single replica
     ├── helmrelease-webui.yaml   # khairul169/garage-webui
@@ -145,9 +145,9 @@ Key choices baked in:
 
 - **Image**: `dxflrs/garage` pinned by digest. Renovate will manage updates.
 - **`garage.toml`**: rendered from a ConfigMap (or templated Secret) that injects `rpc_secret`, `admin_token`, `metrics_token` via env-substitution. Set `replication_factor = 1`, `consistency_mode = "none"`, `db_engine = "lmdb"`, `metadata_dir = "/mnt/meta"`, `data_dir = "/mnt/data"`.
-- **PVCs** (both `ceph-block`, RWO):
-  - `garage-meta`: 5Gi
-  - `garage-data`: size for current MinIO usage + 50% headroom (check Phase 3 inventory)
+- **Storage** (split — see §2 for rationale):
+  - `garage-meta`: 5Gi PVC on `ceph-block`, RWO. Mounted at `/mnt/meta`. Holds the LMDB index — fsync-critical.
+  - `garage-data`: NFS-backed, mounted at `/mnt/data`. Export `nas.internal:/mnt/sega/k8s-garage` (separate path from MinIO's `/mnt/sega/k8s` to keep cleanup blast radius bounded — see §9 step 4). Either define an NFS PV/PVC pair or use the app-template `persistence.data: { type: nfs, server: ${SECRET_NFS_SERVER}, path: /mnt/sega/k8s-garage }` form. Make sure the NFS export exists on the NAS before Flux applies. Size headroom: NFS exports are typically thin-provisioned against the underlying pool — confirm pool free space ≥ current MinIO usage + 50%.
 - **Service**: ClusterIP, ports 3900 (s3), 3903 (admin). **Do not expose 3901**.
 - **Routes**:
   - `garage-s3.${SECRET_DOMAIN}` → port 3900 on `envoy-internal` (temporary; required only if you want to mirror via external endpoints — you can skip this and do all mirroring pod-to-pod instead).
@@ -177,7 +177,7 @@ After Flux applies:
    kubectl -n storage exec -it "$POD" -- /garage layout apply --version 1
    kubectl -n storage exec -it "$POD" -- /garage status
    ```
-   Substitute `200G` with the data PVC size you provisioned.
+   Substitute `200G` with the capacity you want to advertise for the NFS-backed `data_dir`. Since the NFS export is thin-provisioned against the NAS pool, this is a logical placement hint, not a hard quota — pick something close to "current MinIO usage + 50% headroom" from the Phase 3 inventory.
 
 3. **`YOU →`** Browse to `https://garage.${SECRET_DOMAIN}` and confirm the WebUI loads and reports the node as healthy.
 
@@ -445,12 +445,13 @@ Then:
    - Remove `./minio/ks.yaml` from `kubernetes/apps/storage/kustomization.yaml`.
    - Commit. Flux prunes the HelmRelease, Service, HTTPRoutes.
 
-4. **`YOU →`** **Manually delete MinIO data on NFS** — Flux does not touch NFS contents:
+4. **`YOU →`** **Manually delete MinIO data on NFS** — Flux does not touch NFS contents. MinIO's data lives at `/mnt/sega/k8s/` on the NAS; Garage's data lives at `/mnt/sega/k8s-garage/` (a deliberately separate export). Delete only the MinIO paths:
    ```sh
-   ssh nas.internal 'ls /mnt/sega/k8s/'      # confirm what's there
+   ssh nas.internal 'ls /mnt/sega/k8s/'                     # confirm what's there
+   ssh nas.internal 'ls /mnt/sega/k8s-garage/ | head -5'    # sanity: Garage's path is separate
    ssh nas.internal 'rm -rf /mnt/sega/k8s/.minio.sys /mnt/sega/k8s/postgresql /mnt/sega/k8s/ocis-data'
    ```
-   Be specific — don't `rm -rf /mnt/sega/k8s/` if other things share that path. The `minio-nfs` PV pointed there but it's possible other workloads also use the directory.
+   Be specific — never `rm -rf /mnt/sega/k8s/` (other workloads may share that path) and **never** `rm -rf /mnt/sega/k8s-garage/` (that's the live Garage `data_dir`).
 
 5. **`YOU →`** **Retire 1Password items**: archive `minio-secret`. Don't delete it for at least another month — keeping it as a safety reference is cheap.
 
@@ -482,8 +483,9 @@ Already covered above; summarised here for review:
 | oCIS s3ng + Barman both call them "buckets" but have different consistency needs | Phase 4d's scale-to-zero is non-negotiable for oCIS. Barman tolerates online copy. |
 | `MINIO_ROOT_USER` is currently the same key as `aws-access-key-id` for two consumers | Don't rotate `minio-secret` mid-migration; both apps would lose access at once. |
 | Garage layout assignment is imperative | Phase 1 step 2 is required after every fresh deploy of Garage. Document in app readme. |
-| NFS for Garage `meta_dir` is a known footgun | Plan uses `ceph-block` for both meta and data. Don't switch to NFS without testing. |
-| Single-node Garage `replication_factor = 1` = no Garage-layer redundancy | Ceph already provides redundancy for the underlying PVCs. Volsync/kopia keeps off-cluster backups of `data_dir`. |
+| NFS for Garage `meta_dir` is a known footgun | Split storage: `meta_dir` on `ceph-block` (fsync-safe), `data_dir` on NFS (supported by Garage for blob storage). Don't move `meta_dir` to NFS under any circumstances. |
+| NAS availability is now in the hot path for S3 reads/writes | Same as MinIO today (no regression). If the NAS drops, Garage blob ops fail but the index (on Ceph) stays consistent — restoring NAS access resumes service without corruption. |
+| Single-node Garage `replication_factor = 1` = no Garage-layer redundancy | NAS RAID + Ceph (for `meta_dir`) provide underlying redundancy. Volsync/kopia keeps off-cluster backups. |
 | In-tree `barmanObjectStore` and plugin can't coexist on one cluster | Plan deletes `spec.backup` in the same commit that adds `spec.plugins`. No middle state. |
 | `bootstrap.recovery` is consulted only at cluster creation | Updating it is documentary — actually-running clusters ignore it. Don't expect it to do anything for the migration itself. |
 
