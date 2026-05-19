@@ -69,3 +69,10 @@ spec:
         ports:
           http:
             port: *port
+    route:
+      app:
+        hostnames:
+          - garage.${SECRET_DOMAIN}
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
