@@ -26,38 +26,23 @@ spec:
         containers:
           app:
             image:
-              repository: dxflrs/garage
+              repository: mirror.gcr.io/dxflrs/garage
               tag: v2.3.0@sha256:866bd13ed2038ba7e7190e840482bc27234c4afaf77be8cfa439ae088c1e4690
-            command: ["/garage"]
-            args: ["server"]
             env:
               TZ: "${TIMEZONE}"
-              RUST_LOG: "garage=info"
-              GARAGE_CONFIG_FILE: /etc/garage.toml
             envFrom:
               - secretRef:
                   name: garage-secret
-            probes:
-              liveness: &probes
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /health
-                    port: &s3-port 3900
-                  initialDelaySeconds: 15
-                  periodSeconds: 30
-                  timeoutSeconds: 10
-                  failureThreshold: 6
-              readiness: *probes
-              startup:
-                enabled: false
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: [ALL] }
             resources:
               requests:
                 cpu: 100m
-                memory: 256Mi
+                memory: 512Mi
               limits:
-                memory: 2Gi
+                memory: 768Mi
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true
