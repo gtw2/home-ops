@@ -78,6 +78,13 @@ spec:
                   originServerName: external.${SECRET_DOMAIN}
                   tcpKeepAlive: 7200s
                 service: https://envoy-external.{{ .Release.Namespace }}.svc.cluster.local:443
+              - hostname: "*.${SECRET_GAMING_DOMAIN}"
+                originRequest:
+                  http2Origin: true
+                  keepAliveTimeout: 3600s
+                  originServerName: external.${SECRET_GAMING_DOMAIN}
+                  tcpKeepAlive: 7200s
+                service: https://envoy-external.{{ .Release.Namespace }}.svc.cluster.local:443
               - service: http_status:404
     persistence:
       config-file:

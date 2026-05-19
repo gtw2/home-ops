@@ -9,3 +9,6 @@ spec:
     - dnsName: "external.${SECRET_DOMAIN}"
       recordType: CNAME
       targets: ["3d9f6a77-310e-49ed-8e12-f0f11ee5bafb.cfargotunnel.com"]
+    - dnsName: "external.${SECRET_GAMING_DOMAIN}"
+      recordType: CNAME
+      targets: ["3d9f6a77-310e-49ed-8e12-f0f11ee5bafb.cfargotunnel.com"]
