@@ -53,12 +53,30 @@ spec:
         seccompProfile: { type: RuntimeDefault }
     service:
       app:
-        controller: *app
+        controller: garage
         ports:
           s3:
-            port: *s3-port
-          admin:
-            port: &admin-port 3903
+            port: 3900
+          api:
+            port: 3903
+    route:
+      s3:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Storage
+          gethomepage.dev/name: Garage
+          gethomepage.dev/icon: mdi-warehouse
+          gethomepage.dev/description: S3-compatible object storage
+          gethomepage.dev/pod-selector: app.kubernetes.io/name=garage-webui
+        hostnames:
+          - s3.${SECRET_DOMAIN}
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: s3
     persistence:
       config:
         type: configMap
