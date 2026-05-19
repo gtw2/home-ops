@@ -8,4 +8,3 @@ resources:
   - ./configmap.yaml
   - ./helmrelease-garage.yaml
   - ./helmrelease-webui.yaml
-#  - ./httproute.yaml
