@@ -6,12 +6,6 @@ metadata:
   name: create
 spec:
   endpoints:
-    - dnsName: "create.${SECRET_DOMAIN}"
-      recordType: CNAME
-      targets: ["mc.${SECRET_DOMAIN}"]
-      providerSpecific:
-        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
-          value: 'false'
     - dnsName: "create.${SECRET_GAMING_DOMAIN}"
       recordType: CNAME
       targets: ["mc.${SECRET_GAMING_DOMAIN}"]

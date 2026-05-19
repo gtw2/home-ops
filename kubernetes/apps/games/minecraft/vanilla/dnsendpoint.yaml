@@ -6,12 +6,6 @@ metadata:
   name: vanilla
 spec:
   endpoints:
-    - dnsName: "vanilla.${SECRET_DOMAIN}"
-      recordType: CNAME
-      targets: ["mc.${SECRET_DOMAIN}"]
-      providerSpecific:
-        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
-          value: 'false'
     - dnsName: "vanilla.${SECRET_GAMING_DOMAIN}"
       recordType: CNAME
       targets: ["mc.${SECRET_GAMING_DOMAIN}"]
