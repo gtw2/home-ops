@@ -38,26 +38,14 @@ spec:
     podMonitorMetricRelabelings:
       - { sourceLabels: ["cluster"], targetLabel: cnpg_cluster, action: replace }
       - { regex: cluster, action: labeldrop }
-  backup:
-    retentionPolicy: 30d
-    barmanObjectStore: &barmanObjectStore
-      data:
-        compression: bzip2
-      wal:
-        compression: bzip2
-        maxParallel: 8
-      destinationPath: s3://postgresql/
-      endpointURL: http://minio.storage.svc.cluster.local:9000
-      # Note: serverName version needs to be incremented
-      # when recovering from an existing cnpg cluster
-      serverName: &currentCluster immich17-v5
-      s3Credentials:
-        accessKeyId:
-          name: immich-secret
-          key: aws-access-key-id
-        secretAccessKey:
-          name: immich-secret
-          key: aws-secret-access-key
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: immich-garage
+        # Note: serverName version needs to be incremented
+        # when recovering from an existing cnpg cluster
+        serverName: immich17-v6
   # Note: previousCluster needs to be set to the name of the previous
   # cluster when recovering from an existing cnpg cluster
   bootstrap:
@@ -65,10 +53,12 @@ spec:
     #   postInitSQL:
     #     - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
     recovery:
-      source: &previousCluster immich17-v3
+      source: immich17-v5
   # Note: externalClusters is needed when recovering from an existing cnpg cluster
   externalClusters:
-    - name: *previousCluster
-      barmanObjectStore:
-        <<: *barmanObjectStore
-        serverName: *previousCluster
+    - name: immich17-v5
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: immich-garage
+          serverName: immich17-v5
