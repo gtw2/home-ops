@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: garage-config
+data:
+  garage.toml: |
+    metadata_dir = "/mnt/meta"
+    data_dir     = "/mnt/data"
+    db_engine    = "lmdb"
+    metadata_auto_snapshot_interval = "6h"
+
+    replication_factor = 1
+    compression_level  = 2
+
+    # rpc_secret is provided via GARAGE_RPC_SECRET (envFrom garage-secret).
+    # Single-node cluster: RPC isn't used across the network, but the daemon
+    # still needs to bind it. Public addr is loopback so nothing off-pod can talk.
+    rpc_bind_addr   = "[::]:3901"
+    rpc_public_addr = "127.0.0.1:3901"
+
+    [s3_api]
+    api_bind_addr = "[::]:3900"
+    s3_region     = "us-east-1"
+    root_domain   = ".s3.${SECRET_DOMAIN}"
+
+    [admin]
+    api_bind_addr = "[::]:3903"
+    # admin_token  via GARAGE_ADMIN_TOKEN
+    # metrics_token via GARAGE_METRICS_TOKEN

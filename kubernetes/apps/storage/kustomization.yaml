@@ -6,6 +6,7 @@ namespace: storage
 components:
   - ../../components/common
 resources:
+  - ./garage/ks.yaml
   - ./kopia/ks.yaml
   - ./minio/ks.yaml
 #  - ./nextcloud/ks.yaml
