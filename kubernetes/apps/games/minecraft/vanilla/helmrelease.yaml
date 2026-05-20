@@ -70,7 +70,7 @@ spec:
               EULA: "true"
               TZ: "${TIMEZONE}"
               TYPE: FABRIC
-              # ENABLE_AUTOPAUSE: TRUE
+              ENABLE_AUTOPAUSE: FALSE
               MAX_TICK_TIME: "-1"
               # renovate: depName=minecraft datasource=custom.minecraft versioning=semver-coerced
               VERSION: 1.21.11
