@@ -83,6 +83,11 @@ spec:
               # idle creative pods forever. Tune in this one place; the README documents
               # the trade-off.
               - --auto-scale-down-after=30m
+              # MOTD shown to status pings while a backend is at replicas: 0. Without
+              # this, mc-router does not respond at all and the server appears as
+              # "Can't connect to server" in the client's list. With it set, players
+              # see a friendly message and know to click connect to wake the backend.
+              - --auto-scale-asleep-motd=Server is sleeping — connect to wake it up
             env:
               TZ: "${TIMEZONE}"
             probes:

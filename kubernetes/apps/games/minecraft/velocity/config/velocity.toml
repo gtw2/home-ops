@@ -121,11 +121,13 @@ compression-level = -1
 login-ratelimit = 3000
 
 # Specify a custom timeout for connection timeouts here. The default is five seconds.
-# Bumped to 60s so mc-router has time to scale creative backends from 0→1 on first connect.
-connection-timeout = 60000
+# Bumped to 3 minutes so mc-router has time to scale a modded backend from 0→1 on
+# first connect (cold start: pod schedule + image pull + JVM start + mod load).
+connection-timeout = 180000
 
 # Specify a read timeout for connections here. The default is 30 seconds.
-read-timeout = 30000
+# Bumped alongside connection-timeout for the same cold-start reason.
+read-timeout = 60000
 
 # Enables compatibility with HAProxy's PROXY protocol. If you don't know what this is for, then
 # don't enable it.
