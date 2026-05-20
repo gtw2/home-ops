@@ -152,7 +152,8 @@ spec:
         controller: *app
         type: ClusterIP
         annotations:
-          mc-router.itzg.me/externalServerName: "create-creative.games.svc.cluster.local"
+          # See vanilla/helmrelease.yaml for why both names are listed.
+          mc-router.itzg.me/externalServerName: "create-creative.games.svc.cluster.local,create-creative.${SECRET_GAMING_DOMAIN}"
         ports:
           java:
             port: 25565

@@ -137,7 +137,11 @@ spec:
           # Velocity reaches mc-router via the `vanilla` ExternalName Service (see route-services.yaml),
           # which CNAMEs to minecraft-router. The handshake hostname matches this annotation,
           # so mc-router knows which Service's pods to scale and forward to.
-          mc-router.itzg.me/externalServerName: "vanilla.games.svc.cluster.local"
+          # Velocity's modern forwarding preserves the player's original handshake hostname
+          # when connecting to the backend, so mc-router needs to recognize BOTH the internal
+          # name (used when /server X is invoked in-game) and the public hostname (used when
+          # a player connects directly via the forced-host subdomain).
+          mc-router.itzg.me/externalServerName: "vanilla.games.svc.cluster.local,vanilla.${SECRET_GAMING_DOMAIN}"
         ports:
           java:
             port: 25565

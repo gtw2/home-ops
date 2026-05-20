@@ -158,7 +158,8 @@ spec:
         type: ClusterIP
         annotations:
           # Velocity reaches mc-router via the `create` ExternalName Service (see route-services.yaml).
-          mc-router.itzg.me/externalServerName: "create.games.svc.cluster.local"
+          # See vanilla/helmrelease.yaml for why both names are listed.
+          mc-router.itzg.me/externalServerName: "create.games.svc.cluster.local,create.${SECRET_GAMING_DOMAIN}"
         ports:
           java:
             port: 25565
