@@ -83,8 +83,16 @@ spec:
               # idle creative pods forever. Tune in this one place; the README documents
               # the trade-off.
               - --auto-scale-down-after=30m
+              # MOTD shown to status pings while a backend is at replicas: 0. Without
+              # this, mc-router does not respond at all and the server appears as
+              # "Can't connect to server" in the client's list. With it set, players
+              # see a friendly message and know to click connect to wake the backend.
+              - --auto-scale-asleep-motd=Server is sleeping — connect to wake it up
             env:
               TZ: "${TIMEZONE}"
+              # Temporary while diagnosing why players see "Network Protocol Error"
+              # after the edge-LB refactor; revert once the cause is identified.
+              DEBUG: "true"
             probes:
               readiness: &probes
                 enabled: true
@@ -116,19 +124,28 @@ spec:
               limits:
                 memory: 128Mi
     service:
-      # In-cluster only. Velocity is the public entrypoint; backends point at
-      # ExternalName Service aliases of this Service so mc-router can scale
-      # them when Velocity opens a connection (via /server X or a forced-host
-      # route). mc-router's relay is byte-faithful, so Velocity's modern
-      # player-info-forwarding handshake reaches the backend intact.
+      # mc-router is the public TCP entrypoint. It reads the handshake hostname,
+      # scales the matching backend StatefulSet from 0→1 if needed, then routes the
+      # client to Velocity (via the proxyServerName annotation on each backend's
+      # Service). Velocity then connects to the now-running backend directly, so
+      # Velocity's modern player-info-forwarding handshake reaches the backend
+      # intact (mc-router never sits between Velocity and the backend).
       app:
         controller: mc-router
-        type: ClusterIP
+        type: LoadBalancer
+        annotations:
+          io.cilium/lb-ipam-ips: 10.10.40.150
+          io.cilium/lb-ipam-sharing-key: minecraft-frontend
         ports:
           minecraft:
             port: 25565
             protocol: TCP
             targetPort: 25565
+      # Admin API kept on its own ClusterIP service — no need to expose it externally.
+      api:
+        controller: mc-router
+        type: ClusterIP
+        ports:
           api:
             port: 25564
             protocol: TCP

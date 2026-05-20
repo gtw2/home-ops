@@ -138,8 +138,8 @@ spec:
         type: ClusterIP
         annotations:
           # See vanilla/helmrelease.yaml for the annotation contract.
-          mc-router.itzg.me/externalServerName: "vanilla-creative.games.svc.cluster.local"
-          mc-router.itzg.me/autoScaleWaitTimeout: "3m"
+          mc-router.itzg.me/externalServerName: "vanilla-creative.${SECRET_GAMING_DOMAIN}"
+          mc-router.itzg.me/proxyServerName: "minecraft-velocity.games.svc.cluster.local:25565"
         ports:
           java:
             port: 25565
