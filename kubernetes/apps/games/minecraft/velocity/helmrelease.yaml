@@ -48,7 +48,11 @@ spec:
             nameOverride: *app
             image:
               repository: itzg/mc-proxy
-              tag: java21@sha256:86b89f268855d1b02a814aaded2c12b18c526e0769ae3777bc6d8c2af84f0e07
+              # Bumped to java25 because miniplaceholders' latest release is compiled for
+              # class file v69 (Java 25). On java21, every status ping crashes MiniMOTD's
+              # ProxyPingEvent handler with UnsupportedClassVersionError → clients see
+              # "Network Protocol Error" in the server list.
+              tag: java25@sha256:53b04d65a292ee8b7336c251ff8583920723a8effa8602b8a1ee0d1129419861
             tty: true
             env:
               TZ: ${TIMEZONE}
