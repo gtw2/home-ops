@@ -90,6 +90,9 @@ spec:
               - --auto-scale-asleep-motd=Server is sleeping — connect to wake it up
             env:
               TZ: "${TIMEZONE}"
+              # Temporary while diagnosing why players see "Network Protocol Error"
+              # after the edge-LB refactor; revert once the cause is identified.
+              DEBUG: "true"
             probes:
               readiness: &probes
                 enabled: true
