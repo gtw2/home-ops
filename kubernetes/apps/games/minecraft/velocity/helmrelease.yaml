@@ -61,8 +61,8 @@ spec:
               TYPE: VELOCITY
               # TODO renovate
               MINECRAFT_VERSION: 1.21.11
-              VELOCITY_VERSION: "3.4.0-SNAPSHOT"
-              VELOCITY_BUILD_ID: 539
+              VELOCITY_VERSION: "3.5.0-SNAPSHOT"
+              #VELOCITY_BUILD_ID: 539
               OVERRIDE_ICON: "true"
               # PLUGINS_FILE: /config/plugins.txt
               INIT_MEMORY: 128M
