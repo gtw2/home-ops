@@ -121,16 +121,28 @@ spec:
               limits:
                 memory: 128Mi
     service:
-      # In-cluster only. Velocity is the public entrypoint; creative backends point at
-      # ExternalName Service aliases of this Service so mc-router can scale them on connect.
+      # mc-router is the public TCP entrypoint. It reads the handshake hostname,
+      # scales the matching backend StatefulSet from 0→1 if needed, then routes the
+      # client to Velocity (via the proxyServerName annotation on each backend's
+      # Service). Velocity then connects to the now-running backend directly, so
+      # Velocity's modern player-info-forwarding handshake reaches the backend
+      # intact (mc-router never sits between Velocity and the backend).
       app:
         controller: mc-router
-        type: ClusterIP
+        type: LoadBalancer
+        annotations:
+          io.cilium/lb-ipam-ips: 10.10.40.150
+          io.cilium/lb-ipam-sharing-key: minecraft-frontend
         ports:
           minecraft:
             port: 25565
             protocol: TCP
             targetPort: 25565
+      # Admin API kept on its own ClusterIP service — no need to expose it externally.
+      api:
+        controller: mc-router
+        type: ClusterIP
+        ports:
           api:
             port: 25564
             protocol: TCP

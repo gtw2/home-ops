@@ -114,24 +114,33 @@ spec:
               #   memory: 1Gi
 
     service:
+      # TCP 25565 is reached only via mc-router (at the edge LB). Keeping this as
+      # ClusterIP avoids a port conflict with mc-router on the shared LB IP and
+      # ensures clients can't bypass mc-router's scale-up logic by connecting to
+      # Velocity directly.
       velocity:
         controller: velocity
-        type: LoadBalancer
-        annotations:
-          io.cilium/lb-ipam-ips: 10.10.40.150
+        type: ClusterIP
         ports:
           velocity-proxy:
             port: 25565
             protocol: TCP
-            # targetPort: velocity
+      # UDP voice + bedrock have to reach Velocity directly because mc-router is
+      # TCP-only. Sharing the LB IP with mc-router (different protocol/port tuples)
+      # via the Cilium sharing-key keeps a single public IP for the whole stack.
+      udp:
+        controller: velocity
+        type: LoadBalancer
+        annotations:
+          io.cilium/lb-ipam-ips: 10.10.40.150
+          io.cilium/lb-ipam-sharing-key: minecraft-frontend
+        ports:
           voice-proxy:
             port: 25577
             protocol: UDP
-            # targetPort: voice
           bedrock-proxy:
             port: 19132
             protocol: UDP
-            # targetPort: bedrock
       rcon:
         controller: velocity
         ports:

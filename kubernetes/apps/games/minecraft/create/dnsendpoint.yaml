@@ -15,3 +15,13 @@ spec:
     - dnsName: "_minecraft._tcp.create.${SECRET_GAMING_DOMAIN}"
       recordType: SRV
       targets: ["0 5 25565 ipv4.${SECRET_GAMING_DOMAIN}"]
+    # See vanilla/dnsendpoint.yaml for why the creative subdomain has its own record.
+    - dnsName: "create-creative.${SECRET_GAMING_DOMAIN}"
+      recordType: CNAME
+      targets: ["mc.${SECRET_GAMING_DOMAIN}"]
+      providerSpecific:
+        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+          value: 'false'
+    - dnsName: "_minecraft._tcp.create-creative.${SECRET_GAMING_DOMAIN}"
+      recordType: SRV
+      targets: ["0 5 25565 ipv4.${SECRET_GAMING_DOMAIN}"]

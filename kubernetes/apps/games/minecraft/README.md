@@ -1,74 +1,69 @@
 # Minecraft
 
 ```
-                                              ┌─────────────────┐
-   Player → mc.${SECRET_DOMAIN}:25565 ───────►│  Velocity       │ always-on
-                                              │  (mc-proxy)     │ 10.10.40.150
-                                              └────────┬────────┘
-                                                       │ /server X
-                                                       ▼
-                                              ┌─────────────────┐
-                                              │  mc-router      │ always-on
-                                              │  (ClusterIP)    │ scale-from-zero proxy
-                                              └────────┬────────┘
-                                                       │ matches handshake hostname →
-                                                       │ scales StatefulSet 0→1 on connect
-                                                       ▼
-                            ┌──────────────┬───────────┴───────────┬──────────────┐
-                            ▼              ▼                       ▼              ▼
-                       ┌─────────┐   ┌─────────┐            ┌──────────────┐ ┌──────────────┐
-                       │ vanilla │   │ create  │            │ vanilla-     │ │ create-      │
-                       │ replicas│   │ replicas│            │ creative     │ │ creative     │
-                       │ : 0     │   │ : 0     │            │ replicas: 0  │ │ replicas: 0  │
-                       └─────────┘   └─────────┘            └──────────────┘ └──────────────┘
+                              ┌──────────────────┐
+   Player TCP 25565 ─────────►│  mc-router       │ public LB 10.10.40.150 (TCP)
+                              │  (edge LB)       │ reads handshake hostname,
+                              └─────────┬────────┘ scales backend STS 0→1,
+                                        │          routes to Velocity
+                                        ▼
+                              ┌──────────────────┐
+                              │  Velocity        │ ClusterIP (TCP 25565)
+                              │  (mc-proxy)      │ LB 10.10.40.150 (UDP only,
+                              └─────────┬────────┘ shared with mc-router)
+                                        │ direct backend Service address
+                                        │ (modern forwarding preserved)
+                                        ▼
+            ┌──────────────┬─────────────┴─────────────┬──────────────┐
+            ▼              ▼                           ▼              ▼
+       ┌─────────┐   ┌─────────┐                ┌──────────────┐ ┌──────────────┐
+       │ vanilla │   │ create  │                │ vanilla-     │ │ create-      │
+       │ STS 0   │   │ STS 0   │                │ creative     │ │ creative     │
+       └─────────┘   └─────────┘                │ STS 0        │ │ STS 0        │
+                                                └──────────────┘ └──────────────┘
 
-                       Hub (lobby) is reached directly by Velocity, no mc-router, always-on.
+       Hub (lobby) is always-on; Velocity reaches it directly via cluster DNS.
+       Voice (UDP 25577) and Bedrock (UDP 19132) hit Velocity directly via the
+       shared LB IP (mc-router is TCP-only).
 ```
 
 ## Roles
 
 | Component | State | Owns |
 |---|---|---|
-| **Velocity** (`velocity/`) | Always-on, public LB `10.10.40.150` | LuckPerms permissions, `/server` hopping, voicechat proxy, MiniMOTD, tab list, forced-host subdomains |
-| **mc-router** (`router/`) | Always-on, ClusterIP | Hostname routing + scale-from-zero/scale-to-zero on connect |
+| **mc-router** (`router/`) | Always-on, public LB `10.10.40.150` (TCP 25565) | Public TCP entrypoint, hostname routing, scale-from-zero/scale-to-zero of backend StatefulSets |
+| **Velocity** (`velocity/`) | Always-on, ClusterIP (TCP) + shared LB (UDP) | LuckPerms permissions, `/server` hopping, voicechat proxy, MiniMOTD, tab list, forced-host subdomains, modern player-info-forwarding to backends |
 | **Lobby** (`lobby/`) | Always-on | Velocity's `try` fallback; the landing server |
-| **Vanilla / Create / *-Creative** | `replicas: 0` | World data; woken by mc-router on `/server X` |
+| **Vanilla / Create / *-Creative** | `replicas: 0` | World data; woken by mc-router when their public hostname is accessed |
 
 ## Auto-scaling behavior
 
-- mc-router scales a backend StatefulSet **0 → 1** when Velocity opens a TCP connection to it. (mc-router only supports StatefulSets — backends must use `controllers.<name>.type: statefulset` with `statefulset.serviceName` set equal to the controller name.)
+- mc-router scales a backend StatefulSet **0 → 1** when a client opens a TCP connection whose handshake hostname matches the Service's `externalServerName` annotation. (mc-router only supports StatefulSets — backends must use `controllers.<name>.type: statefulset` with `statefulset.serviceName` set equal to the controller name.)
 - After **30 minutes** of no active connections, mc-router scales it back to **0**.
-- The 30m timeout is global — mc-router doesn't support per-service overrides. To run different timeouts (e.g. survival vs creative), deploy a second mc-router instance with its own `--auto-scale-down-after` and route each backend through the appropriate one. Today we accept the single value.
-- First-connect cold start is ~30-60s while the pod boots. Velocity's `connection-timeout=60000` covers this.
+- The 30m timeout is global — mc-router doesn't support per-service overrides. Tune in `router/helmrelease.yaml` (`--auto-scale-down-after`); today survival and creative share it.
+- First-connect cold start can be 60-120s (image pull + JVM + mod load). Velocity's `connection-timeout = 180000` covers this.
+- **Important:** `/server X` from inside Velocity to a *sleeping* backend will fail — Velocity dials the backend Service directly, bypassing mc-router. Players must connect via the public hostname (e.g. `vanilla.${CFG_GAMING_DOMAIN}`) to trip the scale-up first. Once awake, `/server X` between servers works normally.
 
 ## How a backend gets routed through mc-router
 
-Every scaled backend needs **three** things:
+Every scaled backend needs **two** things:
 
-1. **The HelmRelease** (`<server>/helmrelease.yaml`): `replicas: 0`, and on its Service:
+1. **The HelmRelease** (`<server>/helmrelease.yaml`): backend is a StatefulSet with `replicas: 0`, and its Service carries:
    ```yaml
    annotations:
-     mc-router.itzg.me/externalServerName: "<server>.games.svc.cluster.local"
+     # Public hostname that wakes this backend on connect
+     mc-router.itzg.me/externalServerName: "<server>.${SECRET_GAMING_DOMAIN}"
+     # Where mc-router routes the client connection (the proxy)
+     mc-router.itzg.me/proxyServerName: "minecraft-velocity.games.svc.cluster.local:25565"
    ```
 
-2. **An ExternalName Service alias** (`<server>/route-services.yaml`): so Velocity can DNS-resolve `<server>.games.svc.cluster.local` to mc-router:
-   ```yaml
-   apiVersion: v1
-   kind: Service
-   metadata:
-     name: <server>
-   spec:
-     type: ExternalName
-     externalName: minecraft-router.games.svc.cluster.local
-   ```
-
-3. **A Velocity backend entry** (`velocity/config/velocity.toml`):
+2. **A Velocity backend entry** (`velocity/config/velocity.toml`) — direct backend Service address so modern player-info-forwarding is preserved end-to-end:
    ```toml
    [servers]
-   <Name> = "<server>.games.svc.cluster.local:25565"
+   <Name> = "minecraft-<server>.games.svc.cluster.local:25565"
    ```
 
-The handshake hostname Velocity sends is `<server>.games.svc.cluster.local` — which matches the `externalServerName` annotation and tells mc-router which StatefulSet to scale.
+A matching `[forced-hosts]` entry routes players who connect via the public subdomain to that backend after they pass through mc-router and Velocity.
 
 ## Adding a new creative copy of an existing server
 
@@ -86,44 +81,37 @@ Say you want a creative copy of `vanilla`:
    - `MOTD`, lower `MAX_MEMORY` if you want
    - `replicas: 0`
    - `CFG_LUCKPERMS_SERVER: "<server>-creative"` (distinct LuckPerms context so creative permissions don't bleed into survival)
-   - Service annotation: `mc-router.itzg.me/externalServerName: "<server>-creative.games.svc.cluster.local"`
+   - Service annotations:
+     ```yaml
+     mc-router.itzg.me/externalServerName: "<server>-creative.${SECRET_GAMING_DOMAIN}"
+     mc-router.itzg.me/proxyServerName: "minecraft-velocity.games.svc.cluster.local:25565"
+     ```
    - `persistence.data.existingClaim: minecraft-<server>-creative`
    - Reuses the parent's `envFrom` Secret (`minecraft-<server>-secret`) and `configMap`
 
-2. **Add the ExternalName** to `<server>/route-services.yaml`:
-   ```yaml
-   ---
-   apiVersion: v1
-   kind: Service
-   metadata:
-     name: <server>-creative
-   spec:
-     type: ExternalName
-     externalName: minecraft-router.games.svc.cluster.local
-   ```
-
-3. **Register with Velocity** in `velocity/config/velocity.toml`:
+2. **Register with Velocity** in `velocity/config/velocity.toml`:
    ```toml
    [servers]
-   <Server>Creative = "<server>-creative.games.svc.cluster.local:25565"
+   <Server>Creative = "minecraft-<server>-creative.games.svc.cluster.local:25565"
 
    [forced-hosts]
    "<server>-creative.$${CFG_GAMING_DOMAIN}" = ["<Server>Creative"]
    ```
 
-4. **Register the resource** in `<server>/kustomization.yaml`:
+3. **Register the resource** in `<server>/kustomization.yaml`:
    ```yaml
    resources:
      - ./helmrelease-creative.yaml
    ```
-   (route-services.yaml is already wired up)
 
-5. **Create the PVC** with the initial world clone:
+4. **Create the PVC** with the initial world clone:
    ```bash
    task minecraft:refresh-creative SOURCE=<server>
    ```
 
-6. **Commit and reconcile**. Try `/server <Server>Creative` in-game.
+5. **Add a DNS record** (in `<server>/dnsendpoint.yaml`) so `<server>-creative.${SECRET_GAMING_DOMAIN}` resolves to the public LB IP — without this, players can't trip mc-router's scale-up by entering via the public hostname.
+
+6. **Commit and reconcile**. Try connecting via `<server>-creative.${SECRET_GAMING_DOMAIN}` in-game (this is what wakes the backend).
 
 ## Refreshing creative worlds from their source
 

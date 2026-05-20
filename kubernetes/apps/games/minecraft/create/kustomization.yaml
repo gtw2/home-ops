@@ -7,7 +7,6 @@ resources:
   - ./externalsecret.yaml
   - ./helmrelease.yaml             # survival
   - ./helmrelease-creative.yaml    # creative copy (scale-from-zero clone of survival world)
-  - ./route-services.yaml          # ExternalName aliases pointing Velocity at mc-router
 configMapGenerator:
   - name: minecraft-create-configmap
     files:
