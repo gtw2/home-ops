@@ -72,19 +72,19 @@ ping-passthrough = "disabled"
 enable-player-address-logging = true
 
 [servers]
-# Direct backend Service addresses. mc-router sits at the edge (TCP 25565 LB)
-# and routes incoming players to Velocity; Velocity then connects to backends
-# directly here, so modern player-info-forwarding is preserved end-to-end.
-#
-# Caveat: /server X from inside Velocity only works if the backing StatefulSet
-# is already at replicas: 1. Waking a sleeping backend requires the player to
-# connect via the public hostname (e.g. vanilla.${CFG_GAMING_DOMAIN}) so the
-# handshake reaches mc-router and trips its scale-up.
+# Backend addresses. The non-Hub entries are ExternalName Service aliases
+# (see <server>/route-services.yaml) that CNAME to mc-router. Velocity's
+# handshake-host to the backend matches the externalServerName annotation
+# on the real backend Service, so mc-router knows to scale that StatefulSet
+# 0→1 on connect (whether the connection comes from /server X in-game or
+# from a forced-host route on first connect). mc-router waits for the pod
+# to become reachable, then transparently relays the modern-forwarding bytes.
+#   Hub        → direct to lobby (always-on, no scaling needed).
 Hub = "minecraft-lobby:25565"
-Vanilla = "minecraft-vanilla.games.svc.cluster.local:25565"
-Create = "minecraft-create.games.svc.cluster.local:25565"
-VanillaCreative = "minecraft-vanilla-creative.games.svc.cluster.local:25565"
-CreateCreative = "minecraft-create-creative.games.svc.cluster.local:25565"
+Vanilla = "vanilla.games.svc.cluster.local:25565"
+Create = "create.games.svc.cluster.local:25565"
+VanillaCreative = "vanilla-creative.games.svc.cluster.local:25565"
+CreateCreative = "create-creative.games.svc.cluster.local:25565"
 
 # In what order we should try servers when a player logs in or is kicked from a server.
 try = [

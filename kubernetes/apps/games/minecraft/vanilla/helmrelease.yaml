@@ -137,13 +137,14 @@ spec:
           # Velocity reaches mc-router via the `vanilla` ExternalName Service (see route-services.yaml),
           # which CNAMEs to minecraft-router. The handshake hostname matches this annotation,
           # so mc-router knows which Service's pods to scale and forward to.
-          # Hostname mc-router watches for in the player's handshake. When a player connects
-          # to this hostname, mc-router scales this Service's backing StatefulSet 0→1.
-          mc-router.itzg.me/externalServerName: "vanilla.${SECRET_GAMING_DOMAIN}"
-          # Where mc-router actually routes the client connection. Velocity then handles
-          # /server hopping and player-info-forwarding to the (now-running) backend directly.
-          # This preserves modern forwarding (mc-router is NOT in the Velocity↔backend path).
-          mc-router.itzg.me/proxyServerName: "minecraft-velocity.games.svc.cluster.local:25565"
+          # Hostname Velocity uses to dial this backend (see velocity.toml [servers]
+          # and route-services.yaml — the ExternalName CNAMEs to mc-router). When the
+          # handshake arrives at mc-router with this hostname, mc-router scales the
+          # backing StatefulSet 0→1, waits for it to become reachable, then transparently
+          # relays Velocity's modern-forwarding bytes through to the backend.
+          mc-router.itzg.me/externalServerName: "vanilla.games.svc.cluster.local"
+          # Give modded cold start enough headroom (image pull + JVM + mod load).
+          mc-router.itzg.me/autoScaleWaitTimeout: "3m"
         ports:
           java:
             port: 25565

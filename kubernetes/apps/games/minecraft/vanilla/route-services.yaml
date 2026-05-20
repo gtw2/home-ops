@@ -1,0 +1,23 @@
+---
+# These ExternalName Services give Velocity a way to dial each backend by a
+# hostname that resolves to mc-router. velocity.toml [servers] points at the
+# matching hostname (e.g. "vanilla.games.svc.cluster.local:25565"); mc-router
+# reads Velocity's handshake, matches it against the backend Service's
+# externalServerName annotation, scales the backing StatefulSet 0→1 if
+# needed, then relays Velocity's modern-forwarding bytes through to the
+# real backend pod.
+apiVersion: v1
+kind: Service
+metadata:
+  name: vanilla
+spec:
+  type: ExternalName
+  externalName: minecraft-router.games.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vanilla-creative
+spec:
+  type: ExternalName
+  externalName: minecraft-router.games.svc.cluster.local
