@@ -6,7 +6,7 @@ metadata:
   namespace: {{ ENV.NAMESPACE }}
   labels:
     # Match the labels the bjw-s app-template applies to the creative HR's resources,
-    # so the PVC groups consistently with the Deployment/Pod that mounts it.
+    # so the PVC groups consistently with the StatefulSet/Pod that mounts it.
     app.kubernetes.io/name: minecraft-{{ ENV.SOURCE }}-creative
     app.kubernetes.io/instance: minecraft-{{ ENV.SOURCE }}-creative
     app.kubernetes.io/component: creative-clone

@@ -5,13 +5,13 @@ version: '3'
 # Tasks for managing Minecraft creative-clone worlds.
 #
 # Naming convention (any server family that has a creative variant works, not just vanilla/create):
-#   Source Deployment: minecraft-<SOURCE>            (e.g. minecraft-vanilla)
-#   Target Deployment: minecraft-<SOURCE>-creative
-#   Target PVC:        minecraft-<SOURCE>-creative   (RWO, ceph-block, RBD CoW clone of source PVC)
+#   Source StatefulSet: minecraft-<SOURCE>            (e.g. minecraft-vanilla)
+#   Target StatefulSet: minecraft-<SOURCE>-creative
+#   Target PVC:         minecraft-<SOURCE>-creative   (RWO, ceph-block, RBD CoW clone of source PVC)
 #
 # Runtime assumptions:
 #   - Source has RCON enabled (itzg default) with RCON_PASSWORD env from its secret.
-#   - Both source and target Deployments may be at replicas: 0 (mc-router scale-from-zero).
+#   - Both source and target StatefulSets may be at replicas: 0 (mc-router scale-from-zero).
 #     The task wakes the source for the RCON dance and restores its prior replica count.
 #   - SIZE defaults to whatever the source PVC currently requests; override with SIZE=...
 
@@ -25,7 +25,7 @@ tasks:
     desc: Refresh a creative-clone world from its source [SOURCE=<name>] [SIZE=auto] [FORCE=true]
     summary: |
       Quiesces the source via RCON, then replaces the creative PVC with a fresh
-      RBD copy-on-write clone of the source PVC. Bails if the creative Deployment
+      RBD copy-on-write clone of the source PVC. Bails if the creative StatefulSet
       currently has replicas > 0 (someone is playing on it) unless FORCE=true.
 
       Source servers run at replicas: 0 by default (mc-router scale-from-zero), so
