@@ -79,7 +79,11 @@ spec:
                 miniplaceholders
                 papiproxybridge:EoZAMV65
                 simple-voice-chat:jMopHMDQ
-                unifiedmetrics
+                # UnifiedMetrics 0.3.8 (Apr 2023) is the latest release on Modrinth
+                # and is not tagged for MC 1.21.x. Pinning the version ID bypasses
+                # itzg's game-version filter; Velocity plugins are decoupled from
+                # MC version internals, so 0.3.8 still loads cleanly on 1.21.11.
+                unifiedmetrics:Dubg3nLw
                 velocitab:alpha
                 viabackwards
                 viaversion

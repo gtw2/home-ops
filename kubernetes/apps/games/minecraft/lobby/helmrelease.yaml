@@ -91,7 +91,12 @@ spec:
               MODRINTH_PROJECTS: |-
                 luckperms:OrIs0S6b
                 simple-voice-chat
-                unifiedmetrics
+                # UnifiedMetrics 0.3.8 (Apr 2023) is the latest release on Modrinth;
+                # no version tagged for MC 1.21.x exists. Pinning the version ID
+                # bypasses itzg's game-version filter. The plugin uses stable
+                # Bukkit/Paper APIs (TPS, online players, heap), so it loads on
+                # newer Paper versions without NMS breakage.
+                unifiedmetrics:Ypqt7eH1
                 worldedit
               # signedvelocity:TKC72r9l
               # discordsrv

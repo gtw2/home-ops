@@ -103,7 +103,6 @@ spec:
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
                 fabric-api
-                fabric-language-kotlin
                 luckperms:OrIs0S6b
                 worldedit
                 krypton
@@ -111,7 +110,11 @@ spec:
                 fabricproxy-lite
                 lithium
                 simple-voice-chat
-                unifiedmetrics
+                # FabricExporter 1.0.20 — explicit MC 1.21.11 support, no kotlin
+                # dependency. Listens on 25585 by default (matches metrics
+                # Service port below). UnifiedMetrics has no Fabric build for
+                # 1.21.x; FabricExporter is the active alternative.
+                fabricexporter:D7LrQrIU
                 vanilla-permissions
               # VANILLATWEAKS_SHARECODE: 4miIMt # Coord HUD, Anti-Endermen Griefing for 1.20
               ENABLE_QUERY: "true"
@@ -156,8 +159,8 @@ spec:
           rcon:
             port: 25575
           metrics:
-            # UnifiedMetrics Prometheus driver listens on 9100 by default.
-            port: 9100
+            # FabricExporter listens on 25585 by default.
+            port: 25585
     serviceMonitor:
       metrics:
         enabled: true
