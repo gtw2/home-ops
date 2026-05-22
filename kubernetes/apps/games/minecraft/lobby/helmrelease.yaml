@@ -91,6 +91,7 @@ spec:
               MODRINTH_PROJECTS: |-
                 luckperms:OrIs0S6b
                 simple-voice-chat
+                unifiedmetrics
                 worldedit
               # signedvelocity:TKC72r9l
               # discordsrv
@@ -131,10 +132,11 @@ spec:
           rcon:
             port: 25575
           metrics:
-            port: 25585
+            # UnifiedMetrics Prometheus driver listens on 9100 by default.
+            port: 9100
     serviceMonitor:
       metrics:
-        enabled: false
+        enabled: true
         serviceName: *app
         endpoints:
           - port: metrics

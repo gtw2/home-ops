@@ -157,7 +157,6 @@ spec:
         controller: *app
         type: ClusterIP
         annotations:
-          # Velocity reaches mc-router via the `create` ExternalName Service (see route-services.yaml).
           # See vanilla/helmrelease.yaml for the annotation contract.
           mc-router.itzg.me/externalServerName: "create.${SECRET_GAMING_DOMAIN}"
           mc-router.itzg.me/proxyServerName: "minecraft-velocity.games.svc.cluster.local:25565"
@@ -177,6 +176,11 @@ spec:
             port: 25585
     serviceMonitor:
       metrics:
+        # No Prometheus exporter mod is available for NeoForge 1.21.1 today —
+        # UnifiedMetrics supports Velocity/Paper/Fabric only, and the wider
+        # Modrinth ecosystem has no NeoForge-compatible scrape exporter for
+        # this MC version. Leave disabled until one ships; the port + endpoint
+        # scaffolding stays so it's a one-line flip once that changes.
         enabled: false
         serviceName: *app
         endpoints:

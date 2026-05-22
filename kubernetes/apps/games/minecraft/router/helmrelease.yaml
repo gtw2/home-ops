@@ -79,10 +79,12 @@ spec:
               # Scale-to-zero after the connection drains + idle period
               - --auto-scale-down
               # Single global value (mc-router doesn't support per-service overrides).
-              # 30m balances "survival stays up much longer than creative" vs not pinning
-              # idle creative pods forever. Tune in this one place; the README documents
-              # the trade-off.
-              - --auto-scale-down-after=30m
+              # 60m favors avoiding cold-start churn over pinning idle pods — first-connect
+              # cold start is 60-120s of pod schedule + image pull + JVM start + mod load,
+              # and creative pods sleep cheaply (replicas: 0 holds no compute). If creative
+              # idle drift becomes a problem, drop back to 30m and document the trade-off
+              # in the README. Tune in this one place.
+              - --auto-scale-down-after=60m
               # MOTD shown to status pings while a backend is at replicas: 0. Without
               # this, mc-router does not respond at all and the server appears as
               # "Can't connect to server" in the client's list. With it set, players

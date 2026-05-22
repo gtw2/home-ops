@@ -39,10 +39,11 @@
 ## Auto-scaling behavior
 
 - mc-router scales a backend StatefulSet **0 → 1** when a client opens a TCP connection whose handshake hostname matches the Service's `externalServerName` annotation. (mc-router only supports StatefulSets — backends must use `controllers.<name>.type: statefulset` with `statefulset.serviceName` set equal to the controller name.)
-- After **30 minutes** of no active connections, mc-router scales it back to **0**.
-- The 30m timeout is global — mc-router doesn't support per-service overrides. Tune in `router/helmrelease.yaml` (`--auto-scale-down-after`); today survival and creative share it.
+- After **60 minutes** of no active connections, mc-router scales it back to **0**.
+- The 60m timeout is global — mc-router doesn't support per-service overrides. Tune in `router/helmrelease.yaml` (`--auto-scale-down-after`); today survival and creative share it.
 - First-connect cold start can be 60-120s (image pull + JVM + mod load). Velocity's `connection-timeout = 180000` covers this.
 - **Important:** `/server X` from inside Velocity to a *sleeping* backend will fail — Velocity dials the backend Service directly, bypassing mc-router. Players must connect via the public hostname (e.g. `vanilla.${CFG_GAMING_DOMAIN}`) to trip the scale-up first. Once awake, `/server X` between servers works normally.
+  - **Why this isn't easily fixed inside mc-router:** mc-router's `proxyServerName` annotation is a single value per Service, so it can't route external-name handshakes to Velocity *and* internal wake-name handshakes to the backend pod simultaneously. mc-router also doesn't trigger scale-up on routes defined via `--mapping` / `--routes-config`, only on annotation-based routes whose Service name matches the backend StatefulSet name. A clean fix needs either an upstream `proxyServerName` per-hostname feature or a small custom "wake-on-connect" TCP proxy that scales the StatefulSet via the k8s API before forwarding. The 60m scale-down + 180s Velocity connection timeout makes this UX wart rare in practice.
 
 ## How a backend gets routed through mc-router
 

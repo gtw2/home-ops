@@ -105,13 +105,13 @@ data:
     #   connections to the database backend.
     # - More information about determining the size of connection pools can be found here:
     #   https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
-    maximum-pool-size: 10
+    maximum-pool-size: 5
 
     # Sets the minimum number of idle connections that the pool will try to maintain.
     # - For maximum performance and responsiveness to spike demands, it is recommended to not set
     #   this value and instead allow the pool to act as a fixed size connection pool.
     #   (set this value to the same as 'maximum-pool-size')
-    minimum-idle: 10
+    minimum-idle: 2
 
     # This setting controls the maximum lifetime of a connection in the pool in milliseconds.
     # - The value should be at least 30 seconds less than any database or infrastructure imposed

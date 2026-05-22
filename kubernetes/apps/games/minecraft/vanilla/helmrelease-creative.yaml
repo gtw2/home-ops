@@ -105,6 +105,7 @@ spec:
               # Must match vanilla's mod list so the cloned world loads cleanly
               MODRINTH_PROJECTS: |-
                 fabric-api
+                fabric-language-kotlin
                 luckperms:OrIs0S6b
                 worldedit
                 krypton
@@ -112,6 +113,7 @@ spec:
                 fabricproxy-lite
                 lithium
                 simple-voice-chat
+                unifiedmetrics
                 vanilla-permissions
               ENABLE_QUERY: "true"
               EXISTING_OPS_FILE: SYNCHRONIZE

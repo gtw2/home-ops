@@ -79,6 +79,7 @@ spec:
                 miniplaceholders
                 papiproxybridge:EoZAMV65
                 simple-voice-chat:jMopHMDQ
+                unifiedmetrics
                 velocitab:alpha
                 viabackwards
                 viaversion
@@ -158,8 +159,9 @@ spec:
 
     serviceMonitor:
       metrics:
-        # TODO: This was using the wrong ip in prometheus?
-        enabled: false
+        # UnifiedMetrics (in MODRINTH_PROJECTS) exposes Prometheus on port 9100
+        # by default; matches the `metrics` Service port below.
+        enabled: true
         serviceName: minecraft-velocity-metrics
         endpoints:
           - port: metrics

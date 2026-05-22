@@ -103,6 +103,7 @@ spec:
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
                 fabric-api
+                fabric-language-kotlin
                 luckperms:OrIs0S6b
                 worldedit
                 krypton
@@ -110,6 +111,7 @@ spec:
                 fabricproxy-lite
                 lithium
                 simple-voice-chat
+                unifiedmetrics
                 vanilla-permissions
               # VANILLATWEAKS_SHARECODE: 4miIMt # Coord HUD, Anti-Endermen Griefing for 1.20
               ENABLE_QUERY: "true"
@@ -134,9 +136,6 @@ spec:
         controller: *app
         type: ClusterIP
         annotations:
-          # Velocity reaches mc-router via the `vanilla` ExternalName Service (see route-services.yaml),
-          # which CNAMEs to minecraft-router. The handshake hostname matches this annotation,
-          # so mc-router knows which Service's pods to scale and forward to.
           # Hostname mc-router watches for in the player's handshake. When a player connects
           # to this hostname, mc-router scales this Service's backing StatefulSet 0→1.
           mc-router.itzg.me/externalServerName: "vanilla.${SECRET_GAMING_DOMAIN}"
@@ -157,10 +156,11 @@ spec:
           rcon:
             port: 25575
           metrics:
-            port: 25585
+            # UnifiedMetrics Prometheus driver listens on 9100 by default.
+            port: 9100
     serviceMonitor:
       metrics:
-        enabled: false
+        enabled: true
         serviceName: *app
         endpoints:
           - port: metrics
