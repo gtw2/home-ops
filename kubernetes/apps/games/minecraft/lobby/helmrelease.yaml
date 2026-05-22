@@ -88,14 +88,16 @@ spec:
               ## Mods
               REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
+              # unifiedmetrics:Ypqt7eH1 is UnifiedMetrics 0.3.8 (Apr 2023), the
+              # latest release on Modrinth — no version tagged for MC 1.21.x
+              # exists. Pinning the version ID bypasses itzg's game-version
+              # filter. The plugin uses stable Bukkit/Paper APIs (TPS, online
+              # players, heap), so it loads on newer Paper versions without
+              # NMS breakage. NB: comments inside the |- block are parsed as
+              # project slugs by itzg, so they have to live outside it.
               MODRINTH_PROJECTS: |-
                 luckperms:OrIs0S6b
                 simple-voice-chat
-                # UnifiedMetrics 0.3.8 (Apr 2023) is the latest release on Modrinth;
-                # no version tagged for MC 1.21.x exists. Pinning the version ID
-                # bypasses itzg's game-version filter. The plugin uses stable
-                # Bukkit/Paper APIs (TPS, online players, heap), so it loads on
-                # newer Paper versions without NMS breakage.
                 unifiedmetrics:Ypqt7eH1
                 worldedit
               # signedvelocity:TKC72r9l

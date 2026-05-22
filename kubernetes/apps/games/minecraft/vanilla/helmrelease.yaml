@@ -101,6 +101,12 @@ spec:
               ## Mods
               REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
+              # fabricexporter:D7LrQrIU is FabricExporter 1.0.20 — explicit MC
+              # 1.21.11 support, no kotlin dependency. Listens on 25585 by
+              # default (matches the metrics Service port below). UnifiedMetrics
+              # has no Fabric build for 1.21.x; FabricExporter is the active
+              # alternative. NB: comments inside the |- block are parsed as
+              # project slugs by itzg — keep them out of the block.
               MODRINTH_PROJECTS: |-
                 fabric-api
                 luckperms:OrIs0S6b
@@ -110,10 +116,6 @@ spec:
                 fabricproxy-lite
                 lithium
                 simple-voice-chat
-                # FabricExporter 1.0.20 — explicit MC 1.21.11 support, no kotlin
-                # dependency. Listens on 25585 by default (matches metrics
-                # Service port below). UnifiedMetrics has no Fabric build for
-                # 1.21.x; FabricExporter is the active alternative.
                 fabricexporter:D7LrQrIU
                 vanilla-permissions
               # VANILLATWEAKS_SHARECODE: 4miIMt # Coord HUD, Anti-Endermen Griefing for 1.20

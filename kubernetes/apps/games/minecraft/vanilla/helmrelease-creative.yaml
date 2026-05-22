@@ -103,6 +103,9 @@ spec:
               REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
               # Must match vanilla's mod list so the cloned world loads cleanly
+              # See vanilla/helmrelease.yaml for the rationale on the
+              # fabricexporter pin. Comments must stay outside the |- block —
+              # itzg parses lines inside as project slugs.
               MODRINTH_PROJECTS: |-
                 fabric-api
                 luckperms:OrIs0S6b
@@ -112,7 +115,6 @@ spec:
                 fabricproxy-lite
                 lithium
                 simple-voice-chat
-                # See vanilla/helmrelease.yaml for the rationale on this pin.
                 fabricexporter:D7LrQrIU
                 vanilla-permissions
               ENABLE_QUERY: "true"
