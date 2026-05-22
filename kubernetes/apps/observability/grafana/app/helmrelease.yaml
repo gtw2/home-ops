@@ -171,6 +171,18 @@ spec:
           gnetId: 15038
           revision: 3
           datasource: Prometheus
+        minecraft-fabric:
+          # renovate: depName="Minecraft Fabric"
+          gnetId: 14492
+          revision: 5
+          datasource:
+            - { name: DS_PROMETHEUS, value: Prometheus }
+        minecraft-unifiedmetrics:
+          # renovate: depName="UnifiedMetrics 0.3.x / Prometheus"
+          gnetId: 14756
+          revision: 11
+          datasource:
+            - { name: DS_PROMETHEUS, value: Prometheus }
         kubernetes-api-server:
           # renovate: depName="Kubernetes / System / API Server"
           gnetId: 15761
