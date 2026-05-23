@@ -81,10 +81,15 @@ spec:
               # Performance
               JVM_XX_OPTS: -XX:MaxRAMPercentage=75
               JVM_DD_OPTS: disable.watchdog:true
-              MAX_MEMORY: 2024M
+              # Flat hub with WorldEdit + LuckPerms + voice — heap stays small.
+              # JVM overhead pushes RSS to ~1.4× heap, hence the 1536Mi memory
+              # limit further down.
+              MAX_MEMORY: 1024M
               USE_AIKAR_FLAGS: "true"
               SNOOPER_ENABLED: "false"
-              VIEW_DISTANCE: 14
+              # Flat hub: 14 was wasteful. 8 chunks (~128 blocks) is plenty for
+              # a landing/lobby area.
+              VIEW_DISTANCE: 8
               ## Mods
               REMOVE_OLD_MODS: "true"
               MODRINTH_DEFAULT_VERSION_TYPE: release
@@ -116,10 +121,13 @@ spec:
                 add: ["NET_RAW"]
             resources:
               requests:
-                cpu: 150m
-                memory: 1Gi
+                cpu: 100m
+                memory: 768Mi
               limits:
-                memory: 2Gi
+                # No CPU limit: throttling kills MC tick rate. Memory limit
+                # leaves ~512Mi headroom over MAX_MEMORY for JVM metaspace,
+                # direct buffers, and threads.
+                memory: 1536Mi
     service:
       minecraft:
         controller: *app
