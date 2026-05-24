@@ -69,6 +69,13 @@ spec:
               MAX_MEMORY: 256M
               # https://docs.papermc.io/velocity/getting-started#launching-velocity-under-macos-or-linux
               JVM_XX_OPTS: "-XX:+UseG1GC -XX:G1HeapRegionSize=4M -XX:+UnlockExperimentalVMOptions -XX:+ParallelRefProcEnabled -XX:+AlwaysPreTouch -XX:MaxInlineLevel=15"
+              # Raises Velocity's known-packs cap so it can decode the configuration-phase
+              # registry sync from heavily-modded NeoForge backends (Create + JCS2 has ~71
+              # mods). Without this, Velocity throws "Invalid payload REGISTER!" /
+              # "packet did not decode successfully" in ClientConfigSessionHandler and
+              # disconnects the player. Formula from proxy-compatible-forge docs:
+              # 64 + (mod_count * 1.5), rounded up; 192 leaves headroom for ~85 mods.
+              JVM_DD_OPTS: "velocity.max-known-packs=192"
               ENABLE_RCON: "false"
               REPLACE_ENV_VARIABLES: "TRUE"
               REMOVE_OLD_MODS: "true"

@@ -142,7 +142,7 @@ spec:
         annotations:
           # See vanilla/helmrelease.yaml for the annotation contract.
           mc-router.itzg.me/externalServerName: "create.${SECRET_GAMING_DOMAIN}"
-          mc-router.itzg.me/proxyServerName: "minecraft-create.games.svc.cluster.local:25565"
+          mc-router.itzg.me/proxyServerName: "minecraft-velocity.games.svc.cluster.local:25565"
         ports:
           java:
             port: 25565
