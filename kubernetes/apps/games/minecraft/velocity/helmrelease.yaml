@@ -75,7 +75,9 @@ spec:
               # "packet did not decode successfully" in ClientConfigSessionHandler and
               # disconnects the player. Formula from proxy-compatible-forge docs:
               # 64 + (mod_count * 1.5), rounded up; 192 leaves headroom for ~85 mods.
-              JVM_DD_OPTS: "velocity.max-known-packs=192"
+              # NB: itzg/mc-proxy uses JVM_OPTS for -D system props (it has no JVM_DD_OPTS,
+              # unlike itzg/minecraft-server).
+              JVM_OPTS: "-Dvelocity.max-known-packs=192"
               ENABLE_RCON: "false"
               REPLACE_ENV_VARIABLES: "TRUE"
               REMOVE_OLD_MODS: "true"
