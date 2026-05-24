@@ -109,7 +109,6 @@ spec:
               MODRINTH_PROJECTS: |-
                 luckperms:dKAPoPGd
                 proxy-compatible-forge
-                platform
                 sleep
                 worldedit
               CURSEFORGE_FILES: |-
