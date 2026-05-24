@@ -113,8 +113,6 @@ spec:
                 sleep
                 worldedit
               CURSEFORGE_FILES: |-
-                create-aeronautics
-                sable
                 ftb-xmod-compat
               # PLUGINS: |-
               #   https://cdn.modrinth.com/data/7IbzD4Zm/versions/JZpRIpOD/SignedVelocity-Sponge-10-1.3.0.jar

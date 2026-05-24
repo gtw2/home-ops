@@ -109,8 +109,6 @@ spec:
                 sleep
                 worldedit
               CURSEFORGE_FILES: |-
-                create-aeronautics
-                sable
                 ftb-xmod-compat
               ENABLE_QUERY: "true"
               EXISTING_OPS_FILE: SYNCHRONIZE
