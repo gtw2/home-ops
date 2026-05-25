@@ -89,6 +89,7 @@ spec:
               # loads cleanly on 1.21.11. NB: comments inside the |- block
               # scalar are treated as project slugs by itzg, so keep them out.
               MODRINTH_PROJECTS: |-
+                luckperms
                 mckotlin
                 minimotd
                 miniplaceholders
@@ -103,7 +104,7 @@ spec:
                 vpacketevents
               PLUGINS: |-
                 https://github.com/FeuSalamander/Vmessage/releases/download/1.6.2/Vmessage.jar
-                https://download.luckperms.net/1624/velocity/LuckPerms-Velocity-5.5.36.jar
+              #  https://download.luckperms.net/1624/velocity/LuckPerms-Velocity-5.5.36.jar
             envFrom: *envFrom
             securityContext:
               allowPrivilegeEscalation: false
