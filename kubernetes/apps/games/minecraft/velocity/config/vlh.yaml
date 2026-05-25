@@ -1,0 +1,24 @@
+# VelocityLimboHandler — holds modded-client players in NanoLimbo while their
+# target backend boots, then transfers them back automatically.
+# https://github.com/AkselGlyholt/velocity-limbo-handler
+file-version: 6
+
+# Must match the server ID in velocity.toml's [servers] block (case sensitive).
+limbo-name: Limbo
+
+# Where direct connections (no forced-host match) get routed. The Paper hub
+# is fine for vanilla clients — modded clients only land here via forced-host
+# fallback, which goes to Limbo, not here.
+direct-connect-server: Hub
+
+# How often to retry connecting to the player's original backend, in ms.
+task-interval: 3000
+
+# Queue enables per-server fairness — players only wait for the server they
+# were on, not behind everyone else.
+queue-enabled: true
+queue-notify-interval: 30
+
+# Block commands that would let a player escape Limbo before their server
+# is ready. Velocity's own /server stays usable for ops who need it.
+disabled-commands: ["server", "lobby", "hub"]

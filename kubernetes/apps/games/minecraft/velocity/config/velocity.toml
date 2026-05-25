@@ -85,6 +85,10 @@ Vanilla = "minecraft-vanilla.games.svc.cluster.local:25565"
 Create = "minecraft-create.games.svc.cluster.local:25565"
 VanillaCreative = "minecraft-vanilla-creative.games.svc.cluster.local:25565"
 CreateCreative = "minecraft-create-creative.games.svc.cluster.local:25565"
+# Holding pen for modded clients while their backend cold-starts. NanoLimbo
+# answers vanilla protocol but VelocityLimboHandler queues players here and
+# auto-transfers them once the real backend is healthy.
+Limbo = "minecraft-limbo.games.svc.cluster.local:25565"
 
 # In what order we should try servers when a player logs in or is kicked from a server.
 try = [
@@ -93,21 +97,29 @@ try = [
 ]
 
 [forced-hosts]
-# Configure your forced hosts here.
+# Forced-host try lists: when the primary backend is unreachable (cold start,
+# crash, scale-to-zero), Velocity falls through to the next entry. Limbo is the
+# safety net for modded backends — a NanoLimbo pod that accepts the player's
+# connection so VelocityLimboHandler can queue them and transfer back once the
+# real backend is ready. Hub stays as the vanilla landing pad.
 "hub.$${CFG_GAMING_DOMAIN}" = [
     "Hub"
 ]
 "vanilla.$${CFG_GAMING_DOMAIN}" = [
-    "Vanilla"
+    "Vanilla",
+    "Limbo"
 ]
 "create.$${CFG_GAMING_DOMAIN}" = [
-    "Create"
+    "Create",
+    "Limbo"
 ]
 "vanilla-creative.$${CFG_GAMING_DOMAIN}" = [
-    "VanillaCreative"
+    "VanillaCreative",
+    "Limbo"
 ]
 "create-creative.$${CFG_GAMING_DOMAIN}" = [
-    "CreateCreative"
+    "CreateCreative",
+    "Limbo"
 ]
 
 [advanced]

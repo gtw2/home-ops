@@ -96,6 +96,7 @@ spec:
                 simple-voice-chat:jMopHMDQ
                 unifiedmetrics:Dubg3nLw
                 velocitab:alpha
+                velocity-limbo-handler
                 viabackwards
                 viaversion
                 vlobby
@@ -215,6 +216,9 @@ spec:
             readOnly: true
           - path: /config/plugins/vlobby/configuration.conf
             subPath: vlobby.conf
+            readOnly: true
+          - path: /config/plugins/velocity-limbo-handler/config.yml
+            subPath: vlh.yaml
             readOnly: true
           - path: /config/plugins/minimotd-velocity/extra-configs/create.conf
             subPath: config-create.conf

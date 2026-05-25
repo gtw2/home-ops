@@ -13,6 +13,7 @@ configMapGenerator:
       - luckperms.yaml=config/luckperms.yaml
       - voice.conf=config/voice.conf
       - vlobby.conf=config/vlobby.conf
+      - vlh.yaml=config/vlh.yaml
       - vmessage.toml=config/vmessage.toml
       - velocitab.yaml=config/velocitab.yaml
       - config-create.conf=config/minimotd/extra-configs/create.conf

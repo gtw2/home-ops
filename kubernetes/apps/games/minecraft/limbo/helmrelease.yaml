@@ -1,0 +1,117 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app minecraft-limbo
+spec:
+  interval: 15m
+  timeout: 5m
+  maxHistory: 3
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    defaultPodOptions:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    controllers:
+      minecraft-limbo:
+        # Always-on safety net for cold-start UX. Sized for ~128Mi heap — a few hundred
+        # players idling in a NanoLimbo void is still well under the memory limit.
+        replicas: 1
+        annotations:
+          reloader.stakater.com/auto: "true"
+        initContainers:
+          # itzg/minecraft-server TYPE=NANOLIMBO writes a default /data/settings.yml
+          # only if one doesn't exist, then unconditionally runs mc-image-helper patch
+          # against it (needs write access). We render the real settings.yml — with the
+          # forwarding secret injected — via ExternalSecret, mount it read-only at
+          # /config, and copy it into the emptyDir-backed /data before the main
+          # container starts. itzg then sees a pre-existing file and skips its default.
+          copy-settings:
+            image:
+              repository: public.ecr.aws/docker/library/busybox
+              tag: "1.37"
+            command:
+              - sh
+              - -c
+              - "cp /config/settings.yml /data/settings.yml && chmod 644 /data/settings.yml"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/itzg/minecraft-server
+              tag: 2026.5.2@sha256:5476619d049f4c0e2764532b345da1db4c154b4294bcc16d9c3b8d5f4b0d9923
+            tty: true
+            probes:
+              # NanoLimbo has no rcon/mc-health endpoint — TCP-probe the listener instead.
+              readiness: &probes
+                enabled: true
+                type: TCP
+                port: 25565
+              liveness: *probes
+              startup:
+                <<: *probes
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
+            env:
+              EULA: "true"
+              TZ: "${TIMEZONE}"
+              TYPE: NANOLIMBO
+              SERVER_PORT: "25565"
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 25m
+                memory: 128Mi
+              limits:
+                memory: 256Mi
+    service:
+      minecraft:
+        controller: *app
+        type: ClusterIP
+        ports:
+          java:
+            port: 25565
+            protocol: TCP
+    persistence:
+      # NanoLimbo is stateless — no PVC. emptyDir is reset every restart, which is
+      # fine because settings.yml is re-copied by the init container each time.
+      data:
+        type: emptyDir
+        globalMounts:
+          - path: /data
+      settings:
+        type: secret
+        name: minecraft-limbo-secret
+        items:
+          - key: settings.yml
+            path: settings.yml
+        advancedMounts:
+          minecraft-limbo:
+            copy-settings:
+              - path: /config/settings.yml
+                subPath: settings.yml
+                readOnly: true
