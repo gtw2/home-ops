@@ -98,10 +98,15 @@ try = [
 
 [forced-hosts]
 # Forced-host try lists: when the primary backend is unreachable (cold start,
-# crash, scale-to-zero), Velocity falls through to the next entry. Limbo is the
-# safety net for modded backends — a NanoLimbo pod that accepts the player's
-# connection so VelocityLimboHandler can queue them and transfer back once the
-# real backend is ready. Hub stays as the vanilla landing pad.
+# crash, scale-to-zero), Velocity falls through to the next entry.
+#
+# Limbo is only listed for vanilla backends. NanoLimbo speaks vanilla protocol
+# only, and NeoForge clients with required-on-both mods (e.g. the Create
+# modpack) refuse to handshake with it — so adding Limbo as a fallback for
+# modded forced-hosts would just give those clients a different error message,
+# not a waiting room. Instead, modded backends are kept always-on (replicas: 1)
+# in their HelmRelease; the creative variant is the exception and cold-starts
+# from zero, with the connection-refused window accepted as a known trade-off.
 "hub.$${CFG_GAMING_DOMAIN}" = [
     "Hub"
 ]
@@ -110,16 +115,14 @@ try = [
     "Limbo"
 ]
 "create.$${CFG_GAMING_DOMAIN}" = [
-    "Create",
-    "Limbo"
+    "Create"
 ]
 "vanilla-creative.$${CFG_GAMING_DOMAIN}" = [
     "VanillaCreative",
     "Limbo"
 ]
 "create-creative.$${CFG_GAMING_DOMAIN}" = [
-    "CreateCreative",
-    "Limbo"
+    "CreateCreative"
 ]
 
 [advanced]

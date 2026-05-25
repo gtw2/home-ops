@@ -34,13 +34,20 @@ spec:
           type: RuntimeDefault
     controllers:
       minecraft-create:
-        # Scaled 0→1 by mc-router on /server Create; back to 0 after 30m idle.
-        # mc-router only knows how to scale StatefulSets, and requires
-        # metadata.name == spec.serviceName to fire the scale-up.
+        # Kept always-on (replicas: 1). NeoForge clients refuse to handshake
+        # with any limbo that doesn't speak NeoForge protocol, and running a
+        # NeoForge limbo would mean booting the whole modpack a second time
+        # for the waiting-room — at that point it's cheaper to just leave the
+        # real server running. Cold-start scale-from-zero remains in use for
+        # the creative variant, which is touched rarely enough that the
+        # connection-refused window is acceptable.
+        # StatefulSet kept (not Deployment) so mc-router can still manage it
+        # if we re-enable scale-to-zero later; mc-router requires
+        # metadata.name == spec.serviceName for scale-up to fire.
         type: statefulset
         statefulset:
           serviceName: minecraft-create
-        replicas: 0
+        replicas: 1
         annotations:
           reloader.stakater.com/auto: "true"
         containers:
