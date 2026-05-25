@@ -118,17 +118,17 @@ spec:
                 create-dragons-plus
                 create-encased
                 create-enchantment-industry
-                create-shufflefilter
+                create-shuffle-filter
                 create-stuff-additions
-                create-deployer-api
+                deployer
                 emi
                 farmers-delight
                 immersive-paintings
                 lootjs
                 modernfix
-                platform-shape
+                platform
                 puzzles-lib
-                create-steam-n-rails-neoforge
+                steam-n-rails-neoforge
                 simple-voice-chat
                 xaeros-minimap
                 xaeros-world-map
