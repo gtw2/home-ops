@@ -111,13 +111,54 @@ spec:
               # AUTO_CURSEFORGE — itzg resolves the manifest, downloads every
               # included mod, and replaces them when the modpack version bumps.
               CF_SLUG: just-create-smp-2
+              CF_EXCLUDE_MODS: |-
+                create
+                carry-on
+                collective
+                create-dragons-plus
+                create-encased
+                create-enchantment-industry
+                create-shufflefilter
+                create-stuff-additions
+                create-deployer-api
+                emi
+                farmers-delight
+                immersive-paintings
+                lootjs
+                modernfix
+                platform-shape
+                puzzles-lib
+                create-steam-n-rails
+                simple-voice-chat
+                xaeros-minimap
+                xaeros-world-map
               # Extra mods layered on top of the modpack.
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
-                create-aeronautics:FIeWE7UC
+                create
+                carry-on
+                collective
+                create-dragons-plus
+                create-encased
+                create-enchantment-industry
+                create-shufflefilter
+                create-stuff-additions
+                create-deployer-api
+                emi
+                farmers-delight
+                immersive-paintings
+                lootjs
+                modernfix
+                platform-shape
+                puzzles-lib
+                create-steam-n-rails
+                simple-voice-chat
+                xaeros-minimap
+                xaeros-world-map
+                create-aeronautics
                 luckperms:dKAPoPGd
                 proxy-compatible-forge
-                sable:ZYLSN31S
+                sable
                 sleep
                 worldedit
               CURSEFORGE_FILES: |-
