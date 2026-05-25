@@ -107,8 +107,10 @@ spec:
               # Extra mods layered on top of the modpack.
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
+                create-aeronautics:FIeWE7UC
                 luckperms:dKAPoPGd
                 proxy-compatible-forge
+                sable
                 sleep
                 worldedit
               CURSEFORGE_FILES: |-
