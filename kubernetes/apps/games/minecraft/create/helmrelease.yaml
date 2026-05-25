@@ -141,13 +141,16 @@ spec:
                 create-dragons-plus
                 create-encased
                 create-enchantment-industry
+                create-shuffle-filter
                 create-stuff-additions
+                deployer
                 emi
                 farmers-delight
                 immersive-paintings
                 lootjs
                 modernfix
                 puzzles-lib
+                platform
                 create-steam-n-rails
                 simple-voice-chat
                 xaeros-minimap
@@ -159,9 +162,6 @@ spec:
                 sleep
                 worldedit
               CURSEFORGE_FILES: |-
-                create-shufflefilter
-                create-deployer-api
-                platform-shape
                 ftb-xmod-compat
               # PLUGINS: |-
               #   https://cdn.modrinth.com/data/7IbzD4Zm/versions/JZpRIpOD/SignedVelocity-Sponge-10-1.3.0.jar
