@@ -77,6 +77,7 @@ spec:
               EULA: "true"
               TZ: "${TIMEZONE}"
               TYPE: AUTO_CURSEFORGE
+              CF_MOD_LOADER_VERSION: 21.1.230
               # ENABLE_AUTOPAUSE: TRUE
               MAX_TICK_TIME: "-1"
               # USES_PLUGINS: "true"
@@ -135,6 +136,8 @@ spec:
               # Extra mods layered on top of the modpack.
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
+                architectury-api
+                curios
                 create
                 carry-on
                 collective
