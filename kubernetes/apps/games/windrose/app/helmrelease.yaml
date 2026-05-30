@@ -23,7 +23,7 @@ spec:
           app:
             image:
               repository: mornedhels/windrose-server
-              tag: 0.1.0-proton@sha256:cb777e7a20d945c2cf71cf3e41b02155ce278211d793401e44de64a06faa244c
+              tag: 1.0.0-proton@sha256:374927da1083d6d524212eb3bf77d2f40a9ab4f89df02ee742ec48cde1d73299
             env:
               TZ: ${TIMEZONE}
               PUID: "4711"
