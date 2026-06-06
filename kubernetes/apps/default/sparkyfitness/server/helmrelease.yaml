@@ -37,7 +37,7 @@ spec:
             image:
               # renovate: datasource=docker depName=ghcr.io/codewithcj/sparkyfitness-server
               repository: ghcr.io/codewithcj/sparkyfitness-server
-              tag: v0.16.3@sha256:6fd11fcbb13f4a7391859333c59ecf8b8e0b677f00c96e36249809af7e60a5ec
+              tag: v0.16.8@sha256:c151215e42367edc437f00b7e821e3ea19c09128815b9e9ee7a54de1b16e1cea
             envFrom: *envFrom
             env:
               TZ: "${TIMEZONE}"
