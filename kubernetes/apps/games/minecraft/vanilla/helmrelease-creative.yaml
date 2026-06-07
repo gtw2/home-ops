@@ -52,7 +52,7 @@ spec:
             # Keep in lock-step with vanilla/helmrelease.yaml
             image:
               repository: ghcr.io/itzg/minecraft-server
-              tag: 2026.5.2@sha256:5476619d049f4c0e2764532b345da1db4c154b4294bcc16d9c3b8d5f4b0d9923
+              tag: 2026.5.4@sha256:f364bae78a0027aee72b01b9b532b1ae0990b3ee8cadbb6a3bc25db77418a25f
             tty: true
             probes:
               liveness: &probes
