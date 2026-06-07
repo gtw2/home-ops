@@ -52,7 +52,7 @@ spec:
               # class file v69 (Java 25). On java21, every status ping crashes MiniMOTD's
               # ProxyPingEvent handler with UnsupportedClassVersionError → clients see
               # "Network Protocol Error" in the server list.
-              tag: java25@sha256:2709b52bbc8503f92aa02e18355bf994fb0f630456f2bbcf844cec12410e6ad5
+              tag: java25@sha256:15ac81eba29e38336a0e4d49637d2b29f94839aab931a434a3db593cd94f9287
             tty: true
             env:
               TZ: ${TIMEZONE}
