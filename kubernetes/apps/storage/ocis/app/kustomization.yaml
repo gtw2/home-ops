@@ -5,7 +5,7 @@ kind: Kustomization
 resources:
   - ./externalsecret.yaml
   - ./helmrelease.yaml
-  #- ./cronjob.yaml
+  - ./cronjob.yaml
 configMapGenerator:
   - name: ocis-configmap
     files:
