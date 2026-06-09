@@ -43,7 +43,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: kubectl
-              image: docker.io/alpine/kubectl:1.31.0
+              image: docker.io/alpine/kubectl:1.36.1
               command:
                 - kubectl
                 - rollout
