@@ -34,11 +34,16 @@ nodes:
     talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
     controlPlane: true
     networkInterfaces:
-      - # 2.5G ignore for WoL/vPro
-        deviceSelector:
-          hardwareAddr: 58:47:ca:76:*
-          driver: igc
-        ignore: true
+      - # 2.5G management/bootstrap on VLAN 5 (10.10.5.0/24) — out-of-band Talos
+        # path, independent of the 10G LACP bond0. No node IP / VIP / default route.
+        interface: bond1
+        bond:
+          deviceSelectors: [{ hardwareAddr: "58:47:ca:76:*", driver: igc }]
+          mode: active-backup
+          miimon: 100
+        dhcp: false
+        addresses: ["10.10.5.21/24"]
+        mtu: 1500
       - # 10G
         interface: bond0
         bond:
@@ -76,11 +81,16 @@ nodes:
     talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
     controlPlane: true
     networkInterfaces:
-      - # 2.5G ignore for WoL/vPro
-        deviceSelector:
-          hardwareAddr: 58:47:ca:77:*
-          driver: igc
-        ignore: true
+      - # 2.5G management/bootstrap on VLAN 5 (10.10.5.0/24) — out-of-band Talos
+        # path, independent of the 10G LACP bond0. No node IP / VIP / default route.
+        interface: bond1
+        bond:
+          deviceSelectors: [{ hardwareAddr: "58:47:ca:77:*", driver: igc }]
+          mode: active-backup
+          miimon: 100
+        dhcp: false
+        addresses: ["10.10.5.22/24"]
+        mtu: 1500
       - # 10G
         interface: bond0
         bond:
@@ -118,11 +128,16 @@ nodes:
     talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
     controlPlane: true
     networkInterfaces:
-      - # 2.5G ignore for WoL/vPro
-        deviceSelector:
-          hardwareAddr: 58:47:ca:77:*
-          driver: igc
-        ignore: true
+      - # 2.5G management/bootstrap on VLAN 5 (10.10.5.0/24) — out-of-band Talos
+        # path, independent of the 10G LACP bond0. No node IP / VIP / default route.
+        interface: bond1
+        bond:
+          deviceSelectors: [{ hardwareAddr: "58:47:ca:77:*", driver: igc }]
+          mode: active-backup
+          miimon: 100
+        dhcp: false
+        addresses: ["10.10.5.23/24"]
+        mtu: 1500
       - # 10G
         interface: bond0
         bond:
@@ -160,11 +175,16 @@ nodes:
     talosImageURL: factory.talos.dev/installer/f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
     controlPlane: false
     networkInterfaces:
-      - # 2.5G ignore for WoL/vPro
-        deviceSelector:
-          hardwareAddr: 58:47:ca:76:*
-          driver: igc
-        ignore: true
+      - # 2.5G management/bootstrap on VLAN 5 (10.10.5.0/24) — out-of-band Talos
+        # path, independent of the 10G LACP bond0. No node IP / VIP / default route.
+        interface: bond1
+        bond:
+          deviceSelectors: [{ hardwareAddr: "58:47:ca:76:*", driver: igc }]
+          mode: active-backup
+          miimon: 100
+        dhcp: false
+        addresses: ["10.10.5.24/24"]
+        mtu: 1500
       - # 10G
         interface: bond0
         bond:

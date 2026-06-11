@@ -30,7 +30,7 @@ spec:
       exclusive: false
     dashboards:
       enabled: true
-    devices: bond+
+    devices: bond0+ # bond0 and its VLANs only; exclude bond1 (out-of-band mgmt)
     enableIPv4BIGTCP: true
     endpointRoutes:
       enabled: true

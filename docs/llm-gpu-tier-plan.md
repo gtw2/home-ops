@@ -181,6 +181,23 @@ addresses so management/apply uses the stable OOB path; the k8s API VIP
 - **vPro/AMT:** if you want a dedicated OOB port, select a single igc MAC here and leave
   the other `ignore: true` instead of bonding both.
 
+### Applying to the live cluster (no rebuild required)
+
+This change is **additive** and safe to apply to the running cluster, with one
+precaution already handled in the repo:
+
+- **Cilium `devices`** was changed `bond+` → `bond0+`
+  (`kubernetes/apps/kube-system/cilium/app/helmrelease.yaml`). `bond+` would have made
+  Cilium attach its BPF datapath to the new `bond1`; `bond0+` keeps `bond0` + its VLANs
+  and excludes `bond1`. It matches the same interfaces as today until `bond1` exists, so
+  merging it is a no-op now. **Merge/reconcile this first**, before applying `bond1`.
+- `bond0` is unchanged; `bond1` has **no node IP, no VIP, no default route**, so routing,
+  Cilium, BGP and Ceph (host-net on `10.10.40`) are untouched.
+- Apply **one node at a time** with **`--mode=try`** (auto-reverts on a timeout if
+  anything misbehaves): `talhelper gencommand apply --node <ip> --extra-flags '--mode=try' | bash`.
+- Adding an interface is a live, no-reboot change. Order vs UniFi doesn't affect safety:
+  until the 2.5G ports are on the Management VLAN, `bond1` is simply inert.
+
 ## Open decisions before writing YAML
 
 - First model + PVC sizing / decode args (e.g. a Qwen3 ~32B-class for the 128 GB box).
