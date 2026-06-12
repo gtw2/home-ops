@@ -38,7 +38,9 @@ nodes:
         # path, independent of the 10G LACP bond0. No node IP / VIP / default route.
         interface: bond1
         bond:
-          deviceSelectors: [{ hardwareAddr: "58:47:ca:76:*", driver: igc }]
+          deviceSelectors:
+            - { busPath: "0000:57:00.0", driver: igc }
+            - { busPath: "0000:5a:00.0", driver: igc }
           mode: active-backup
           miimon: 100
         dhcp: false
@@ -87,7 +89,9 @@ nodes:
         # path, independent of the 10G LACP bond0. No node IP / VIP / default route.
         interface: bond1
         bond:
-          deviceSelectors: [{ hardwareAddr: "58:47:ca:77:*", driver: igc }]
+          deviceSelectors:
+            - { busPath: "0000:57:00.0", driver: igc }
+            - { busPath: "0000:5a:00.0", driver: igc }
           mode: active-backup
           miimon: 100
         dhcp: false
@@ -136,7 +140,9 @@ nodes:
         # path, independent of the 10G LACP bond0. No node IP / VIP / default route.
         interface: bond1
         bond:
-          deviceSelectors: [{ hardwareAddr: "58:47:ca:77:*", driver: igc }]
+          deviceSelectors:
+            - { busPath: "0000:57:00.0", driver: igc }
+            - { busPath: "0000:5a:00.0", driver: igc }
           mode: active-backup
           miimon: 100
         dhcp: false
@@ -185,7 +191,9 @@ nodes:
         # path, independent of the 10G LACP bond0. No node IP / VIP / default route.
         interface: bond1
         bond:
-          deviceSelectors: [{ hardwareAddr: "58:47:ca:76:*", driver: igc }]
+          deviceSelectors:
+            - { busPath: "0000:57:00.0", driver: igc }
+            - { busPath: "0000:5a:00.0", driver: igc }
           mode: active-backup
           miimon: 100
         dhcp: false
