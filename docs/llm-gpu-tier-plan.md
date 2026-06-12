@@ -198,6 +198,61 @@ precaution already handled in the repo:
 - Adding an interface is a live, no-reboot change. Order vs UniFi doesn't affect safety:
   until the 2.5G ports are on the Management VLAN, `bond1` is simply inert.
 
+> ⚠️ **2026-06-11 — that "clean additive apply" turned out to be blocked.** A dry-run
+> against the live cluster revealed significant pre-existing drift, so `bond1` cannot be
+> applied in isolation via the full machineconfig. See the next section. The Cilium
+> `bond0+` change *was* applied (via Flux) and is fine; the `bond1` talconfig change is
+> committed but **not yet applied to any node**.
+
+## Config-drift reconciliation & rollout (REQUIRED before bond1 can land)
+
+A `talosctl apply-config --dry-run` on talos-1 showed the running nodes have drifted from
+what `talhelper genconfig` (v3.1.10) now produces:
+
+| Drift | Running cluster | New generated | Disposition |
+|---|---|---|---|
+| **Network format** | inline `machine.network.interfaces` | multi-doc (`BondConfig`/`LinkAliasConfig`/`VLANConfig`/`Layer2VIPConfig`) | **Accept** — talhelper 3.x moved to multi-doc; end-state network is equivalent (bond0 + VLANs + VIP + new bond1). Cleanest applied via reboot (fresh boot builds new format). |
+| **Install image** | `…:v1.13.3` | `…:v1.13.2` | **Accept** — fallout from the git installer revert. `apply-config` only updates the stored ref; it does **not** upgrade/downgrade the running OS (already v1.13.2). |
+| **Features** | `rbac/stableHostname/apidCheckExtKeyUsage: true` explicit | omitted | **Accept** — default-on in modern Talos, so a no-op. Verify on the worker; optionally pin via a global patch for zero ambiguity. |
+| **certSANs / grub** | — | `grubUseUKICmdline: true`, certSANs shuffle | Benign. |
+
+Because the `features` change isn't live-applicable, `--mode=try` is rejected and
+`--mode=auto` **reboots** each node. So this is a planned, reboot-bearing rollout — not a
+live tweak. **Decision (2026-06-11): do the full reconciliation, validate on the worker
+first.** `bond1` rides along for free.
+
+### Pre-flight
+1. Confirm intended Talos = **v1.13.2** (git revert). Do **not** bundle a Talos upgrade.
+2. `talosctl -n <ip> apply-config --file clusterconfig/kubernetes-<node>.yaml --mode=auto --dry-run`
+   on **all four** nodes; confirm each diff matches the table above (no surprises).
+3. Backups: per node `talosctl -n <ip> get mc v1alpha1 -o yaml > backups/<node>.yaml`;
+   etcd snapshot `talosctl -n <cp> etcd snapshot etcd-$(date +%F).db`; copy current `talosconfig`.
+4. Ceph: `ceph osd set noout` (skip rebalance during brief reboots); confirm `HEALTH_OK`.
+5. Confirm UniFi 2.5G ports are on the Management VLAN with DHCP (done 2026-06-11).
+
+### Phase 1 — worker `talos-4` (proves the migration, low blast radius)
+- `kubectl cordon talos-4 && kubectl drain talos-4 --ignore-daemonsets --delete-emptydir-data`
+- `task talos:apply-node IP=10.10.40.24 MODE=auto` (reboots)
+- Validate: node `Ready`; `talosctl -n 10.10.40.24 get links,addresses` shows `bond0`
+  (`10.10.40.24` + VLANs) **and** `bond1` (`10.10.5.24`); `features` still active; Ceph OSDs
+  rejoin; **reach the Talos API on `10.10.5.24`** (OOB path works).
+- `kubectl uncordon talos-4`. **Gate:** proceed only if fully clean.
+
+### Phase 2 — control plane `talos-1/2/3`, ONE at a time
+Per node: verify `etcd` healthy + Ceph OK → cordon/drain → `task talos:apply-node IP=<ip> MODE=auto`
+→ wait `Ready` + etcd member healthy + VIP `10.10.40.20` reachable → uncordon → validate → next.
+Never have more than one control-plane node down (3-node quorum).
+
+### Phase 3 — finalize
+- `ceph osd unset noout`.
+- Optionally repoint talosctl endpoints to the OOB path: `talosctl config endpoint 10.10.5.21 10.10.5.22 10.10.5.23`.
+- Verify `bond1`/OOB on all nodes; `kubectl get nodes` all `Ready`; Ceph `HEALTH_OK`; apps healthy.
+
+### Rollback
+Per node: reapply the backup (`talosctl apply-config --file backups/<node>.yaml --mode=auto`)
+or `talosctl rollback`. etcd snapshot covers worst case. Worker-first ordering means a bad
+migration is caught on `talos-4` before any control-plane node is at risk.
+
 ## Open decisions before writing YAML
 
 - First model + PVC sizing / decode args (e.g. a Qwen3 ~32B-class for the 128 GB box).
