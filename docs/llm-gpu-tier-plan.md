@@ -132,6 +132,33 @@ The `.taskfiles/talos` **`upgrade-node`** task reads the image via
 
 ## Bootstrap-path fix — 2.5G management interface (chosen approach)
 
+> ✅ **COMPLETED 2026-06-11.** All 4 nodes migrated to the corrected config; `bond1`
+> OOB (`10.10.5.21–24`, 2-port active-backup) and `bond0` (2-port 802.3ad LACP) up on
+> every node; config drift fully reconciled (clean dry-run); etcd healthy; Ceph
+> `HEALTH_OK`. Outcome + the hard-won lessons below.
+>
+> **Lesson 1 — the dual-port-same-MAC bond trap (cost us an incident).** The MS-01's
+> dual-port NICs report **one identical MAC for both ports** (10G i40e; the 2.5G igc
+> ports differ in MAC but share the `58:47:ca:*` prefix). talhelper's new multi-doc
+> network rendering emits **one `LinkAliasConfig` per selector**, and an alias is 1:1 —
+> so a single MAC/prefix selector either collapses a bond to **one** member (i40e →
+> broke 802.3ad LACP against the 2-port UniFi LAG → no traffic) or is **skipped
+> entirely** (igc → `"matched multiple links, skipping"` → bond with 0 members, down).
+> **Fix: select each port by PCI `busPath`** (uniform across identical MS-01s):
+> `bond0` = `0000:02:00.0`/`0000:02:00.1` (i40e); `bond1` = `0000:57:00.0`/`0000:5a:00.0`
+> (igc). Renders `bond-m0`/`bond-m1` → real 2-member bonds. **Any future multi-NIC node
+> must use busPath selectors, not MAC.** (Worth a talhelper bug report.)
+>
+> **Lesson 2 — the rollout reboots, and recovery uses the OOB path.** Applying the
+> multi-doc migration is **not** live (the bundled `features`/format drift forces a
+> reboot; `--mode=try` is rejected). Do it drained/cordoned, `ceph osd set noout`, one
+> node at a time, worker-first. A *subsequent* bond-only change (e.g. the bond1 busPath
+> fix) **is** live/no-reboot once drift is reconciled. When the first apply isolated
+> talos-4, recovery was: physical console → reset to maintenance mode → node DHCPs on the
+> 2.5G Mgmt VLAN → `apply-config --insecure` the backed-up known-good config. The OOB
+> path's real value is exactly this. (2.5GbE i226 PHY takes ~15s to negotiate — don't
+> panic if links show `down` briefly after apply.)
+
 **Scope decision:** do **not** re-architect the service/Ceph networks. Everything on
 `bond0` / `10.10.40.0/24` (Ceph host-net public+cluster, Cilium native routing, node IP,
 VIP, LB pool, VLANs 20/90) stays **exactly as-is**. Only fix the Talos bootstrap pain.
@@ -150,19 +177,22 @@ management/bootstrap interface** on the existing `10.10.5.0/24` Management VLAN:
 
 Nothing else moves: no renumber, no Rook change, no cert/VIP/LB change.
 
-### talconfig change (replaces the current `ignore: true` igc block)
+### talconfig change (replaces the current `ignore: true` igc block) — FINAL working form
 
 ```yaml
       - # 2.5G management/bootstrap on VLAN 5 — independent of the 10G LACP bond
         interface: bond1
         bond:
-          deviceSelectors: [{ hardwareAddr: "58:47:ca:76:*", driver: igc }]
+          deviceSelectors:                       # busPath, NOT MAC (see Lesson 1)
+            - { busPath: "0000:57:00.0", driver: igc }
+            - { busPath: "0000:5a:00.0", driver: igc }
           mode: active-backup        # host-side only; NO switch LAG
           miimon: 100
         dhcp: false
         addresses: ["10.10.5.21/24"]  # .22/.23/.24 on the others
         mtu: 1500
         # deliberately NO routes — default stays via bond0 → 10.10.40.1
+        # bond0 likewise uses busPath: 0000:02:00.0 / 0000:02:00.1 (driver i40e)
 ```
 
 The 10G `bond0` block is unchanged. Point talosctl **endpoints** at the `10.10.5.x`
