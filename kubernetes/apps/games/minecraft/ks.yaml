@@ -79,7 +79,7 @@ spec:
 #     substitute:
 #       APP: *app
 #       VOLSYNC_CAPACITY: 20Gi
-# ---
+---
 # yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
