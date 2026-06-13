@@ -111,6 +111,7 @@ spec:
               # Base mod set comes from the Just Create SMP 2 modpack via
               # AUTO_CURSEFORGE — itzg resolves the manifest, downloads every
               # included mod, and replaces them when the modpack version bumps.
+              REMOVE_OLD_MODS: "true"
               CF_SLUG: just-create-smp-2
               CF_EXCLUDE_MODS: |-
                 create
