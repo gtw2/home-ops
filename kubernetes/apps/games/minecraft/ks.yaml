@@ -37,49 +37,49 @@ spec:
     substitute:
       APP: *app
       VOLSYNC_CAPACITY: 5Gi
----
-# yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: &app minecraft-create
-  namespace: &namespace games
-spec:
-  targetNamespace: *namespace
-  commonMetadata:
-    labels:
-      app.kubernetes.io/name: *app
-  components:
-    - ../../../../components/volsync
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
-  dependsOn:
-    # mc-router must exist before this Kustomization applies; once vanilla/create flip to
-    # replicas: 0, Velocity's connection to them depends on mc-router being live to scale them up.
-    - name: minecraft-router
-    - name: external-secrets
-      namespace: external-secrets
-    - name: rook-ceph-cluster
-      namespace: rook-ceph
-    - name: volsync
-      namespace: storage
-  path: ./kubernetes/apps/games/minecraft/create
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-    namespace: flux-system
-  wait: true
-  interval: 30m
-  retryInterval: 1m
-  timeout: 5m
-  postBuild:
-    substitute:
-      APP: *app
-      VOLSYNC_CAPACITY: 20Gi
----
+# ---
+# # yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: &app minecraft-create
+#   namespace: &namespace games
+# spec:
+#   targetNamespace: *namespace
+#   commonMetadata:
+#     labels:
+#       app.kubernetes.io/name: *app
+#   components:
+#     - ../../../../components/volsync
+#   decryption:
+#     provider: sops
+#     secretRef:
+#       name: sops-age
+#   dependsOn:
+#     # mc-router must exist before this Kustomization applies; once vanilla/create flip to
+#     # replicas: 0, Velocity's connection to them depends on mc-router being live to scale them up.
+#     - name: minecraft-router
+#     - name: external-secrets
+#       namespace: external-secrets
+#     - name: rook-ceph-cluster
+#       namespace: rook-ceph
+#     - name: volsync
+#       namespace: storage
+#   path: ./kubernetes/apps/games/minecraft/create
+#   prune: true
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#     namespace: flux-system
+#   wait: true
+#   interval: 30m
+#   retryInterval: 1m
+#   timeout: 5m
+#   postBuild:
+#     substitute:
+#       APP: *app
+#       VOLSYNC_CAPACITY: 20Gi
+# ---
 # yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
