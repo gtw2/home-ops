@@ -73,6 +73,11 @@ spec:
               EULA: "true"
               TZ: "${TIMEZONE}"
               TYPE: AUTO_CURSEFORGE
+              # Keep loader in lock-step with create/helmrelease.yaml — the
+              # cloned world is version-locked. See that file for why the
+              # force-reinstall is needed.
+              CF_MOD_LOADER_VERSION: 21.1.230
+              CF_FORCE_REINSTALL_MODLOADER: "true"
               MAX_TICK_TIME: "-1"
               # === MUST MATCH create survival ===
               VERSION: 1.21.1

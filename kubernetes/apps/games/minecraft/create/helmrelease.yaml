@@ -78,6 +78,12 @@ spec:
               TZ: "${TIMEZONE}"
               TYPE: AUTO_CURSEFORGE
               CF_MOD_LOADER_VERSION: 21.1.230
+              # The NeoForge loader is cached on the /data PVC, so once a loader
+              # is installed AUTO_CURSEFORGE reuses it and silently ignores
+              # CF_MOD_LOADER_VERSION. Force a reinstall so the pinned 21.1.230
+              # actually replaces the modpack-declared 21.1.222. Can be dropped
+              # back to "false" once the volume has the correct loader.
+              CF_FORCE_REINSTALL_MODLOADER: "true"
               # ENABLE_AUTOPAUSE: TRUE
               MAX_TICK_TIME: "-1"
               # USES_PLUGINS: "true"
