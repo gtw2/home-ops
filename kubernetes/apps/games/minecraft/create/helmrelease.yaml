@@ -120,6 +120,7 @@ spec:
               REMOVE_OLD_MODS: "true"
               CF_SLUG: just-create-smp-2
               CF_EXCLUDE_MODS: |-
+                architectury-api
                 create
                 carry-on
                 collective
