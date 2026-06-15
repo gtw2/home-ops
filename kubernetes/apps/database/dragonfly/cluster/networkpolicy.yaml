@@ -1,3 +1,36 @@
+# Allow cross-namespace clients to reach dragonfly (port 6379).
+# Starting with dragonfly-operator v1.6.x, the operator generates a
+# NetworkPolicy that restricts 6379 to the database namespace only
+# (podSelector: {} with no namespaceSelector). NetworkPolicies are
+# additive, so this policy re-opens 6379 to the consuming namespaces.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dragonfly-allow-clients
+  namespace: database
+spec:
+  podSelector:
+    matchLabels:
+      app: dragonfly
+      app.kubernetes.io/name: dragonfly
+      app.kubernetes.io/part-of: dragonfly
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: In
+            values:
+              - games
+              - home-automation
+              - media
+              - security
+    ports:
+    - port: 6379
+      protocol: TCP
+---
 # Allow Prometheus to scrape dragonfly metrics (port 9999)
 # The dragonfly-operator creates a NetworkPolicy that restricts
 # port 9999 to only the operator pod. This policy adds Prometheus access.
