@@ -45,7 +45,7 @@ spec:
         barmanObjectName: immich-garage
         # Note: serverName version needs to be incremented
         # when recovering from an existing cnpg cluster
-        serverName: immich17-v6
+        serverName: immich17-v7
   # Note: previousCluster needs to be set to the name of the previous
   # cluster when recovering from an existing cnpg cluster
   bootstrap:
@@ -53,10 +53,10 @@ spec:
     #   postInitSQL:
     #     - CREATE EXTENSION IF NOT EXISTS vchord CASCADE;
     recovery:
-      source: immich17-v5
+      source: immich17-v6
   # Note: externalClusters is needed when recovering from an existing cnpg cluster
   externalClusters:
-    - name: immich17-v5
+    - name: immich17-v6
       plugin:
         name: barman-cloud.cloudnative-pg.io
         parameters:
