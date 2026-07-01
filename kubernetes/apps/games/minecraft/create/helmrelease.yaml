@@ -119,54 +119,55 @@ spec:
               # included mod, and replaces them when the modpack version bumps.
               REMOVE_OLD_MODS: "true"
               CF_SLUG: just-create-smp-2
-              CF_FILENAME_MATCHER: 1.0.1
-              CF_EXCLUDE_MODS: |-
-                architectury-api
-                create
-                carry-on
-                collective
-                create-dragons-plus
-                create-encased
-                create-enchantment-industry
-                create-shuffle-filter
-                create-stuff-additions
-                deployer
-                emi
-                farmers-delight
-                immersive-paintings
-                lootjs
-                modernfix
-                platform
-                puzzles-lib
-                steam-n-rails-neoforge
-                simple-voice-chat
-                xaeros-minimap
-                xaeros-world-map
+              #CF_FILENAME_MATCHER: 1.0.1
+              # CF_EXCLUDE_MODS: |-
+              #   architectury-api
+              #   create
+              #   carry-on
+              #   collective
+              #   create-dragons-plus
+              #   create-encased
+              #   create-enchantment-industry
+              #   create-shuffle-filter
+              #   create-stuff-additions
+              #   deployer
+              #   emi
+              #   farmers-delight
+              #   immersive-paintings
+              #   lootjs
+              #   modernfix
+              #   platform
+              #   puzzles-lib
+              #   steam-n-rails-neoforge
+              #   simple-voice-chat
+              #   xaeros-minimap
+              #   xaeros-world-map
               # Extra mods layered on top of the modpack.
               MODRINTH_DEFAULT_VERSION_TYPE: release
+              # MODRINTH_PROJECTS: |-
+              #   architectury-api
+              #   curios
+              #   create
+              #   carry-on
+              #   collective
+              #   create-dragons-plus
+              #   create-encased
+              #   create-enchantment-industry
+              #   create-shuffle-filter
+              #   create-stuff-additions
+              #   deployer
+              #   emi
+              #   farmers-delight
+              #   immersive-paintings
+              #   lootjs
+              #   modernfix
+              #   puzzles-lib
+              #   platform
+              #   create-steam-n-rails-1.21.1
+              #   simple-voice-chat
+              #   xaeros-minimap
+              #   xaeros-world-map
               MODRINTH_PROJECTS: |-
-                architectury-api
-                curios
-                create
-                carry-on
-                collective
-                create-dragons-plus
-                create-encased
-                create-enchantment-industry
-                create-shuffle-filter
-                create-stuff-additions
-                deployer
-                emi
-                farmers-delight
-                immersive-paintings
-                lootjs
-                modernfix
-                puzzles-lib
-                platform
-                create-steam-n-rails-1.21.1
-                simple-voice-chat
-                xaeros-minimap
-                xaeros-world-map
                 create-aeronautics
                 luckperms:dKAPoPGd
                 proxy-compatible-forge
