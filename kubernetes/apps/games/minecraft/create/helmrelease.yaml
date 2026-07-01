@@ -91,7 +91,6 @@ spec:
               # Pin the modpack so it never jumps versions unattended. Use the exact
               # file id (best) or a filename matcher. Bump this deliberately when you
               # actually want to update — and back up first.
-              CF_FILE_ID: "1.0.2"   # or: CF_FILENAME_MATCHER: "1.0.2hotfix"
               # ENABLE_AUTOPAUSE: TRUE
               MAX_TICK_TIME: "-1"
               # USES_PLUGINS: "true"
@@ -127,7 +126,7 @@ spec:
               # included mod, and replaces them when the modpack version bumps.
               REMOVE_OLD_MODS: "true"
               CF_SLUG: just-create-smp-2
-              #CF_FILENAME_MATCHER: 1.0.1
+              CF_FILENAME_MATCHER: 1.0.2hotfix
               CF_EXCLUDE_MODS: |-
                 foxys
               MODRINTH_DEFAULT_VERSION_TYPE: release
