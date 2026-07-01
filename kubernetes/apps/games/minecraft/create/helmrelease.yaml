@@ -131,7 +131,7 @@ spec:
                 foxys
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
-                distanthorizons
+                distanthorizons:beta
                 create-aeronautics
                 luckperms:dKAPoPGd
                 proxy-compatible-forge
