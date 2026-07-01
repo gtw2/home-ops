@@ -84,6 +84,14 @@ spec:
               # actually replaces the modpack-declared 21.1.222. Can be dropped
               # back to "false" once the volume has the correct loader.
               CF_FORCE_REINSTALL_MODLOADER: "true"
+              CF_OVERRIDES_SKIP_EXISTING: "true"
+              # Hard-exclude the world path from override handling entirely.
+              CF_OVERRIDES_EXCLUSIONS: |-
+                just-create-smp-2/**
+              # Pin the modpack so it never jumps versions unattended. Use the exact
+              # file id (best) or a filename matcher. Bump this deliberately when you
+              # actually want to update — and back up first.
+              CF_FILE_ID: "<id-of-the-version-you-want>"   # or: CF_FILENAME_MATCHER: "1.0.2hotfix"
               # ENABLE_AUTOPAUSE: TRUE
               MAX_TICK_TIME: "-1"
               # USES_PLUGINS: "true"
