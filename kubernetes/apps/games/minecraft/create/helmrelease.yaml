@@ -91,7 +91,7 @@ spec:
               # Pin the modpack so it never jumps versions unattended. Use the exact
               # file id (best) or a filename matcher. Bump this deliberately when you
               # actually want to update — and back up first.
-              CF_FILE_ID: "<id-of-the-version-you-want>"   # or: CF_FILENAME_MATCHER: "1.0.2hotfix"
+              CF_FILE_ID: "1.0.2hotfix"   # or: CF_FILENAME_MATCHER: "1.0.2hotfix"
               # ENABLE_AUTOPAUSE: TRUE
               MAX_TICK_TIME: "-1"
               # USES_PLUGINS: "true"
