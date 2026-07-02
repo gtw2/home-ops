@@ -138,6 +138,7 @@ spec:
               CURSEFORGE_FILES: |-
                 architectury-api
                 ftb-xmod-compat
+                ftb-library-forge
               # PLUGINS: |-
               #   https://cdn.modrinth.com/data/7IbzD4Zm/versions/JZpRIpOD/SignedVelocity-Sponge-10-1.3.0.jar
               # PLUGINS_OUT_DIR: /data/mods/plugins
