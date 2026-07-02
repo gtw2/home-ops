@@ -83,7 +83,6 @@ spec:
               # CF_MOD_LOADER_VERSION. Force a reinstall so the pinned 21.1.230
               # actually replaces the modpack-declared 21.1.222. Can be dropped
               # back to "false" once the volume has the correct loader.
-              CF_FORCE_REINSTALL_MODLOADER: "true"
               CF_OVERRIDES_SKIP_EXISTING: "true"
               # Hard-exclude the world path from override handling entirely.
               CF_OVERRIDES_EXCLUSIONS: |-
@@ -107,7 +106,6 @@ spec:
               # at startup by itzg's sync-and-interpolate (CFG_ prefix).
               CFG_LUCKPERMS_SERVER: "create"
               SPAWN_PROTECTION: 0
-              FORCE_REDOWNLOAD: "true"
               ONLINE_MODE: "false"
               ALLOW_FLIGHT: "true"
               REPLACE_ENV_IN_PLACE: "true"
@@ -124,7 +122,6 @@ spec:
               # Base mod set comes from the Just Create SMP 2 modpack via
               # AUTO_CURSEFORGE — itzg resolves the manifest, downloads every
               # included mod, and replaces them when the modpack version bumps.
-              REMOVE_OLD_MODS: "true"
               CF_SLUG: just-create-smp-2
               CF_FILENAME_MATCHER: 1.0.2hotfix
               CF_EXCLUDE_MODS: |-
