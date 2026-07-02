@@ -7,17 +7,31 @@ metadata:
 spec:
   trigger:
     manual: restore-once
-  restic:
-    repository: {{ ENV.APP }}-restic-secret
+  kopia:
+    repository: {{ ENV.APP }}-volsync-secret
+    # Locate this app's snapshots within the shared kopia repo.
+    sourceIdentity:
+      sourceName: {{ ENV.APP }}
+    # Direct = write straight into the existing app PVC (app must be scaled to 0).
     destinationPVC: {{ ENV.CLAIM }}
     copyMethod: Direct
-    storageClassName: {{ ENV.STORAGE_CLASS_NAME }}
     accessModes: {{ ENV.ACCESS_MODES }}
-    previous: {{ ENV.PREVIOUS }}
+    # Make the PVC exactly match the snapshot (removes files created after it).
+    enableFileDeletion: true
+    cacheCapacity: 5Gi
+    cacheStorageClassName: openebs-hostpath
+    cacheAccessModes: ["ReadWriteOnce"]
+    cleanupCachePVC: true
+    cleanupTempPVC: true
     moverSecurityContext:
       runAsUser: {{ ENV.PUID }}
       runAsGroup: {{ ENV.PGID }}
       fsGroup: {{ ENV.PGID }}
-    enableFileDeletion: true
-    cleanupCachePVC: true
-    cleanupTempPVC: true
+{% if ENV.RESTORE_AS_OF %}
+    # Restore the newest snapshot at or before this RFC3339 timestamp.
+    restoreAsOf: "{{ ENV.RESTORE_AS_OF }}"
+{% endif %}
+{% if ENV.PREVIOUS %}
+    # Skip back this many snapshots from the restoreAsOf/latest point (0 = that point).
+    previous: {{ ENV.PREVIOUS }}
+{% endif %}

@@ -1,19 +1,51 @@
 ---
+# Job name prefix "volsync-" + the created-by label make the volsync-mover-nfs
+# MutatingAdmissionPolicy inject the kopia repository (NFS) at /repository.
+# A real tmp volume/volumeMount is required: Kubernetes prunes empty arrays, so
+# without a member the policy's JSONPatch ("add .../volumeMounts/-") has nothing
+# to append to and the job is rejected. tmp also gives kopia a writable $HOME.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: list-{{ ENV.APP }}
+  name: volsync-list-{{ ENV.APP }}
   namespace: {{ ENV.NS }}
+  labels:
+    app.kubernetes.io/created-by: volsync
 spec:
   ttlSecondsAfterFinished: 3600
+  backoffLimit: 1
   template:
+    metadata:
+      labels:
+        app.kubernetes.io/created-by: volsync
     spec:
       automountServiceAccountToken: false
-      restartPolicy: OnFailure
+      restartPolicy: Never
       containers:
         - name: list
-          image: docker.io/restic/restic:latest
-          args: ["snapshots"]
+          # Same mover image VolSync uses (has the kopia binary at a matching
+          # version). Keep the tag in sync with kubernetes/apps/storage/volsync.
+          image: ghcr.io/perfectra1n/volsync:v0.17.11
+          env:
+            - name: HOME
+              value: /tmp
           envFrom:
+            # Provides KOPIA_PASSWORD (kopia reads it automatically).
             - secretRef:
-                name: {{ ENV.APP }}-volsync
+                name: {{ ENV.APP }}-volsync-secret
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              kopia repository connect filesystem --path=/repository --no-check-for-updates
+              # Shared repo: lists every app. Find the stanza headed
+              # "{{ ENV.APP }}@{{ ENV.NS }}:/data" and read the snapshot timestamps
+              # under it to choose a RESTORE_AS_OF for `task volsync:restore`.
+              kopia snapshot list --all
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
