@@ -131,7 +131,6 @@ spec:
                 foxys
               MODRINTH_DEFAULT_VERSION_TYPE: release
               MODRINTH_PROJECTS: |-
-                architectury-api
                 distanthorizons:beta
                 create-aeronautics
                 luckperms:dKAPoPGd
@@ -140,6 +139,7 @@ spec:
                 sleep
                 worldedit
               CURSEFORGE_FILES: |-
+                architectury-api
                 ftb-xmod-compat
               # PLUGINS: |-
               #   https://cdn.modrinth.com/data/7IbzD4Zm/versions/JZpRIpOD/SignedVelocity-Sponge-10-1.3.0.jar
