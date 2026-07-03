@@ -1,0 +1,123 @@
+# vMessage Configuration File
+# Thanks for downloading my plugin! I hope you like it!
+# MiniMessage is supported for formatting in all messages.
+# Placeholders are parsed before MiniMessage so you can use them in your format.
+# For in-depth explanation of the configuration options, visit: https://github.com/szymon-off/vMessage/wiki/Configuration-(config.yml)
+#
+# ⚠️ If you have used vMessage before v1.8.0, the contents of this file may be malformed ⚠️
+
+messages:
+  chat:
+    enabled: true
+
+    # %player% - Player
+    # %message% - Message
+    # %server% - Player's Current Server
+    # %prefix% - LuckPerms Prefix
+    # %suffix% - LuckPerms Suffix
+    format: '<white>(<red>%server%</red>)</white> %prefix%%player% <b><gray>></gray></b> <white>%message%<reset>'
+
+    # Whether to allow players to use MiniMessage in their messages
+    allow-mini-message: false
+
+    # The message to send when a muted player tries to send a message
+    # %player% - Player
+    # %message% - Message
+    # %server% - Player's Current Server
+    # %prefix% - LuckPerms Prefix
+    # %suffix% - LuckPerms Suffix
+    # %reason% - Reason for muting
+    # %end-date% - End date of the mute
+    # %moderator% - Moderator who muted the player
+    muted-message: <red>You are muted and cannot send messages.</red>
+  join:
+    enabled: true
+
+    # %player% - Player
+    # %server% - Player's Current Server
+    # %prefix% - LuckPerms Prefix
+    # %suffix% - LuckPerms Suffix
+    format: <reset>%prefix%%player% <gray>joined</gray> <yellow>%server%
+  leave:
+    enabled: true
+
+    # %player% - Player
+    # %server% - Player's Last Server
+    # %prefix% - LuckPerms Prefix
+    # %suffix% - LuckPerms Suffix
+    format: <reset>%prefix%%player% <gray>left</gray> <yellow>%server%
+  change:
+    enabled: true
+
+    # %player% - Player
+    # %old_server% - Player's Previous Server
+    # %new_server% - Player's New Server
+    # %prefix% - LuckPerms Prefix
+    # %suffix% - LuckPerms Suffix
+    format: <reset>%prefix%%player% <red>moved to</red> <yellow>%new_server%
+commands:
+  # /broadcast, /bcast, /bc
+  broadcast:
+    enabled: true
+
+    # %player% - Player
+    # %message% - Message
+    # %server% - Player's Current Server
+    # %prefix% - LuckPerms Prefix
+    # %suffix% - LuckPerms Suffix
+    format: <b><#00ffff>%player%:</b> %message%
+
+    # If false, players will need the permission 'vmessage.command.broadcast' to use the /broadcast command
+    # If true, all players can use the /broadcast command by default unless they have the permission 'vmessage.command.broadcast' set to false
+    allow-by-default: false
+
+    # Whether to allow players to use MiniMessage in their broadcast messages
+    # MiniMessage is always allowed for console broadcasts
+    allow-mini-message: true
+
+  # /message, /msg, /whisper, /w
+  message:
+    enabled: true
+
+    # %sender% - Sender
+    # %receiver% - Receiver
+    # %message% - Message
+    # %sender-server% - Sender's Current Server
+    # %receiver-server% - Receiver's Current Server
+    # %sender-prefix% - Sender's LuckPerms Prefix
+    # %sender-suffix% - Sender's LuckPerms Suffix
+    # %receiver-prefix% - Receiver's LuckPerms Prefix
+    # %receiver-suffix% - Receiver's LuckPerms Suffix
+    # Custom meta placeholders are currently not supported for this option
+    format:
+      sender: '<b>(<#00ffff>You </#00ffff>→ <#00ffff>%receiver%</#00ffff>): </b>%message%'
+      receiver: '<b>(<#00ffff>%sender% </#00ffff>→ <#00ffff>You</#00ffff>): </b>%message%'
+
+    # Whether to allow players to use MiniMessage in their private messages
+    allow-mini-message: false
+
+    # If false, players will need the permission 'vmessage.command.message' to use the /message command
+    # If true, all players can use the /message command by default unless they have the permission 'vmessage.command.message' set to false
+    # This also affects the /reply command
+    allow-by-default: false
+
+    # Whether to enable the /reply command
+    # It will reply to the last person who sent you a message
+    enable-reply-command: true
+
+# If you want to use additional LuckPerms meta values you can add them here
+# You can then use them in placeholder format like this: &custom_name& [AMPERSAND not PERCENT]
+luck-perms-meta:
+  custom-name1: meta_key1
+  custom-name2: meta_key2
+
+# If you want to display a different name for a server you can add it here
+# It will then be used in the messages above instead of the server's actual name
+server-aliases:
+  lobby: Lobby
+  lobby1: Lobby
+  lobby2: Lobby
+
+# This option is here for safety when updating the plugin from an older version
+# WARNING: This will overwrite the previous backup (config.yml.bak)
+backup-config: false
