@@ -15,7 +15,7 @@ messages:
     # %server% - Player's Current Server
     # %prefix% - LuckPerms Prefix
     # %suffix% - LuckPerms Suffix
-    format: '<white>(<red>%server%</red>)</white> %prefix%%player% <b><gray>></gray></b> <white>%message%<reset>'
+    format: "<white>(<red>%server%</red>)</white> %prefix%%player% <b><gray>></gray></b> <white>%message%<reset>"
 
     # Whether to allow players to use MiniMessage in their messages
     allow-mini-message: false
@@ -29,7 +29,7 @@ messages:
     # %reason% - Reason for muting
     # %end-date% - End date of the mute
     # %moderator% - Moderator who muted the player
-    muted-message: <red>You are muted and cannot send messages.</red>
+    muted-message: "<red>You are muted and cannot send messages.</red>"
   join:
     enabled: true
 
@@ -37,7 +37,7 @@ messages:
     # %server% - Player's Current Server
     # %prefix% - LuckPerms Prefix
     # %suffix% - LuckPerms Suffix
-    format: <reset>%prefix%%player% <gray>joined</gray> <yellow>%server%
+    format: "<reset>%prefix%%player% <gray>joined</gray> <yellow>%server%"
   leave:
     enabled: true
 
@@ -45,7 +45,7 @@ messages:
     # %server% - Player's Last Server
     # %prefix% - LuckPerms Prefix
     # %suffix% - LuckPerms Suffix
-    format: <reset>%prefix%%player% <gray>left</gray> <yellow>%server%
+    format: "<reset>%prefix%%player% <gray>left</gray> <yellow>%server%"
   change:
     enabled: true
 
@@ -54,7 +54,7 @@ messages:
     # %new_server% - Player's New Server
     # %prefix% - LuckPerms Prefix
     # %suffix% - LuckPerms Suffix
-    format: <reset>%prefix%%player% <red>moved to</red> <yellow>%new_server%
+    format: "<reset>%prefix%%player% <red>moved to</red> <yellow>%new_server%"
 commands:
   # /broadcast, /bcast, /bc
   broadcast:
