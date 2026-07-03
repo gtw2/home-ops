@@ -33,4 +33,4 @@ version = 2.0
 [advanced]
         #Overrides the modern forwarding version decided by PCF. Change it to "MODERN_DEFAULT" if you encounter chat-signing issues. Changing this setting requires a server restart.
         #Allowed Values: NO_OVERRIDE, MODERN_DEFAULT, MODERN_FORWARDING_WITH_KEY, MODERN_FORWARDING_WITH_KEY_V2, MODERN_LAZY_SESSION
-        modernForwardingVersion = "NO_OVERRIDE"
+        modernForwardingVersion = "MODERN_DEFAULT"
