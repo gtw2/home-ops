@@ -214,7 +214,7 @@ spec:
           - path: /config/plugins/velocitab/tab_groups.yml
             subPath: velocitab.yaml
             readOnly: true
-          - path: /config/plugins/vmessage/config.yml
+          - path: /config/plugins/vMessage/config.yml
             subPath: vmessage.yaml
             readOnly: true
           - path: /config/plugins/vlobby/configuration.conf
