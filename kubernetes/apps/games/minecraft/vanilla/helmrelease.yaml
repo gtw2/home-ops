@@ -115,6 +115,7 @@ spec:
                 ferrite-core
                 fabricproxy-lite
                 lithium
+                signedvelocity
                 simple-voice-chat
                 fabricexporter:D7LrQrIU
                 vanilla-permissions

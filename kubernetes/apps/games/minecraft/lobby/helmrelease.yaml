@@ -102,6 +102,7 @@ spec:
               # project slugs by itzg, so they have to live outside it.
               MODRINTH_PROJECTS: |-
                 luckperms:OrIs0S6b
+                signedvelocity
                 simple-voice-chat
                 unifiedmetrics:Ypqt7eH1
                 worldedit

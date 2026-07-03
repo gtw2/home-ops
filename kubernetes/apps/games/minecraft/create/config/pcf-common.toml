@@ -7,7 +7,7 @@ version = 2.0
         enabled = true
         #The type of forwarding to use
         #Allowed Values: MODERN
-        mode = "MODERN"
+        mode = "MODERN_DEFAULT"
         #The forwarding secret shared with the proxy
         secret = "$${CFG_FORWARDING_SECRET}"
         #A list of approved proxy hostnames or IP addresses. If the connecting proxy's hostname or IP isn't in this list, the player will be disconnected. Leave empty to allow all.
