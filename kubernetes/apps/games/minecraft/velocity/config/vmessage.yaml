@@ -15,10 +15,10 @@ messages:
     # %server% - Player's Current Server
     # %prefix% - LuckPerms Prefix
     # %suffix% - LuckPerms Suffix
-    format: "<white>(<red>%server%</red>)</white> %prefix%%player% <b><gray>></gray></b> <white>%message%<reset>"
+    format: "<white>(<red>%server%</red>)</white> %prefix%%player% <b><gray>></gray></b> <white>%message%</white>"
 
     # Whether to allow players to use MiniMessage in their messages
-    allow-mini-message: false
+    allow-mini-message: true
 
     # The message to send when a muted player tries to send a message
     # %player% - Player
