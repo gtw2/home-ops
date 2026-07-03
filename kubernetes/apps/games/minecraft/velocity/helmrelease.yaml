@@ -101,9 +101,10 @@ spec:
                 viabackwards
                 viaversion
                 vlobby
+                vmessage
                 vpacketevents
-              PLUGINS: |-
-                https://github.com/FeuSalamander/Vmessage/releases/download/1.6.2/Vmessage.jar
+              # PLUGINS: |-
+              #   https://github.com/FeuSalamander/Vmessage/releases/download/1.6.2/Vmessage.jar
             #    https://download.luckperms.net/1643/velocity/LuckPerms-Velocity-5.5.55.jar
             envFrom: *envFrom
             securityContext:
