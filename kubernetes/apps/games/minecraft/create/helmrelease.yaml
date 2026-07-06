@@ -85,6 +85,7 @@ spec:
               # back to "false" once the volume has the correct loader.
               CF_OVERRIDES_SKIP_EXISTING: "false"
               CF_FORCE_REINSTALL_MODLOADER: "true"
+              CF_FORCE_SYNCHRONIZE: "true"
               # Hard-exclude the world path from override handling entirely.
               CF_OVERRIDES_EXCLUSIONS: |-
                 just-create-smp-2/**
