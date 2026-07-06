@@ -83,7 +83,7 @@ spec:
               # CF_MOD_LOADER_VERSION. Force a reinstall so the pinned 21.1.230
               # actually replaces the modpack-declared 21.1.222. Can be dropped
               # back to "false" once the volume has the correct loader.
-              CF_OVERRIDES_SKIP_EXISTING: "true"
+              CF_OVERRIDES_SKIP_EXISTING: "false"
               CF_FORCE_REINSTALL_MODLOADER: "true"
               # Hard-exclude the world path from override handling entirely.
               CF_OVERRIDES_EXCLUSIONS: |-
@@ -124,7 +124,7 @@ spec:
               # AUTO_CURSEFORGE — itzg resolves the manifest, downloads every
               # included mod, and replaces them when the modpack version bumps.
               CF_SLUG: just-create-smp-2
-              CF_FILENAME_MATCHER: 1.0.2hotfix
+              # CF_FILENAME_MATCHER: 1.0.2hotfix
               CF_EXCLUDE_MODS: |-
                 foxys
               MODRINTH_DEFAULT_VERSION_TYPE: release
