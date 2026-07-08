@@ -83,9 +83,9 @@ spec:
               # CF_MOD_LOADER_VERSION. Force a reinstall so the pinned 21.1.230
               # actually replaces the modpack-declared 21.1.222. Can be dropped
               # back to "false" once the volume has the correct loader.
-              CF_OVERRIDES_SKIP_EXISTING: "false"
+              CF_OVERRIDES_SKIP_EXISTING: "true"
               CF_FORCE_REINSTALL_MODLOADER: "true"
-              CF_FORCE_SYNCHRONIZE: "true"
+              CF_FORCE_SYNCHRONIZE: "false"
               # Hard-exclude the world path from override handling entirely.
               CF_OVERRIDES_EXCLUSIONS: |-
                 just-create-smp-2/**
