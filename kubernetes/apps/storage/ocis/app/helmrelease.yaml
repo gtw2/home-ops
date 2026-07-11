@@ -29,7 +29,7 @@ spec:
           init-config:
             image:
               repository: docker.io/owncloud/ocis
-              tag: 8.0.5@sha256:9823d57aafdbd34d1e3bd90df550e8127818471484bfbf046bd9bb482fad7391
+              tag: 8.0.5@sha256:3df3091996b18eaf35b995174eb465a97a94f6797c2fa8692fdc31962caf3438
             command:
               - /bin/sh
               - -c
@@ -51,7 +51,7 @@ spec:
           ocis:
             image:
               repository: docker.io/owncloud/ocis
-              tag: 8.0.5@sha256:9823d57aafdbd34d1e3bd90df550e8127818471484bfbf046bd9bb482fad7391
+              tag: 8.0.5@sha256:3df3091996b18eaf35b995174eb465a97a94f6797c2fa8692fdc31962caf3438
             env:
               DEMO_USERS: false
               NOTIFICATIONS_SMTP_AUTHENTICATION: "auto"
