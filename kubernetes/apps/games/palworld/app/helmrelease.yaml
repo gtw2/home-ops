@@ -47,6 +47,9 @@ spec:
               AUTO_REBOOT_CRON_EXPRESSION: "0 9 * * *"
               RCON_ENABLED: true
               RCON_PORT: &rcon_port 25575
+              # REST API (used by Discord GSM for status/players; auth = admin password)
+              REST_API_ENABLED: true
+              REST_API_PORT: &rest_api_port 8212
               # --- Game world settings (map to PalWorldSettings.ini) ---
               # Difficulty & progression
               DIFFICULTY: "None" # None | Casual | Normal | Hard
@@ -149,6 +152,10 @@ spec:
             enabled: true
             port: *query_port
             protocol: UDP
+          restapi:
+            enabled: true
+            port: *rest_api_port
+            protocol: TCP
     persistence:
       data:
         enabled: true
