@@ -13,7 +13,7 @@ resources:
   - ./filebrowser/ks.yaml
   - ./icarus/ks.yaml
   - ./minecraft/ks.yaml
-  - ./palworld/ks.yaml
+  # - ./palworld/ks.yaml
   - ./romm/ks.yaml
   # - ./sdtd/ks.yaml
   # - ./starrupture/ks.yaml
