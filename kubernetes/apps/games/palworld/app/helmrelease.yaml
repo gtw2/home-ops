@@ -37,17 +37,12 @@ spec:
               SERVER_NAME: "BustedRNG"
               SERVER_DESCRIPTION: "BustedRNG Palworld"
               UPDATE_ON_BOOT: true
-              BACKUP_ENABLED: true
+              BACKUP_ENABLED: false
               # Offset off the hour so it never coincides with the top-of-hour VolSync snapshot
-              BACKUP_CRON_EXPRESSION: "15 */2 * * *"
-              DELETE_OLD_BACKUPS: true
-              OLD_BACKUP_DAYS: 2
               AUTO_UPDATE_ENABLED: true
               # :30 offset — auto-update stops the server; keep it clear of VolSync's 0 * * * * snapshot
               AUTO_UPDATE_CRON_EXPRESSION: "30 8 * * *"
-              AUTO_REBOOT_ENABLED: true
-              # :30 offset — auto-reboot kills/flushes the server; keep it clear of VolSync's 0 * * * * snapshot
-              AUTO_REBOOT_CRON_EXPRESSION: "30 9 * * *"
+              AUTO_REBOOT_ENABLED: false
               RCON_ENABLED: true
               RCON_PORT: &rcon_port 25575
               # REST API (used by Discord GSM for status/players; auth = admin password)
