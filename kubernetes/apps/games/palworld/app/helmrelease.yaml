@@ -96,8 +96,8 @@ spec:
               ENABLE_INVADER_ENEMY: true
               ENABLE_PREDATOR_BOSS_PAL: true
               BASE_CAMP_MAX_NUM: 128
-              BASE_CAMP_WORKER_MAX_NUM: 15
-              BASE_CAMP_MAX_NUM_IN_GUILD: 4
+              BASE_CAMP_WORKER_MAX_NUM: 20
+              BASE_CAMP_MAX_NUM_IN_GUILD: 6
               BUILD_AREA_LIMIT: false
               MAX_BUILDING_LIMIT_NUM: 0 # 0 = unlimited
               SUPPLY_DROP_SPAN: 180
