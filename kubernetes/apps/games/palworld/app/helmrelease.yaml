@@ -39,9 +39,7 @@ spec:
               UPDATE_ON_BOOT: true
               BACKUP_ENABLED: false
               # Offset off the hour so it never coincides with the top-of-hour VolSync snapshot
-              AUTO_UPDATE_ENABLED: true
-              # :30 offset — auto-update stops the server; keep it clear of VolSync's 0 * * * * snapshot
-              AUTO_UPDATE_CRON_EXPRESSION: "30 8 * * *"
+              AUTO_UPDATE_ENABLED: false
               AUTO_REBOOT_ENABLED: false
               RCON_ENABLED: true
               RCON_PORT: &rcon_port 25575
@@ -51,7 +49,7 @@ spec:
               # --- Game world settings (map to PalWorldSettings.ini) ---
               # Difficulty & progression
               DIFFICULTY: "None" # None | Casual | Normal | Hard
-              EXP_RATE: "1.000000"
+              EXP_RATE: "1.200000"
               PAL_CAPTURE_RATE: "1.000000"
               PAL_SPAWN_NUM_RATE: "1.000000"
               PAL_EGG_DEFAULT_HATCHING_TIME: "0.200000" # hours
@@ -96,7 +94,7 @@ spec:
               ENABLE_INVADER_ENEMY: true
               ENABLE_PREDATOR_BOSS_PAL: true
               BASE_CAMP_MAX_NUM: 128
-              BASE_CAMP_WORKER_MAX_NUM: 20
+              BASE_CAMP_WORKER_MAX_NUM: 25
               BASE_CAMP_MAX_NUM_IN_GUILD: 10
               BUILD_AREA_LIMIT: false
               MAX_BUILDING_LIMIT_NUM: 0 # 0 = unlimited
