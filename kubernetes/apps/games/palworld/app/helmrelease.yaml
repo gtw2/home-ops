@@ -52,7 +52,7 @@ spec:
               EXP_RATE: "1.200000"
               PAL_CAPTURE_RATE: "1.000000"
               PAL_SPAWN_NUM_RATE: "1.000000"
-              PAL_EGG_DEFAULT_HATCHING_TIME: "0.200000" # hours
+              PAL_EGG_DEFAULT_HATCHING_TIME: "0.150000" # hours
               WORK_SPEED_RATE: "1.000000"
               DAYTIME_SPEEDRATE: "1.000000"
               NIGHTTIME_SPEEDRATE: "1.000000"
