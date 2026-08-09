@@ -57,7 +57,7 @@ spec:
               TYPE: VELOCITY
               # TODO renovate
               MINECRAFT_VERSION: 1.21.11
-              VELOCITY_VERSION: "3.5.0-SNAPSHOT"
+              VELOCITY_VERSION: "4.1.0-SNAPSHOT"
               #VELOCITY_BUILD_ID: 539
               OVERRIDE_ICON: "true"
               # PLUGINS_FILE: /config/plugins.txt
