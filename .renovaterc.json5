@@ -1,14 +1,31 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  // NOTE: we intentionally do NOT extend the aggregate "github>home-operations/renovate-config"
+  // (default.json), because it bundles :helmPostUpgradeTasks (helm-docs/helm-schema) which is for
+  // chart-authoring repos and fails here with an allowedCommands artifact error. This repo consumes
+  // charts, so we cherry-pick the sub-presets instead.
   extends: [
-    "github>home-operations/renovate-config",
+    "config:recommended",
+    "docker:enableMajor",
+    "helpers:pinGitHubActionDigestsToSemver",
+    "abandonments:recommended",
+    ":automergePr",
+    ":configMigration",
+    ":dependencyDashboard",
+    ":disableRateLimiting",
+    "github>home-operations/renovate-config:annotated.json5",
+    "github>home-operations/renovate-config:groups.json5",
+    "github>home-operations/renovate-config:labels.json5",
+    "github>home-operations/renovate-config:semanticCommits.json5",
+    "github>home-operations/renovate-config:sharedActions.json5",
     "local>gtw2/home-ops//.renovate/autoMerge.json5",
     "local>gtw2/home-ops//.renovate/groups.json5",
     "local>gtw2/home-ops//.renovate/grafanDashboards.json5",
   ],
+  dependencyDashboardTitle: "Renovate Dashboard 🤖",
   schedule: ["every weekend"],
   ignorePaths: ["**/*.sops.*"],
-  // The shared preset does not set framework manager file patterns, and Renovate's
+  // The shared presets do not set framework manager file patterns, and Renovate's
   // defaults do not match this repo's kubernetes/** layout — keep these explicit or
   // most HelmRelease/image/kustomize dependencies stop being detected.
   flux: {
