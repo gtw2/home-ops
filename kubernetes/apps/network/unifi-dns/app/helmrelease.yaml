@@ -19,28 +19,21 @@ kind: HelmRelease
 metadata:
   name: &app unifi-dns
 spec:
-  interval: 1h
   chartRef:
     kind: OCIRepository
     name: unifi-dns
-  install:
-    remediation:
-      retries: -1
-  upgrade:
-    cleanupOnFail: true
-    remediation:
-      retries: 3
+  interval: 1h
   values:
     fullnameOverride: *app
     provider:
       name: webhook
       webhook:
         image:
-          repository: ghcr.io/kashalls/external-dns-unifi-webhook
-          tag: v0.9.0@sha256:22f4106f44a0b9ac3c97cf29bbfef93026c1164492152dc797a1d6dc86ddfbb5
+          repository: ghcr.io/home-operations/external-dns-unifi-webhook
+          tag: 0.10.9@sha256:30ae224e23bb7c303d72901a85aea77060288872716b8bc50589216c1f9d0df0
         env:
           - name: UNIFI_HOST
-            value: https://192.168.1.1
+            value: https://unifi.internal
           - name: UNIFI_API_KEY
             valueFrom:
               secretKeyRef:
@@ -60,10 +53,13 @@ spec:
           timeoutSeconds: 5
     triggerLoopOnEvent: true
     policy: sync
-    sources: ["gateway-httproute", "service"]
+    sources:
+      - gateway-httproute
+      - service
     txtOwnerId: main
-    txtPrefix: k8s.main.
-    domainFilters: ["${SECRET_DOMAIN}"]
+    txtPrefix: k8s.main.%{record_type}-
+    domainFilters:
+      - ${SECRET_DOMAIN}
     serviceMonitor:
       enabled: true
     podAnnotations:
