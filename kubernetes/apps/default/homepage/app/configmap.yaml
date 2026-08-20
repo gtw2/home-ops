@@ -179,9 +179,12 @@ data:
       # --- Schedule tab: less-critical / informational ---
       Downloads:
         tab: Schedule
-        style: row
-        columns: 4
+        style: column
         icon: mdi-download-circle
+      Plex Tools:
+        tab: Schedule
+        style: column
+        icon: mdi-toolbox
       Calendar:
         tab: Schedule
         style: column
