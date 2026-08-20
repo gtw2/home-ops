@@ -67,7 +67,7 @@ spec:
             namespace: network
         annotations:
           gethomepage.dev/enabled: "true"
-          gethomepage.dev/group: Media
+          gethomepage.dev/group: Plex Tools
           gethomepage.dev/name: Scrob
           gethomepage.dev/icon: mdi-music-note
           gethomepage.dev/description: Plex scrobble dashboard

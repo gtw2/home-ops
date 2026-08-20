@@ -30,6 +30,7 @@ spec:
           gethomepage.dev/name: Ceph
           gethomepage.dev/icon: ceph.png
           gethomepage.dev/description: Ceph storage dashboard
+          gethomepage.dev/pod-selector: app=rook-ceph-mgr
     cephClusterSpec:
       cephConfig:
         global:

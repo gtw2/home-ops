@@ -149,21 +149,23 @@ data:
       cardBlur: xl
     target: _blank
     layout:
-      # --- Home tab: the apps you actually open day-to-day ---
-      Home:
-        tab: Home
-        style: row
-        columns: 4
-        icon: mdi-home-analytics
-      Media:
-        tab: Home
-        style: row
-        columns: 4
-        icon: mdi-projector-screen
-      Observability:
+      # --- Home tab: Plex Tools row across the top, apps in columns below ---
+      Plex Tools:
         tab: Home
         style: row
         columns: 3
+        icon: mdi-toolbox
+      Home:
+        tab: Home
+        style: column
+        icon: mdi-home-analytics
+      Media:
+        tab: Home
+        style: column
+        icon: mdi-projector-screen
+      Observability:
+        tab: Home
+        style: column
         icon: mdi-chart-line
       # --- Services tab: infrastructure / admin surfaces ---
       Network:
@@ -181,10 +183,6 @@ data:
         tab: Schedule
         style: column
         icon: mdi-download-circle
-      Plex Tools:
-        tab: Schedule
-        style: column
-        icon: mdi-toolbox
       Calendar:
         tab: Schedule
         style: column
