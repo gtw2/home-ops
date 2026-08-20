@@ -93,7 +93,7 @@ spec:
         annotations:
           gethomepage.dev/href: "https://{{ .Release.Name }}.${SECRET_DOMAIN}"
           gethomepage.dev/enabled: "true"
-          gethomepage.dev/group: Observability
+          gethomepage.dev/group: Home
           gethomepage.dev/icon: gatus
           gethomepage.dev/name: Gatus
           gethomepage.dev/description: Service uptime monitor

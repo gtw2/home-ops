@@ -36,7 +36,7 @@ data:
     ingress: false
     traefik: false
   services.yaml: |
-    - Home:
+    - Storage:
         # - Proxmox:
         #     href: https://proxmox.internal:8006
         #     icon: proxmox.png
@@ -149,12 +149,7 @@ data:
       cardBlur: xl
     target: _blank
     layout:
-      # --- Home tab: Plex Tools row across the top, apps in columns below ---
-      Plex Tools:
-        tab: Home
-        style: row
-        columns: 3
-        icon: mdi-toolbox
+      # --- Home tab: day-to-day apps ---
       Home:
         tab: Home
         style: column
@@ -163,10 +158,6 @@ data:
         tab: Home
         style: column
         icon: mdi-projector-screen
-      Observability:
-        tab: Home
-        style: column
-        icon: mdi-chart-line
       # --- Services tab: infrastructure / admin surfaces ---
       Network:
         tab: Services
@@ -178,7 +169,22 @@ data:
         style: row
         columns: 4
         icon: mdi-nas
+      Observability:
+        tab: Services
+        style: row
+        columns: 3
+        icon: mdi-chart-line
+      Home Automation:
+        tab: Services
+        style: row
+        columns: 3
+        icon: mdi-home-automation
       # --- Schedule tab: less-critical / informational ---
+      Plex Tools:
+        tab: Schedule
+        style: row
+        columns: 3
+        icon: mdi-toolbox
       Downloads:
         tab: Schedule
         style: column

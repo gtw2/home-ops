@@ -130,7 +130,7 @@ spec:
           gethomepage.dev/icon: owncloud.svg
           gethomepage.dev/name: OwnCloud Infinite Scale
           gethomepage.dev/description: Cloud native file provider
-          gethomepage.dev/group: Storage
+          gethomepage.dev/group: Home
 
     persistence:
       # storage-users:

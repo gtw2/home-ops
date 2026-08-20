@@ -89,7 +89,7 @@ spec:
             namespace: network
         annotations:
           gethomepage.dev/enabled: "true"
-          gethomepage.dev/group: Home
+          gethomepage.dev/group: Home Automation
           gethomepage.dev/name: Zigbee2MQTT
           gethomepage.dev/icon: zigbee2mqtt.png
           gethomepage.dev/description: Zigbee device gateway
