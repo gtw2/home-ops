@@ -75,8 +75,9 @@ spec:
           gatus.home-operations.com/endpoint: |-
             conditions: ["[STATUS] == 200"]
           gethomepage.dev/enabled: "true"
-          gethomepage.dev/group: Calendar
+          gethomepage.dev/group: Media
           gethomepage.dev/name: Overseerr
+          gethomepage.dev/weight: "20"
           gethomepage.dev/icon: overseerr.png
           gethomepage.dev/description: Media Request Management
           gethomepage.dev/widget.type: overseerr

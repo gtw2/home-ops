@@ -96,6 +96,7 @@ spec:
           gethomepage.dev/group: Home
           gethomepage.dev/icon: gatus
           gethomepage.dev/name: Gatus
+          gethomepage.dev/weight: "30"
           gethomepage.dev/description: Service uptime monitor
           gethomepage.dev/widget.type: gatus
           gethomepage.dev/widget.url: http://gatus.observability:80

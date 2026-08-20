@@ -152,11 +152,13 @@ data:
       # --- Home tab: day-to-day apps ---
       Home:
         tab: Home
-        style: column
+        style: row
+        columns: 3
         icon: mdi-home-analytics
       Media:
         tab: Home
-        style: column
+        style: row
+        columns: 3
         icon: mdi-projector-screen
       # --- Services tab: infrastructure / admin surfaces ---
       Network:

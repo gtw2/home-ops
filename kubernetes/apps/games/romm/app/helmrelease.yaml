@@ -102,6 +102,9 @@ spec:
           gethomepage.dev/group: Media
           gethomepage.dev/icon: sh-romm.png
           gethomepage.dev/name: Romm
+          gethomepage.dev/weight: "35"
+          gethomepage.dev/widget.type: romm
+          gethomepage.dev/widget.url: http://romm.games:8080
     persistence:
       config:
         type: configMap

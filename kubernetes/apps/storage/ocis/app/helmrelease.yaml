@@ -131,6 +131,7 @@ spec:
           gethomepage.dev/name: OwnCloud Infinite Scale
           gethomepage.dev/description: Cloud native file provider
           gethomepage.dev/group: Home
+          gethomepage.dev/weight: "50"
 
     persistence:
       # storage-users:

@@ -94,6 +94,7 @@ spec:
           gethomepage.dev/enabled: "true"
           gethomepage.dev/group: Home
           gethomepage.dev/name: Home-Assistant
+          gethomepage.dev/weight: "10"
           gethomepage.dev/icon: home-assistant.png
           gethomepage.dev/app: home-assistant
           gethomepage.dev/widget.type: homeassistant

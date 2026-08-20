@@ -62,6 +62,7 @@ spec:
           gethomepage.dev/group: Home
           gethomepage.dev/icon: sh-open-webui.svg
           gethomepage.dev/name: Open WebUI
+          gethomepage.dev/weight: "40"
           gethomepage.dev/app: open-webui
         hostnames: ["chat.${SECRET_DOMAIN}"]
         parentRefs:
