@@ -5,6 +5,7 @@ kind: Kustomization
 metadata:
   name: &app agregarr
 spec:
+  targetNamespace: media
   components:
     - ../../../../components/nfs-scaler
     - ../../../../components/volsync
@@ -69,6 +70,7 @@ kind: Kustomization
 metadata:
   name: &app plex-auto-languages
 spec:
+  targetNamespace: media
   dependsOn:
     - name: plex
   interval: 1h
@@ -86,6 +88,7 @@ kind: Kustomization
 metadata:
   name: &app imagemaid
 spec:
+  targetNamespace: media
   dependsOn:
     - name: plex
   interval: 1h
