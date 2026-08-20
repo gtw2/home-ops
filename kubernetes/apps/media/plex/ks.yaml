@@ -22,7 +22,6 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  targetNamespace: media
   wait: false
 ---
 # yaml-language-server: $schema=https://lds-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
@@ -109,6 +108,7 @@ kind: Kustomization
 metadata:
   name: &app scrob
 spec:
+  targetNamespace: media
   components:
     - ../../../../components/volsync
   dependsOn:
