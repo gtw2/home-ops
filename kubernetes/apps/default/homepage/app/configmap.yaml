@@ -160,26 +160,23 @@ data:
         style: row
         columns: 3
         icon: mdi-projector-screen
-      # --- Services tab: infrastructure / admin surfaces ---
+      # --- Services tab: column-style groups masonry-pack side-by-side
+      #     (see maxGroupColumns; keeps tall/short tiles tight, no ragged grid) ---
       Network:
         tab: Services
-        style: row
-        columns: 3
+        style: column
         icon: mdi-server
       Storage:
         tab: Services
-        style: row
-        columns: 4
+        style: column
         icon: mdi-nas
       Observability:
         tab: Services
-        style: row
-        columns: 3
+        style: column
         icon: mdi-chart-line
       Home Automation:
         tab: Services
-        style: row
-        columns: 3
+        style: column
         icon: mdi-home-automation
       # --- Schedule tab: less-critical / informational ---
       Plex Tools:
