@@ -24,6 +24,12 @@ spec:
         parentRefs:
           - name: envoy-internal
             namespace: network
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Storage
+          gethomepage.dev/name: Ceph
+          gethomepage.dev/icon: ceph.png
+          gethomepage.dev/description: Ceph storage dashboard
     cephClusterSpec:
       cephConfig:
         global:

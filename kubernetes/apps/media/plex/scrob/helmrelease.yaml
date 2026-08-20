@@ -65,6 +65,12 @@ spec:
         parentRefs:
           - name: envoy-internal
             namespace: network
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: Scrob
+          gethomepage.dev/icon: mdi-music-note
+          gethomepage.dev/description: Plex scrobble dashboard
     service:
       app:
         ports:

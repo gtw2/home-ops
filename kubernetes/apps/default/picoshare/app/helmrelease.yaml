@@ -54,6 +54,11 @@ spec:
       app:
         annotations:
           external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Storage
+          gethomepage.dev/name: PicoShare
+          gethomepage.dev/icon: sh-picoshare.png
+          gethomepage.dev/description: Ephemeral file sharing
         hostnames: ["share.${SECRET_DOMAIN}"]
         parentRefs:
           - name: envoy-external

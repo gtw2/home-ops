@@ -87,6 +87,12 @@ spec:
         parentRefs:
           - name: envoy-internal
             namespace: network
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Home
+          gethomepage.dev/name: Zigbee2MQTT
+          gethomepage.dev/icon: zigbee2mqtt.png
+          gethomepage.dev/description: Zigbee device gateway
     persistence:
       config:
         existingClaim: "{{ .Release.Name }}"

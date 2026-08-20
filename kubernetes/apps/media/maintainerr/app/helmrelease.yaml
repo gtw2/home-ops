@@ -56,6 +56,14 @@ spec:
         parentRefs:
           - name: envoy-internal
             namespace: network
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: Maintainerr
+          gethomepage.dev/icon: maintainerr.png
+          gethomepage.dev/description: Media collection & rule management
+          gethomepage.dev/widget.type: maintainerr
+          gethomepage.dev/widget.url: http://maintainerr.media:6246
     service:
       app:
         ports:

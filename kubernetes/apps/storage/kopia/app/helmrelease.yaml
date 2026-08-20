@@ -69,6 +69,12 @@ spec:
         parentRefs:
           - name: envoy-internal
             namespace: network
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Storage
+          gethomepage.dev/name: Kopia
+          gethomepage.dev/icon: kopia.png
+          gethomepage.dev/description: Backup repository
     configMaps:
       config:
         data:

@@ -72,6 +72,12 @@ spec:
         parentRefs:
           - name: envoy-internal
             namespace: network
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: Agregarr
+          gethomepage.dev/icon: mdi-calendar-multiselect
+          gethomepage.dev/description: Arr calendar & request aggregator
     persistence:
       config:
         existingClaim: "{{ .Release.Name }}"
