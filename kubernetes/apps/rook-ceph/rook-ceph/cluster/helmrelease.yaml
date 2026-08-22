@@ -45,6 +45,29 @@ spec:
       csi:
         readAffinity:
           enabled: true
+      security:
+        cephx:
+          daemon:
+            # Rotate daemon (mon/mgr/osd/mds) keys to the secure aes256k
+            # cipher introduced in Ceph 20.2 Tentacle. Clears the HEALTH_ERR
+            # AUTH_INSECURE_SERVICE_KEY_TYPE.
+            keyRotationPolicy: KeyGeneration
+            keyGeneration: 2
+          csi:
+            keyType: aes # aes256k requires kernel 7.0+ (nodes are on 6.18)
+      healthCheck:
+        muteHealthWarning:
+          # CSI keys must stay on aes until nodes reach kernel 7.0+, so aes
+          # stays in the allowed cipher list and these client/allow/creatable
+          # warnings cannot be resolved yet — mute them.
+          AUTH_INSECURE_CLIENT_KEY_TYPE:
+            policy: mute
+          AUTH_INSECURE_KEYS_ALLOWED:
+            policy: mute
+          AUTH_INSECURE_KEYS_CREATABLE:
+            policy: mute
+          AUTH_INSECURE_ROTATING_SERVICE_KEY_TYPE:
+            policy: mute
       dashboard:
         enabled: true
         urlPrefix: /
