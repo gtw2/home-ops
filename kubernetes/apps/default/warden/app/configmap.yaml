@@ -23,6 +23,23 @@ data:
     discover_namespaces:
       - games
 
+    # Which channels an annotation is allowed to name. A channel is permitted
+    # if its name is listed here, or its id is in allowed_channel_ids /
+    # WARDEN_ALLOWED_CHANNEL_IDS. This is the anti-spam boundary: it is what
+    # stops cluster-write access pointing a panel at an arbitrary channel.
+    #
+    # Names rather than ids on purpose. A channel name is not sensitive the
+    # way a guild/channel/role id is, so the boundary can live here in git
+    # where it is readable and reviewable.
+    #
+    # Listing a channel here does NOT move anything into it — a game lands
+    # here only if its Service carries `warden.dev/channels`. It also does not
+    # grant Discord permissions: warden still needs View Channel and Send
+    # Messages there, and both of these carry deny-overwrites today.
+    allowed_channels:
+      - minecraft
+      - steam-servers
+
     # Empty on purpose. Every server comes from `warden.dev/*` annotations on
     # its own Service (see the warden repo's discovery.md), so adding a game is
     # one annotation in that game's HelmRelease rather than an edit here too,

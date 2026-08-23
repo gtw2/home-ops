@@ -91,6 +91,9 @@ spec:
           warden.dev/game: "valheim"
           warden.dev/query-port: "2457"        # steam2 / A2S
           warden.dev/control: "true"
+          # The game port on the LoadBalancer. Swap for a public hostname if
+          # this ever gets a DNS record, as palworld has.
+          warden.dev/address: "10.10.40.140:2456"
         ports:
           http:
             port: *port

@@ -57,6 +57,9 @@ spec:
           warden.dev/game: "dragonwilds"       # no query port exposed — Kubernetes-only state
           warden.dev/display: "Dragon Wilds"   # else derived from the key, without the space
           warden.dev/control: "true"
+          # The game port on the LoadBalancer. Swap for a public hostname if
+          # this ever gets a DNS record, as palworld has.
+          warden.dev/address: "10.10.40.148:7778"
         ports:
           gameport:
             enabled: true

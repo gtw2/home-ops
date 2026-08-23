@@ -160,6 +160,9 @@ spec:
           warden.dev/kind: "statefulset"
           warden.dev/query-port: "25565"
           warden.dev/control: "true"
+          # The hostname mc-router matches on, above — the same thing a player
+          # types. No port: it is the default 25565.
+          warden.dev/address: "vanilla.${SECRET_GAMING_DOMAIN}"
         ports:
           java:
             port: 25565
