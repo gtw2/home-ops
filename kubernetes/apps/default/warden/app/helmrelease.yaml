@@ -38,7 +38,7 @@ spec:
               # a ConfigMap change that reloader acts on would restart the pod
               # onto the *old* image. Bump this to deploy.
               repository: ghcr.io/gtw2/warden
-              tag: sha-3f06bccea4d377b6ccfa318dd77b40b8ad94dcee
+              tag: sha-982e4161cf9c66695126721f17575624e5eef2b6
             env:
               WARDEN_CONFIG: /etc/warden/config.yaml
             envFrom:

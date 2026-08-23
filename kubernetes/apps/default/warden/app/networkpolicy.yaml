@@ -1,0 +1,70 @@
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Egress lockdown for warden (architecture.md, "No new attack surface").
+#
+# No ingress rules exist because the bot never listens: it dials out to the
+# Discord gateway and holds that connection. `ingress: []` makes that explicit
+# and default-denies anything inbound.
+#
+# A CiliumNetworkPolicy rather than a plain NetworkPolicy for one specific
+# reason: the kube-apiserver is reached on the node IPs, and Cilium's
+# `policy-cidr-match-mode` is unset (the default), which means ipBlock/CIDR
+# rules do NOT select node IPs. A NetworkPolicy listing the API server's
+# addresses would look correct and silently cut the bot off from the cluster.
+# `toEntities: [kube-apiserver]` is the supported way to express it.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: warden
+  namespace: default
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: warden
+
+  # The bot has no listener. Deny everything inbound.
+  ingress: []
+
+  egress:
+    # DNS. Needed to resolve both the game Services and Discord.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+          rules:
+            dns:
+              - matchPattern: "*"
+
+    # The Kubernetes API: read workload readiness, patch /scale. What the SA
+    # may actually do there is bounded by RBAC and the admission policy.
+    - toEntities:
+        - kube-apiserver
+
+    # The game servers themselves, for status queries (A2S / REST / Minecraft
+    # ping). Ports vary per game and change as games are added, so this is
+    # scoped by namespace rather than by port.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: games
+
+    # Discord, over HTTPS and the gateway websocket.
+    #
+    # Scoped to external destinations on 443. That is deliberately a port
+    # restriction rather than a Discord-only one: `toFQDNs` would be tighter,
+    # but it has to enumerate discord.com, discordapp.com, discord.gg and the
+    # media CDNs, and a missed domain breaks the bot rather than failing
+    # visibly. What this does buy is that the pod cannot reach anything else
+    # in the cluster, and cannot make outbound connections on any other port.
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
