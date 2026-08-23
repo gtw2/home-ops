@@ -138,6 +138,14 @@ spec:
         annotations:
           io.cilium/lb-ipam-ips: 10.10.40.150
           io.cilium/lb-ipam-sharing-key: minecraft-frontend
+          warden.dev/enabled: "true"
+          warden.dev/game: "minecraft"
+          warden.dev/display: "Minecraft"
+          warden.dev/kind: "deployment"
+          warden.dev/query-port: "25565"
+          warden.dev/control: "true"
+          warden.dev/channels: "minecraft"
+          warden.dev/address: "mc.${SECRET_GAMING_DOMAIN}"
         ports:
           minecraft:
             port: 25565
