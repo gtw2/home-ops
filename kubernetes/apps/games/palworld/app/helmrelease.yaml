@@ -139,6 +139,13 @@ spec:
         type: LoadBalancer
         annotations:
           io.cilium/lb-ipam-ips: 10.10.40.142
+          warden.dev/enabled: "true"
+          warden.dev/game: "palworld"
+          # The Palworld protocol talks to the REST API, not the steam query
+          # port — warden would otherwise auto-detect `queryport` (27016).
+          warden.dev/query-port: "8212"
+          warden.dev/query-auth-env: "QUERYAUTH_PALWORLD"
+          warden.dev/control: "true"
         ports:
           gameport:
             enabled: true

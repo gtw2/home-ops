@@ -149,6 +149,17 @@ spec:
           # /server hopping and player-info-forwarding to the (now-running) backend directly.
           # This preserves modern forwarding (mc-router is NOT in the Velocity↔backend path).
           mc-router.itzg.me/proxyServerName: "minecraft-velocity.games.svc.cluster.local:25565"
+          # NOTE: mc-router above already scales this StatefulSet 0->1 when a
+          # player connects. Warden's button is a second, manual control over
+          # the same replica count — useful for stopping, largely redundant for
+          # starting, and the two do not conflict: warden's panel reports
+          # whatever the replica count actually is, whoever set it.
+          warden.dev/enabled: "true"
+          warden.dev/game: "minecraft"
+          warden.dev/display: "Minecraft (Vanilla)"
+          warden.dev/kind: "statefulset"
+          warden.dev/query-port: "25565"
+          warden.dev/control: "true"
         ports:
           java:
             port: 25565

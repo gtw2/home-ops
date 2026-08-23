@@ -53,6 +53,11 @@ spec:
         controller: *app
         type: LoadBalancer
         loadBalancerIP: 10.10.40.143
+        annotations:
+          warden.dev/enabled: "true"
+          warden.dev/game: "icarus"
+          warden.dev/query-port: "27015"       # A2S — confirmed answering, no EOS needed
+          warden.dev/control: "true"
         ports:
           steam1:
             port: *port

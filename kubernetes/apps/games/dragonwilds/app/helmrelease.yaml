@@ -53,6 +53,9 @@ spec:
         type: LoadBalancer
         annotations:
           io.cilium/lb-ipam-ips: 10.10.40.148
+          warden.dev/enabled: "true"
+          warden.dev/game: "dragonwilds"       # no query port exposed — Kubernetes-only state
+          warden.dev/control: "true"
         ports:
           gameport:
             enabled: true

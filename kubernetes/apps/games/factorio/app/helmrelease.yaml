@@ -41,6 +41,11 @@ spec:
         type: LoadBalancer
         annotations:
           io.cilium/lb-ipam-ips: 10.10.40.146
+          warden.dev/enabled: "true"
+          # Factorio speaks no A2S; warden shows lifecycle from Kubernetes
+          # with no player count. The 27015 queryport is unused by any protocol.
+          warden.dev/game: "factorio"
+          warden.dev/control: "true"
         ports:
           gameport:
             enabled: true

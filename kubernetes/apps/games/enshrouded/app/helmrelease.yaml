@@ -51,6 +51,10 @@ spec:
         type: LoadBalancer
         annotations:
           io.cilium/lb-ipam-ips: 10.10.40.144
+          warden.dev/enabled: "true"
+          warden.dev/game: "enshrouded"
+          warden.dev/query-port: "15637"       # A2S
+          warden.dev/control: "true"
         ports:
           gameport:
             enabled: true

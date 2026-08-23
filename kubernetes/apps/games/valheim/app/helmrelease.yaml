@@ -86,6 +86,11 @@ spec:
         controller: *app
         type: LoadBalancer
         loadBalancerIP: 10.10.40.140
+        annotations:
+          warden.dev/enabled: "true"
+          warden.dev/game: "valheim"
+          warden.dev/query-port: "2457"        # steam2 / A2S
+          warden.dev/control: "true"
         ports:
           http:
             port: *port
