@@ -1,0 +1,76 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app warden
+  namespace: default # keep
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controllers:
+      warden:
+        # Exactly one replica: two bots would both own the same panel message
+        # and both answer the same button press.
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        serviceAccount:
+          identifier: *app
+        containers:
+          app:
+            image:
+              repository: ghcr.io/gtw2/warden
+              tag: main
+            env:
+              WARDEN_CONFIG: /etc/warden/config.yaml
+            envFrom:
+              # DISCORD_TOKEN, the Discord IDs, and QUERYAUTH_* — the Homepage
+              # pattern. Warden has no Kubernetes access to read Secrets.
+              - secretRef:
+                  name: warden-secret
+            probes:
+              # The bot holds an outbound gateway connection and listens on
+              # nothing, so there is no endpoint to probe.
+              liveness: { enabled: false }
+              readiness: { enabled: false }
+              startup: { enabled: false }
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+    serviceAccount:
+      warden: {}
+    # No Service and no route: warden dials out to the Discord gateway and
+    # never listens.
+    persistence:
+      config:
+        type: configMap
+        name: warden-config
+        globalMounts:
+          - path: /etc/warden
+            readOnly: true

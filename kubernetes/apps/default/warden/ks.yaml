@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://lds-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app warden-guard
+  namespace: default
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: warden
+  # No targetNamespace: these are cluster-scoped.
+  path: ./kubernetes/apps/default/warden/guard
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  # wait: true is the point of this split — the bot's Kustomization dependsOn
+  # this one, so the 0/1 admission ceiling is provably in place before warden's
+  # ServiceAccount or its scale permission exist at all.
+  wait: true
+  interval: 30m
+  retryInterval: 1m
+  timeout: 5m
+---
+# yaml-language-server: $schema=https://lds-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app warden
+  namespace: default
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    - name: warden-guard
+    - name: external-secrets-stores
+      namespace: external-secrets
+  # NOTE: deliberately no targetNamespace. These resources span two
+  # namespaces — the bot and its Secret live in `default`, its Roles live in
+  # `games` — and targetNamespace would rewrite every one of them to `default`,
+  # silently moving the Roles away from the workloads they grant access to.
+  # Each manifest sets its own namespace explicitly instead.
+  path: ./kubernetes/apps/default/warden/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  wait: false # no flux ks dependents
+  interval: 30m
+  retryInterval: 1m
+  timeout: 5m

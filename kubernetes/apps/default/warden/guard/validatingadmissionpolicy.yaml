@@ -1,0 +1,59 @@
+# =============================================================================
+# ValidatingAdmissionPolicy: cap the control bot to replicas 0/1  (Option C)
+#
+# The bot's RBAC grants namespace-wide `deployments/scale` in `games` (so adding
+# a controllable game needs no RBAC edit — just an annotation). This policy is
+# the safety bound: it lets THIS ServiceAccount set replicas only to 0 or 1, and
+# only in the `games` namespace. Admins / Flux / anyone else are unaffected.
+#
+# Result: even a fully compromised bot pod can only toggle games workloads 0↔1 —
+# it cannot scale anything to 1000, and cannot mass-zero the namespace beyond
+# what a normal stop would do.
+#
+# Requires ValidatingAdmissionPolicy GA (Kubernetes 1.30+); this cluster runs
+# v1.36.4. Note volsync's policy is a *Mutating* policy on v1beta1 — same house
+# pattern, different apiVersion.
+#
+# This lives in its own Flux Kustomization (warden-guard) that the warden
+# Kustomization dependsOn with wait: true, so the ceiling is established before
+# the ServiceAccount or the scale Role it bounds ever exist.
+# =============================================================================
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.0/validatingadmissionpolicy-admissionregistration-v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: warden-scale-guard
+spec:
+  failurePolicy: Fail          # if the policy can't evaluate, deny (fail closed)
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["apps"]
+        apiVersions: ["v1"]
+        operations:  ["UPDATE"]
+        resources:   ["deployments/scale", "statefulsets/scale"]
+  matchConditions:
+    # Only constrain OUR bot's ServiceAccount — everyone else scales freely.
+    - name: only-control-bot
+      expression: >-
+        request.userInfo.username == 'system:serviceaccount:default:warden'
+  validations:
+    # On a /scale update the request object is an autoscaling/v1 Scale.
+    - expression: "object.spec.replicas == 0 || object.spec.replicas == 1"
+      reason: Forbidden
+      message: "warden may only scale workloads to 0 or 1 replicas."
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.0/validatingadmissionpolicybinding-admissionregistration-v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: warden-scale-guard
+spec:
+  policyName: warden-scale-guard
+  validationActions: ["Deny"]
+  matchResources:
+    # Confine enforcement to the games namespace (defense in depth; the SA's
+    # RBAC already can't scale outside it).
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: games

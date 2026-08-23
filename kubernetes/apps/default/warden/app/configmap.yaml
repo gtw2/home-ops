@@ -1,0 +1,83 @@
+---
+# The shape of the deployment, and nothing that identifies it.
+#
+# Every Discord ID arrives from warden-secret via envFrom — see
+# externalsecret.yaml. Nothing here is sensitive, deliberately: a guild,
+# channel and role ID together identify a private community, and git history
+# is forever.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: warden-config
+  namespace: default # keep
+data:
+  config.yaml: |
+    poll_interval: 30
+    cooldown_seconds: 300        # 5 min dwell before the opposite action
+    start_timeout_seconds: 300   # 5 min to become ready, else Failed
+    log_level: INFO
+
+    # No guild/channel/role IDs here. They come from WARDEN_GUILD_ID,
+    # WARDEN_CONTROL_CHANNEL_ID and WARDEN_GAMEMASTER_ROLE_ID. A server with
+    # no channel_id inherits WARDEN_CONTROL_CHANNEL_ID; override an individual
+    # one with WARDEN_CHANNEL_<KEY>, e.g. WARDEN_CHANNEL_MINECRAFT_VANILLA.
+    #
+    # `control: true` is what puts a Start/Stop button on the panel. Games
+    # without it render as status only. Query coverage per game is documented
+    # in the warden repo's game-coverage.md.
+    servers:
+      - key: palworld
+        display: Palworld
+        game: palworld
+        host: palworld.games.svc.cluster.local
+        query_port: 8212           # REST API; needs QUERYAUTH_PALWORLD
+        query_auth_env: QUERYAUTH_PALWORLD
+        control: true
+        namespace: games
+
+      - key: valheim
+        display: Valheim
+        game: valheim
+        host: valheim.games.svc.cluster.local
+        query_port: 2457           # A2S, unauthenticated
+        control: true
+        namespace: games
+
+      - key: enshrouded
+        display: Enshrouded
+        game: enshrouded
+        host: enshrouded.games.svc.cluster.local
+        query_port: 15637          # A2S
+        control: true
+        namespace: games
+
+      - key: icarus
+        display: Icarus
+        game: icarus
+        host: icarus.games.svc.cluster.local
+        query_port: 27015          # A2S — confirmed answering, no EOS needed
+        control: true
+        namespace: games
+
+      # No query protocol: full lifecycle from Kubernetes, no player count.
+      - key: factorio
+        display: Factorio
+        game: factorio
+        control: true
+        namespace: games
+
+      - key: dragonwilds
+        display: Dragon Wilds
+        game: dragonwilds
+        control: true
+        namespace: games
+
+      # StatefulSet, and normally scaled to zero.
+      - key: minecraft-vanilla
+        display: Minecraft (Vanilla)
+        game: minecraft
+        host: minecraft-vanilla.games.svc.cluster.local
+        query_port: 25565
+        kind: statefulset
+        control: true
+        namespace: games

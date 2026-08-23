@@ -6,7 +6,9 @@ namespace: default
 components:
   - ../../components/common
 resources:
-  - ./discordgsm/ks.yaml
+  # Retired in favour of ./warden (volsync has the data if it's ever needed).
+  # - ./discordgsm/ks.yaml
   - ./echo/ks.yaml
   - ./homepage/ks.yaml
+  - ./warden/ks.yaml
   # - ./picoshare/ks.yaml
