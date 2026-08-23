@@ -38,7 +38,7 @@ spec:
               # ConfigMap change that reloader acts on restarts the pod onto
               # the *old* image. Renovate raises the bump PRs from here.
               repository: ghcr.io/gtw2/warden
-              tag: 0.1.2@sha256:ba609faf8581842c64d1408a47771c7a283eb88b9e069dcefa3c745948e2baad
+              tag: 0.1.3@sha256:f3d0c4629548f0590d53f06740bb7d8cf4af4bce46260a9ac1c4f4ce4e3d6d48
             env:
               WARDEN_CONFIG: /etc/warden/config.yaml
             envFrom:
