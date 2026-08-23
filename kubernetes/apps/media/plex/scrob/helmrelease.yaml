@@ -37,6 +37,18 @@ spec:
               tag: 2.3.0@sha256:eedf0f55122541f81e239e6e6ad36daa6bf3b816e1f1626ebee7769edc514109
             env:
               TZ: ${TIMEZONE}
+              SERVER_URL: https://scrob.${SECRET_DOMAIN}
+              OIDC_ENABLED: "true"
+              OIDC_PROVIDER_NAME: Authentik
+              OIDC_AUTH_URL: https://sso.${SECRET_DOMAIN}/application/o/authorize/
+              OIDC_TOKEN_URL: https://sso.${SECRET_DOMAIN}/application/o/token/
+              OIDC_USERINFO_URL: https://sso.${SECRET_DOMAIN}/application/o/userinfo/
+              OIDC_LOGOUT_URL: https://sso.${SECRET_DOMAIN}/application/o/scrob/end-session/
+              OIDC_REDIRECT_URL: https://scrob.${SECRET_DOMAIN}/oidc-callback
+              OIDC_SCOPES: openid email profile
+              OIDC_IDENTIFIER_FIELD: email
+              OIDC_AUTO_CREATE_USERS: "true"
+              OIDC_DISABLE_PASSWORD_LOGIN: "false"
             envFrom: *envFrom
             resources:
               requests:
