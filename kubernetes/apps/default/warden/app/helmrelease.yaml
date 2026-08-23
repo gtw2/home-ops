@@ -32,13 +32,13 @@ spec:
         containers:
           app:
             image:
-              # Pinned to a commit, not `main`. A mutable tag with the default
-              # IfNotPresent pull policy silently keeps whatever the node has
-              # cached, so a rebuilt `main` would never actually roll out — and
-              # a ConfigMap change that reloader acts on would restart the pod
-              # onto the *old* image. Bump this to deploy.
+              # A released version, pinned by digest. Never a mutable tag: with
+              # the default IfNotPresent pull policy the node keeps whatever it
+              # cached, so a rebuilt `main` silently never rolls out — and a
+              # ConfigMap change that reloader acts on restarts the pod onto
+              # the *old* image. Renovate raises the bump PRs from here.
               repository: ghcr.io/gtw2/warden
-              tag: sha-982e4161cf9c66695126721f17575624e5eef2b6
+              tag: 0.1.0@sha256:a5a49dc42bae673a370ac90b9d3c6af5eb43205ba558cfb58576a01266cb0ab0
             env:
               WARDEN_CONFIG: /etc/warden/config.yaml
             envFrom:
