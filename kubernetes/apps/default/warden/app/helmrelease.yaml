@@ -32,8 +32,13 @@ spec:
         containers:
           app:
             image:
+              # Pinned to a commit, not `main`. A mutable tag with the default
+              # IfNotPresent pull policy silently keeps whatever the node has
+              # cached, so a rebuilt `main` would never actually roll out — and
+              # a ConfigMap change that reloader acts on would restart the pod
+              # onto the *old* image. Bump this to deploy.
               repository: ghcr.io/gtw2/warden
-              tag: main
+              tag: sha-3f06bccea4d377b6ccfa318dd77b40b8ad94dcee
             env:
               WARDEN_CONFIG: /etc/warden/config.yaml
             envFrom:
