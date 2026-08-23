@@ -37,9 +37,18 @@ spec:
     - name: only-control-bot
       expression: >-
         request.userInfo.username == 'system:serviceaccount:default:warden'
+  variables:
+    # `replicas` is omitempty on autoscaling/v1 Scale, so scaling to ZERO
+    # sends an object with no `replicas` key at all. Reading it directly
+    # errors with "no such key", and failurePolicy: Fail turns that error into
+    # a denial — which would let warden start servers but never stop them.
+    # Optional field selection with a 0 default is the fix, and matches the
+    # idiom volsync's policy already uses.
+    - name: replicas
+      expression: "object.spec.?replicas.orValue(0)"
   validations:
     # On a /scale update the request object is an autoscaling/v1 Scale.
-    - expression: "object.spec.replicas == 0 || object.spec.replicas == 1"
+    - expression: "variables.replicas == 0 || variables.replicas == 1"
       reason: Forbidden
       message: "warden may only scale workloads to 0 or 1 replicas."
 ---
