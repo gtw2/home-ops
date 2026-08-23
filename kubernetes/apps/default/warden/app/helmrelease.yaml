@@ -58,6 +58,10 @@ spec:
               limits:
                 memory: 256Mi
     defaultPodOptions:
+      # app-template defaults this to false. Warden needs the projected token:
+      # it is the *only* thing granting cluster access, and without it the bot
+      # cannot read workload readiness and exits at startup.
+      automountServiceAccountToken: true
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
