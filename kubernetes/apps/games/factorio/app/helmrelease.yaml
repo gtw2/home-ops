@@ -46,6 +46,7 @@ spec:
           # with no player count. The 27015 queryport is unused by any protocol.
           warden.dev/game: "factorio"
           warden.dev/control: "true"
+          warden.dev/channels: "steam-servers"
           # The game port on the LoadBalancer. Swap for a public hostname if
           # this ever gets a DNS record, as palworld has.
           warden.dev/address: "10.10.40.146:34197"

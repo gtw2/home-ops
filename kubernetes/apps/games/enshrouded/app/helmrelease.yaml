@@ -55,6 +55,7 @@ spec:
           warden.dev/game: "enshrouded"
           warden.dev/query-port: "15637"       # A2S
           warden.dev/control: "true"
+          warden.dev/channels: "steam-servers"
           # The game port on the LoadBalancer. Swap for a public hostname if
           # this ever gets a DNS record, as palworld has.
           warden.dev/address: "10.10.40.144:15636"

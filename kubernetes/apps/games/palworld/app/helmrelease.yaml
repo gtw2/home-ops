@@ -146,6 +146,7 @@ spec:
           warden.dev/query-port: "8212"
           warden.dev/query-auth-env: "QUERYAUTH_PALWORLD"
           warden.dev/control: "true"
+          warden.dev/channels: "steam-servers"
           # What the panel shows players. Without it the panel would show the
           # internal query address (the REST port on a ClusterIP name), which
           # is accurate and useless to someone trying to connect.
