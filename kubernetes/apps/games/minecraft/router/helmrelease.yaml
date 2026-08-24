@@ -143,7 +143,10 @@ spec:
           warden.dev/display: "Minecraft"
           warden.dev/kind: "deployment"
           warden.dev/query-port: "25565"
-          warden.dev/control: "true"
+          # No control button. mc-router is the entrypoint for every
+          # Minecraft server, including vanilla's wake-on-connect, so
+          # stopping it takes the whole stack unreachable while each
+          # backend still reports itself as running. Status only.
           warden.dev/channels: "minecraft"
           warden.dev/address: "mc.${SECRET_GAMING_DOMAIN}"
         ports:
