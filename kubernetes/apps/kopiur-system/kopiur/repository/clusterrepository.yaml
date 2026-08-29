@@ -38,6 +38,10 @@ spec:
     usernameExpr: "policyName"
   allowedNamespaces:
     list:
+      # The operator projects its own managed Maintenance into the operator
+      # namespace, and the admission webhook gates that on this list too - omit
+      # it and maintenance never applies, so kopia storage is never reclaimed.
+      - kopiur-system
       - database
       - default
       - downloads
