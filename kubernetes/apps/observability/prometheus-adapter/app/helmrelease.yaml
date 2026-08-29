@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prometheus-adapter
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: prometheus-adapter
+  interval: 1h
+  values:
+    logLevel: 1
+    prometheus:
+      url: http://prometheus-operated.observability.svc.cluster.local
+      port: 9090
+    rules:
+      default: false
+      # Serves blackbox `probe_success` on the external metrics API so a plain HPA
+      # can scale to zero on it. See kubernetes/components/zeroscaler.
+      #
+      # max_over_time() rides out scrape gaps: an HPA whose external metric is
+      # missing holds its current replica count instead of scaling.
+      external:
+        - seriesQuery: '{__name__="probe_success"}'
+          resources:
+            namespaced: false
+          name:
+            as: probe_success
+          metricsQuery: max_over_time(<<.Series>>{<<.LabelMatchers>>}[1m])
