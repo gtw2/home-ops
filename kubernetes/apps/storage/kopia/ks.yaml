@@ -8,7 +8,8 @@ spec:
   components:
     - ../../../../components/zeroscaler
   dependsOn:
-    - name: volsync
+    - name: kopiur
+      namespace: kopiur-system
   interval: 1h
   path: ./kubernetes/apps/storage/kopia/app
   postBuild:

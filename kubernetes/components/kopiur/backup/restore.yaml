@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.home-operations.com/kopiur.home-operations.com/restore_v1alpha1.json
+apiVersion: kopiur.home-operations.com/v1alpha1
+kind: Restore
+metadata:
+  name: ${APP}
+  labels:
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
+spec:
+  credentialProjection:
+    # Separate opt-in from the SnapshotPolicy's: the restore mover also needs the
+    # repository's KOPIA_PASSWORD projected into this namespace, or a
+    # rebuild-from-backup cannot open the repository.
+    enabled: true
+  policy:
+    # A brand-new app has no snapshot yet - start empty rather than block.
+    onMissingSnapshot: Continue
+  source:
+    fromPolicy:
+      name: ${APP}
+      offset: 0
+  target:
+    populator: {}

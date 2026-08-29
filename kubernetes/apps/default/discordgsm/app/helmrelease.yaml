@@ -18,8 +18,8 @@ spec:
       strategy: rollback
       retries: 3
   dependsOn:
-    - name: volsync
-      namespace: storage
+    - name: kopiur
+      namespace: kopiur-system
   values:
     annotations:
       reloader.stakater.com/auto: "true"

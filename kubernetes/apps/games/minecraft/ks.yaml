@@ -11,7 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/volsync
+    - ../../../../components/kopiur/backup
   dependsOn:
     # Limbo is velocity's fallback target in forced-hosts. If the Limbo backend
     # doesn't exist when Velocity boots, the first failed primary backend
@@ -21,8 +21,8 @@ spec:
       namespace: external-secrets
     - name: rook-ceph-cluster
       namespace: rook-ceph
-    - name: volsync
-      namespace: storage
+    - name: kopiur
+      namespace: kopiur-system
   path: ./kubernetes/apps/games/minecraft/velocity
   prune: true
   sourceRef:
@@ -36,7 +36,7 @@ spec:
   postBuild:
     substitute:
       APP: *app
-      VOLSYNC_CAPACITY: 5Gi
+      KOPIUR_CAPACITY: 5Gi
 # ---
 # # yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 # apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -50,7 +50,7 @@ spec:
 #     labels:
 #       app.kubernetes.io/name: *app
 #   components:
-#     - ../../../../components/volsync
+#     - ../../../../components/kopiur/backup
 #   decryption:
 #     provider: sops
 #     secretRef:
@@ -63,8 +63,8 @@ spec:
 #       namespace: external-secrets
 #     - name: rook-ceph-cluster
 #       namespace: rook-ceph
-#     - name: volsync
-#       namespace: storage
+#     - name: kopiur
+#       namespace: kopiur-system
 #   path: ./kubernetes/apps/games/minecraft/create
 #   prune: true
 #   sourceRef:
@@ -78,7 +78,7 @@ spec:
 #   postBuild:
 #     substitute:
 #       APP: *app
-#       VOLSYNC_CAPACITY: 20Gi
+#       KOPIUR_CAPACITY: 20Gi
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -92,15 +92,15 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/volsync
+    - ../../../../components/kopiur/backup
   dependsOn:
     # - name: minecraft-velocity
     - name: external-secrets
       namespace: external-secrets
     - name: rook-ceph-cluster
       namespace: rook-ceph
-    - name: volsync
-      namespace: storage
+    - name: kopiur
+      namespace: kopiur-system
   path: ./kubernetes/apps/games/minecraft/lobby
   prune: true
   sourceRef:
@@ -114,7 +114,7 @@ spec:
   postBuild:
     substitute:
       APP: *app
-      VOLSYNC_CAPACITY: 10Gi
+      KOPIUR_CAPACITY: 10Gi
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -156,7 +156,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/volsync
+    - ../../../../components/kopiur/backup
   dependsOn:
     # mc-router must exist before this Kustomization applies; vanilla is replicas: 0 and
     # depends on mc-router for scale-up on connect.
@@ -165,8 +165,8 @@ spec:
       namespace: external-secrets
     - name: rook-ceph-cluster
       namespace: rook-ceph
-    - name: volsync
-      namespace: storage
+    - name: kopiur
+      namespace: kopiur-system
   path: ./kubernetes/apps/games/minecraft/vanilla
   prune: true
   sourceRef:
@@ -180,7 +180,7 @@ spec:
   postBuild:
     substitute:
       APP: *app
-      VOLSYNC_CAPACITY: 20Gi
+      KOPIUR_CAPACITY: 20Gi
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1

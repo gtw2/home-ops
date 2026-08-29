@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.home-operations.com/kopiur.home-operations.com/snapshotschedule_v1alpha1.json
+apiVersion: kopiur.home-operations.com/v1alpha1
+kind: SnapshotSchedule
+metadata:
+  name: ${APP}
+spec:
+  policyRef:
+    name: ${APP}
+  schedule:
+    # `H` hashes the slot per-object, spreading the hourly run across the hour.
+    # This replaces the volsync-mover-jitter MutatingAdmissionPolicy, which
+    # injected a random-sleep initContainer to do the same thing.
+    cron: H * * * *

@@ -16,8 +16,8 @@ spec:
     # Standard depends
     - name: rook-ceph-cluster
       namespace: rook-ceph
-    - name: volsync
-      namespace: storage
+    - name: kopiur
+      namespace: kopiur-system
   path: ./kubernetes/apps/games/filebrowser/app
   prune: true
   sourceRef:

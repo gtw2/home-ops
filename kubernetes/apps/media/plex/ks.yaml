@@ -7,7 +7,7 @@ metadata:
 spec:
   targetNamespace: media
   components:
-    - ../../../../components/volsync
+    - ../../../../components/kopiur/backup
     - ../../../../components/zeroscaler
   dependsOn:
     - name: rook-ceph-cluster
@@ -36,15 +36,15 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
-    - ../../../../components/volsync
+    - ../../../../components/kopiur/backup
     - ../../../../components/zeroscaler
   dependsOn:
     - name: intel-gpu-resource-driver
       namespace: kube-system
     - name: rook-ceph-cluster
       namespace: rook-ceph
-    - name: volsync
-      namespace: storage
+    - name: kopiur
+      namespace: kopiur-system
     - name: external-secrets-stores
       namespace: external-secrets
   path: ./kubernetes/apps/media/plex/app
@@ -60,8 +60,8 @@ spec:
   postBuild:
     substitute:
       APP: *app
-      VOLSYNC_CAPACITY: 20Gi
-      VOLSYNC_CACHE_CAPACITY: 20Gi
+      KOPIUR_CAPACITY: 20Gi
+      KOPIUR_CACHE_CAPACITY: 20Gi
 ---
 # yaml-language-server: $schema=https://k8s-schemas.home-operations.com/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -110,7 +110,7 @@ metadata:
 spec:
   targetNamespace: media
   components:
-    - ../../../../components/volsync
+    - ../../../../components/kopiur/backup
   dependsOn:
     - name: plex
   interval: 1h
@@ -118,7 +118,7 @@ spec:
   postBuild:
     substitute:
       APP: *app
-      VOLSYNC_CAPACITY: 1Gi
+      KOPIUR_CAPACITY: 1Gi
   wait: false
   prune: true
   sourceRef:

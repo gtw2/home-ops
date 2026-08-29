@@ -1,0 +1,37 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.home-operations.com/kopiur.home-operations.com/snapshotpolicy_v1alpha1.json
+apiVersion: kopiur.home-operations.com/v1alpha1
+kind: SnapshotPolicy
+metadata:
+  name: ${APP}
+spec:
+  repository:
+    kind: ClusterRepository
+    name: nas
+  credentialProjection:
+    # The repository's KOPIA_PASSWORD lives in kopiur-system; let the operator
+    # copy it into this namespace for the mover, instead of an ExternalSecret
+    # per app the way VolSync needed.
+    enabled: true
+  adoption: Adopt
+  compression:
+    compressor: zstd
+  sources:
+    - pvc:
+        name: ${APP}
+      # CRITICAL: kopia identity is username@hostname:path, and kopiur defaults
+      # the path to /pvc/<name>. Every existing VolSync snapshot was written at
+      # :/data, so without this override kopiur writes a NEW lineage and the
+      # backup history silently does not continue. Paired with the repository's
+      # identityDefaults, the resolved identity is ${APP}@<namespace>:/data.
+      sourcePathOverride: /data
+  retention:
+    # Mirrors VolSync's `retain: {hourly: 24, daily: 7}` so the migration does
+    # not change what is kept.
+    keepHourly: 24
+    keepDaily: 7
+  mover:
+    cache:
+      capacity: ${KOPIUR_CACHE_CAPACITY:=${KOPIUR_CAPACITY:=5Gi}}
+      storageClassName: ${KOPIUR_CACHE_STORAGECLASS:=openebs-hostpath}
+  volumeSnapshotClassName: ${KOPIUR_SNAPSHOTCLASS:=csi-ceph-blockpool}
