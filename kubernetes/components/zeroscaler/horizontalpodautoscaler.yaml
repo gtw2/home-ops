@@ -15,6 +15,14 @@
 #   ZEROSCALER_KIND        - scale target kind (default Deployment)
 #   ZEROSCALER_JOB_NAME    - Probe jobName to watch (default nfs_probe)
 #   ZEROSCALER_METRIC_NAME - external metric name (default probe_success)
+#
+# The job label is the whole contract: the HPA SUMS every series the external
+# metric returns, so exactly one target may carry a given jobName. A second
+# healthy target on the same job pins the workload at 1 replica forever - no
+# error, no event, the scaler just silently stops working. Observed during a
+# dry run, where a retired probe target lingered for Prometheus' ~5min
+# staleness window and held everything up until it aged out. Give any new
+# probe its own jobName rather than adding a target to an existing one.
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
