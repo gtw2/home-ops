@@ -42,6 +42,22 @@ spec:
       interval: 5m
       failureThreshold: 3
       onFailure: Degrade
+  parameters:
+    epoch:
+      # The repository sat at 2800-4400 content-index blobs against a warn
+      # threshold of 1000, which is what makes `kopia repository connect` slow.
+      #
+      # Maintenance was not broken - it was gated. An epoch cannot close before
+      # minDuration, and with 26 hourly policies this repository writes ~92 index
+      # blobs/hour, so each 24h epoch accumulated ~2200 blobs before it was even
+      # allowed to advance (measured: epoch 191 spanned 24h0m30s with 2204
+      # blobs). Compaction trails ~2 epochs, so the uncompacted tail is roughly
+      # two epochs' worth; closed epochs compact to a single blob each.
+      #
+      # 4h caps an epoch at ~370 blobs, putting the tail near the threshold.
+      # kopiur's own hint suggests 6h, but at this write rate that still lands
+      # ~1100-1650 - above the threshold - so it is sized from measurement here.
+      minDuration: 4h
   identityDefaults:
     # kopia files snapshots under username@hostname:path. VolSync wrote every
     # source as <app>@<namespace>:/data - these expressions reproduce the
