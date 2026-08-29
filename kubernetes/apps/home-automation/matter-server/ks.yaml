@@ -18,6 +18,12 @@ spec:
     substitute:
       APP: *app
       KOPIUR_CAPACITY: 5Gi
+      # matter-server writes 0600 files as root, so no unprivileged UID can read
+      # them - this needs a root mover, which is gated by the privileged-movers
+      # opt-in annotation on the home-automation namespace.
+      KOPIUR_PUID: "0"
+      KOPIUR_PGID: "0"
+      KOPIUR_RUNASNONROOT: "false"
   prune: true
   sourceRef:
     kind: GitRepository

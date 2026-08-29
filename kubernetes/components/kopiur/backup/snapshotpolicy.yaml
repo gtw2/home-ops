@@ -31,6 +31,17 @@ spec:
     keepHourly: 24
     keepDaily: 7
   mover:
+    securityContext:
+      # The mover must be able to READ the source data, and kopiur mounts sources
+      # readOnly, which makes the kubelet skip the fsGroup chgrp walk that VolSync
+      # relied on. So the mover UID has to match the data's owner: a mismatch
+      # either fails loudly or - worse - "succeeds" having snapshotted an empty
+      # tree. Override per-app when the workload does not run as 1000.
+      runAsUser: ${KOPIUR_PUID:=1000}
+      runAsGroup: ${KOPIUR_PGID:=1000}
+      runAsNonRoot: ${KOPIUR_RUNASNONROOT:=true}
+    podSecurityContext:
+      fsGroup: ${KOPIUR_PGID:=1000}
     cache:
       capacity: ${KOPIUR_CACHE_CAPACITY:=${KOPIUR_CAPACITY:=5Gi}}
       storageClassName: ${KOPIUR_CACHE_STORAGECLASS:=openebs-hostpath}

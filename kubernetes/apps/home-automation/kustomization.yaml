@@ -12,3 +12,16 @@ resources:
   - ./open-webui/ks.yaml
   - ./searxng/ks.yaml
   - ./zigbee/ks.yaml
+patches:
+  # matter-server writes 0600 files as root, so its backup needs a root mover.
+  # kopiur gates that on a per-namespace admin opt-in rather than letting any
+  # policy request privilege for itself. The Namespace comes from
+  # components/common, where it is named `not-used` until kustomize's namespace
+  # transformer renames it - so the patch must target that pre-rename name.
+  - target:
+      kind: Namespace
+      name: not-used
+    patch: |-
+      - op: add
+        path: /metadata/annotations/kopiur.home-operations.com~1privileged-movers
+        value: "true"

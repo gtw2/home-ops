@@ -33,3 +33,7 @@ spec:
     substitute:
       APP: *app
       KOPIUR_CAPACITY: 2Gi
+      # pgadmin runs as 5050 and its data is 0600-owned by it; a 1000 mover
+      # cannot read it. VolSync's fsGroup walk hid this - kopiur does not.
+      KOPIUR_PUID: "5050"
+      KOPIUR_PGID: "5050"
