@@ -26,8 +26,10 @@ spec:
         # - ups.internal
         - nas.internal
         - unifi.internal
-        - zigbee-controller.internal
         # - zwave-controller.internal
+        # NOTE: zigbee-controller.internal has its own Probe below (lan-zigbee) so it
+        # carries a stable `job` label for the zeroscaler HPA. Keeping it here too
+        # would duplicate the series.
   metricRelabelings:
     - targetLabel: service
       replacement: blackbox-exporter-lan
@@ -37,8 +39,11 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
 metadata:
-  name: lan-tcp
+  name: lan-nfs
 spec:
+  # `jobName` pins the `job` label on probe_success. The zeroscaler component
+  # (kubernetes/components/zeroscaler) selects on it via the external metrics API.
+  jobName: nfs_probe
   module: tcp_connect
   prober:
     url: blackbox-exporter-lan.observability.svc.cluster.local:9115
@@ -46,6 +51,25 @@ spec:
     staticConfig:
       static:
         - nas.internal:2049
+  metricRelabelings:
+    - targetLabel: service
+      replacement: blackbox-exporter-lan
+      action: replace
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/probe_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: lan-zigbee
+spec:
+  jobName: zigbee_probe
+  module: icmp
+  prober:
+    url: blackbox-exporter-lan.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - zigbee-controller.internal
   metricRelabelings:
     - targetLabel: service
       replacement: blackbox-exporter-lan
