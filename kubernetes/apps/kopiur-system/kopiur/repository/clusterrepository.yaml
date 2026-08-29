@@ -28,6 +28,20 @@ spec:
   credentialProjection:
     # Owner-side gate; each SnapshotPolicy still opts in.
     allowed: true
+  health:
+    probe:
+      # Defaults (30m x 3) mean up to 90 minutes before the breaker opens, and
+      # every policy whose slot falls in that window mints a mover Job that can
+      # only hang on the dead NFS mount. 5m x 3 detects in roughly 15-20 minutes
+      # (a deadline-killed probe adds its own duration on top of the interval)
+      # for the cost of one short connect Job every 5 minutes.
+      #
+      # Threshold stays at 3 deliberately: a single slow connect over a large
+      # index must not degrade the repository.
+      enabled: true
+      interval: 5m
+      failureThreshold: 3
+      onFailure: Degrade
   identityDefaults:
     # kopia files snapshots under username@hostname:path. VolSync wrote every
     # source as <app>@<namespace>:/data - these expressions reproduce the
