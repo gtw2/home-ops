@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/autoscaling/horizontalpodautoscaler_v2.json
+#
+# Scales a workload to zero when the thing it depends on is unreachable, and back
+# to one when it returns. Driven by blackbox-exporter `probe_success` surfaced
+# through prometheus-adapter on the external metrics API.
+#
+# Requires the HPAScaleToZero feature gate on kube-apiserver and
+# kube-controller-manager (see talos/patches/controller/cluster.yaml).
+#
+# Defaults target the NAS: `probe_success{job="nfs_probe"}`, from the `lan-nfs`
+# Probe in kubernetes/apps/observability/blackbox-exporter/lan/probes.yaml.
+# Override per-app via postBuild.substitute:
+#   ZEROSCALER_TARGET      - Deployment name, when it differs from ${APP}
+#   ZEROSCALER_KIND        - scale target kind (default Deployment)
+#   ZEROSCALER_JOB_NAME    - Probe jobName to watch (default nfs_probe)
+#   ZEROSCALER_METRIC_NAME - external metric name (default probe_success)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ${ZEROSCALER_TARGET:=${APP}}
+spec:
+  minReplicas: 0
+  maxReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: ${ZEROSCALER_KIND:=Deployment}
+    name: ${ZEROSCALER_TARGET:=${APP}}
+  metrics:
+    - type: External
+      external:
+        metric:
+          name: ${ZEROSCALER_METRIC_NAME:=probe_success}
+          selector:
+            matchLabels:
+              job: ${ZEROSCALER_JOB_NAME:=nfs_probe}
+        target:
+          type: Value
+          value: "1"
+  behavior:
+    scaleDown:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 15
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+    scaleUp:
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 15
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0

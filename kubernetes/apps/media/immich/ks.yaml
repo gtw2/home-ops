@@ -40,6 +40,8 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
+  components:
+    - ../../../../components/zeroscaler
   dependsOn:
     - name: dragonfly-cluster
       namespace: database
@@ -60,3 +62,4 @@ spec:
   postBuild:
     substitute:
       APP: *app
+      ZEROSCALER_TARGET: immich-server
