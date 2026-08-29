@@ -24,7 +24,7 @@ spec:
             image:
               repository: docker.io/thijsvanloef/palworld-server-docker
               # renovate: datasource=docker depName=docker.io/thijsvanloef/palworld-server-docker
-              tag: v2.7.2
+              tag: v2.7.3
             env:
               TZ: "${TIMEZONE}"
               PUID: 1000
