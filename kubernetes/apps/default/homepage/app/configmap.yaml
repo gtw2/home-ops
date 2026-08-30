@@ -51,6 +51,7 @@ data:
             icon: truenas-scale.png
             description: Primary Network Attached Storage
             widget:
+              version: 2
               type: truenas
               url: https://nas.internal
               key: "{{HOMEPAGE_VAR_TRUENAS_KEY}}"
