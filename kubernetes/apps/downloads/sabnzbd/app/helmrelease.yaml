@@ -56,18 +56,9 @@ spec:
               limits:
                 memory: 6144Mi
             securityContext:
-              runAsNonRoot: true
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
-              runAsUser: 1000
-              runAsGroup: 1000
-              fsGroup: 1000
-              fsGroupChangePolicy: OnRootMismatch
-              supplementalGroups: [3002, 10000]
-              seccompProfile: { type: RuntimeDefault }
-              capabilities:
-                drop:
-                  - ALL
+              capabilities: { drop: ["ALL"] }
           #gluetun:
           #  image:
           #    repository: ghcr.io/qdm12/gluetun
@@ -96,6 +87,14 @@ spec:
          #         - NET_ADMIN
          #     allowPrivilegeEscalation: false
     defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 3002
+        runAsGroup: 3002
+        fsGroup: 3002
+        fsGroupChangePolicy: OnRootMismatch
+        supplementalGroups: [10000]
+        seccompProfile: { type: RuntimeDefault }
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

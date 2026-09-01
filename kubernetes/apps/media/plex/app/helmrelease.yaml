@@ -67,11 +67,11 @@ spec:
           resourceClaimTemplateName: plex
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsUser: 3002
+        runAsGroup: 3002
+        fsGroup: 3002
         fsGroupChangePolicy: OnRootMismatch
-        supplementalGroups: [44, 3002]
+        supplementalGroups: [44]
     service:
       app:
         controller: *app

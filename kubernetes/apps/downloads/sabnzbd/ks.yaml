@@ -34,3 +34,9 @@ spec:
     substitute:
       APP: *app
       KOPIUR_CAPACITY: 1Gi
+      # sabnzbd now runs as 3002 (the media dataset's owner). kopiur mounts
+      # sources readOnly, so the kubelet skips the fsGroup walk that would
+      # otherwise make the data group-readable - the mover UID has to match
+      # the owner or it snapshots a tree it cannot read.
+      KOPIUR_PUID: "3002"
+      KOPIUR_PGID: "3002"

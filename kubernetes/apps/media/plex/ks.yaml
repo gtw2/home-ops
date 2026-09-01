@@ -62,6 +62,12 @@ spec:
       APP: *app
       KOPIUR_CAPACITY: 20Gi
       KOPIUR_CACHE_CAPACITY: 20Gi
+      # plex now runs as 3002 (the media dataset's owner). kopiur mounts
+      # sources readOnly, so the kubelet skips the fsGroup walk that would
+      # otherwise make the data group-readable - the mover UID has to match
+      # the owner or it snapshots a tree it cannot read.
+      KOPIUR_PUID: "3002"
+      KOPIUR_PGID: "3002"
 ---
 # yaml-language-server: $schema=https://k8s-schemas.home-operations.com/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
