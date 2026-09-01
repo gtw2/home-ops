@@ -133,8 +133,8 @@ spec:
                 subPath: tmp
       games:
         type: nfs
-        server: nas.internal
-        path: "/mnt/sega/PlexNAS/Games"
+        server: tank.internal
+        path: "/mnt/silo/media/games"
         advancedMounts:
           romm:
             app:

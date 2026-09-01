@@ -25,6 +25,7 @@ spec:
         # - receiver.internal
         # - ups.internal
         - nas.internal
+        - tank.internal
         - unifi.internal
         # - zwave-controller.internal
         # NOTE: zigbee-controller.internal has its own Probe below (lan-zigbee) so it
@@ -44,6 +45,27 @@ spec:
   # `jobName` pins the `job` label on probe_success. The zeroscaler component
   # (kubernetes/components/zeroscaler) selects on it via the external metrics API.
   jobName: nfs_probe
+  module: tcp_connect
+  prober:
+    url: blackbox-exporter-lan.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - tank.internal:2049
+  metricRelabelings:
+    - targetLabel: service
+      replacement: blackbox-exporter-lan
+      action: replace
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/probe_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: lan-backup
+spec:
+  # `jobName` pins the `job` label on probe_success. The zeroscaler component
+  # (kubernetes/components/zeroscaler) selects on it via the external metrics API.
+  jobName: backup_probe
   module: tcp_connect
   prober:
     url: blackbox-exporter-lan.observability.svc.cluster.local:9115

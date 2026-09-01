@@ -131,8 +131,8 @@ spec:
               - path: /config/matplotlib
       library:
         type: nfs
-        server: nas.internal
-        path: /mnt/sega/PlexNAS/MiscMedia
+        server: tank.internal
+        path: /mnt/silo/media/photos
         advancedMounts:
           server:
             main:

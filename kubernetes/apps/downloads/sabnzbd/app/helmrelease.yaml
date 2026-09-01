@@ -131,8 +131,8 @@ spec:
         existingClaim: *app
       downloads:
         type: nfs
-        server: nas.internal
-        path: /mnt/sega/PlexNAS/DVR
+        server: tank.internal
+        path: /mnt/silo/media/downloads
         globalMounts:
         - path: /downloads
           subPath: usenet
