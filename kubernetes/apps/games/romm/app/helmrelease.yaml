@@ -18,6 +18,7 @@ spec:
         runAsGroup: 1000
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
+        supplementalGroups: [3001]
         seccompProfile: { type: RuntimeDefault }
     controllers:
       romm:

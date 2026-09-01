@@ -30,10 +30,10 @@ spec:
         pod:
           enableServiceLinks: false
           securityContext:
-            runAsUser: 5000
-            runAsGroup: 5000
+            runAsUser: 3003
+            runAsGroup: 3003
             runAsNonRoot: true
-            fsGroup: 5000
+            fsGroup: 3003
             fsGroupChangePolicy: OnRootMismatch
         initContainers:
           init-db:
@@ -64,10 +64,10 @@ spec:
         pod:
           enableServiceLinks: false
           securityContext:
-            runAsUser: 5000
-            runAsGroup: 5000
+            runAsUser: 3003
+            runAsGroup: 3003
             runAsNonRoot: true
-            fsGroup: 5000
+            fsGroup: 3003
             fsGroupChangePolicy: OnRootMismatch
         containers:
           main:
