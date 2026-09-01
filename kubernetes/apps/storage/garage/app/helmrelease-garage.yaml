@@ -84,7 +84,7 @@ spec:
           - path: /mnt/meta
       data:
         type: nfs
-        server: nas.internal
-        path: /mnt/sega/k8s-garage
+        server: tank.internal
+        path: /mnt/silo/k8s/garage
         globalMounts:
           - path: /mnt/data

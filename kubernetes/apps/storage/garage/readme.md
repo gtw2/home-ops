@@ -7,7 +7,7 @@ Single-node Garage cluster replacing MinIO. See `docs/garage-migration.md` (or w
 | Path | Backing | Notes |
 |---|---|---|
 | `/mnt/meta` | `ceph-block` PVC (`garage-meta`, 5Gi RWO) | LMDB index. POSIX fsync required — **never put this on NFS.** |
-| `/mnt/data` | NFS `nas.internal:/mnt/sega/k8s-garage` | Blob chunks. Same backing tier as MinIO previously used. |
+| `/mnt/data` | NFS `tank.internal:/mnt/silo/k8s/garage` | Blob chunks. Moved off `nas.internal:/mnt/sega/k8s-garage`; the export is owned 1000:1000, and NFS mounts get no kubelet fsGroup walk, so ownership must be correct on the NAS side. |
 
 ## Bootstrap (one-time, imperative)
 
