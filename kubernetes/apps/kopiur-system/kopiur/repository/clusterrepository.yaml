@@ -11,8 +11,8 @@ spec:
       path: /repository
       volume:
         nfs:
-          server: nas.internal
-          path: /mnt/sega/VolsyncKopia
+          server: tank.internal
+          path: /mnt/silo/k8s/kopia
   create:
     # The repository already exists and holds the full backup history. Connect
     # only: a failed connect must be loud, never a silently-fresh empty repo.

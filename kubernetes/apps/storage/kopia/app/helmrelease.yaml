@@ -100,8 +100,8 @@ spec:
             subPath: repository.config
       repository:
         type: nfs
-        server: nas.internal
-        path: /mnt/sega/VolsyncKopia
+        server: tank.internal
+        path: /mnt/silo/k8s/kopia
         globalMounts:
           - path: /repository
       tmpfs:
