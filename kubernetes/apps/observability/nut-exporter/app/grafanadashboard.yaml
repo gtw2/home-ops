@@ -9,5 +9,6 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
-  # Panels reference the `prometheus` datasource uid directly, so no input mapping
+  # Prometheus NUT Exporter for DRuggeri. Panels reference the `prometheus`
+  # datasource uid directly, so no input mapping is needed.
   url: https://grafana.com/api/dashboards/19308/revisions/4/download

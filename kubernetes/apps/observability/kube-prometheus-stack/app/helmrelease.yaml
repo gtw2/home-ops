@@ -166,3 +166,9 @@ spec:
     grafana:
       enabled: false
       forceDeployDashboards: true
+      # Emit GrafanaDashboard CRs (configMapRef) instead of relying on the
+      # k8s-sidecar, which went away with the Grafana Helm chart.
+      operator:
+        dashboardsConfigMapRefEnabled: true
+        matchLabels:
+          grafana.internal/instance: grafana
