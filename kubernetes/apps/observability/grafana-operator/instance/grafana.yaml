@@ -97,6 +97,13 @@ spec:
         gethomepage.dev/icon: grafana.png
         gethomepage.dev/name: Grafana
         gethomepage.dev/group: Observability
+        # Operator-built pods carry only `app: grafana`. Homepage otherwise
+        # looks for app.kubernetes.io/name=grafana and reports "Not Found".
+        gethomepage.dev/pod-selector: app=grafana
+        gethomepage.dev/widget.type: grafana
+        gethomepage.dev/widget.url: http://grafana-service.observability:3000
+        gethomepage.dev/widget.username: "{{HOMEPAGE_VAR_GRAFANA_USERNAME}}"
+        gethomepage.dev/widget.password: "{{HOMEPAGE_VAR_GRAFANA_PASSWORD}}"
     spec:
       hostnames: ["grafana.${SECRET_DOMAIN}"]
       parentRefs:
