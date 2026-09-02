@@ -30,9 +30,6 @@ spec:
             env:
               BAZARR__PORT: &port 80
               TZ: ${TIMEZONE}
-            envFrom:
-              - secretRef:
-                  name: bazarr-secret
             probes:
               liveness: &probes
                 enabled: true
