@@ -62,7 +62,6 @@ spec:
         runAsGroup: 3002
         fsGroup: 3002
         fsGroupChangePolicy: OnRootMismatch
-        supplementalGroups: [10000]
         seccompProfile: { type: RuntimeDefault }
     service:
       app:
@@ -82,7 +81,7 @@ spec:
           gethomepage.dev/name: Bazarr
           gethomepage.dev/icon: bazarr.png
           gethomepage.dev/description: Subtitles
-          gethomepage.dev/widget.type: *app
+          gethomepage.dev/widget.type: bazarr
           gethomepage.dev/widget.url: http://bazarr.downloads
           gethomepage.dev/widget.key: "{{ `{{HOMEPAGE_VAR_BAZARR_TOKEN}}` }}"
     persistence:
