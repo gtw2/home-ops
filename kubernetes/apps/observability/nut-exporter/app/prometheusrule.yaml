@@ -1,0 +1,89 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nut-exporter-rules
+spec:
+  groups:
+    - name: nut-exporter.rules
+      rules:
+        - alert: NutUpsOnBattery
+          expr: |-
+            network_ups_tools_ups_status{flag="OB"} == 1
+          for: 1m
+          annotations:
+            summary: >-
+              UPS {{ $labels.ups }} lost mains power and is running on battery
+          labels:
+            severity: critical
+
+        - alert: NutUpsLowBattery
+          expr: |-
+            network_ups_tools_ups_status{flag="LB"} == 1
+          for: 1m
+          annotations:
+            summary: >-
+              UPS {{ $labels.ups }} is reporting a low battery — shutdown is imminent
+          labels:
+            severity: critical
+
+        - alert: NutUpsBatteryChargeLow
+          expr: |-
+            network_ups_tools_battery_charge < network_ups_tools_battery_charge_warning
+          for: 5m
+          annotations:
+            summary: >-
+              UPS {{ $labels.ups }} battery charge is {{ $value | printf "%.0f" }}%, below its warning threshold
+          labels:
+            severity: critical
+
+        - alert: NutUpsReplaceBattery
+          expr: |-
+            network_ups_tools_ups_status{flag="RB"} == 1
+          for: 15m
+          annotations:
+            summary: >-
+              UPS {{ $labels.ups }} is reporting that its battery needs to be replaced
+          labels:
+            severity: critical
+
+        - alert: NutUpsOverloaded
+          expr: |-
+            network_ups_tools_ups_status{flag="OVER"} == 1 or network_ups_tools_ups_load > 90
+          for: 5m
+          annotations:
+            summary: >-
+              UPS {{ $labels.ups }} is overloaded (load {{ $value | printf "%.0f" }}%)
+          labels:
+            severity: critical
+
+        - alert: NutUpsOnBypass
+          expr: |-
+            network_ups_tools_ups_status{flag="BYPASS"} == 1
+          for: 5m
+          annotations:
+            summary: >-
+              UPS {{ $labels.ups }} is on bypass — the load is not battery protected
+          labels:
+            severity: critical
+
+        - alert: NutUpsRuntimeLow
+          expr: |-
+            network_ups_tools_battery_runtime < network_ups_tools_battery_runtime_low
+          for: 1m
+          annotations:
+            summary: >-
+              UPS {{ $labels.ups }} has {{ $value | printf "%.0f" }}s of runtime left, below its low threshold
+          labels:
+            severity: critical
+
+        - alert: NutExporterAbsent
+          expr: |-
+            absent(network_ups_tools_device_info)
+          for: 15m
+          annotations:
+            summary: >-
+              nut-exporter has not reported UPS metrics from tank.internal for 15 minutes
+          labels:
+            severity: critical
