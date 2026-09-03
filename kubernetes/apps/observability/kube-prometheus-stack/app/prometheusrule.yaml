@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# Replacement for the upstream kube-prometheus-stack `KubeHpaMaxedOut`, which is
+# turned off via `defaultRules.disabled` in ./helmrelease.yaml.
+#
+# The upstream rule only skips HPAs where maxReplicas == minReplicas, so it has
+# no concept of scale-to-zero. Zeroscaler HPAs (kubernetes/components/zeroscaler)
+# run minReplicas 0 / maxReplicas 1, so at rest desired == max and the alert
+# fires forever. This copy adds a `minReplicas != 0` guard so those are excluded
+# structurally - no per-app name list to keep in sync.
+#
+# Kept otherwise byte-identical to the chart's rule (expr, for, severity,
+# annotations) so behaviour for real HPAs is unchanged. Re-check on chart bumps.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kube-hpa-maxed-out-zeroscaler-aware
+spec:
+  groups:
+    - name: kubernetes-apps.zeroscaler-aware
+      rules:
+        - alert: KubeHpaMaxedOut
+          expr: |-
+            (
+              kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", namespace=~".*"}
+                ==
+              kube_horizontalpodautoscaler_spec_max_replicas{job="kube-state-metrics", namespace=~".*"}
+            )
+            and on (namespace, horizontalpodautoscaler, cluster) (
+              kube_horizontalpodautoscaler_spec_max_replicas{job="kube-state-metrics", namespace=~".*"}
+                !=
+              kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", namespace=~".*"}
+            )
+            and on (namespace, horizontalpodautoscaler, cluster) (
+              kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", namespace=~".*"}
+                != 0
+            )
+          for: 15m
+          annotations:
+            description: >-
+              HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler }} has been
+              running at max replicas for longer than 15 minutes on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubehpamaxedout
+            summary: HPA is running at max replicas
+          labels:
+            severity: warning

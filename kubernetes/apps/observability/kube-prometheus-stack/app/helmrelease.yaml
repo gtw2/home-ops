@@ -36,6 +36,12 @@ spec:
         enabled: true
         forceConflicts: true
     cleanPrometheusOperatorObjectNames: true
+    defaultRules:
+      disabled:
+        # Replaced by ./prometheusrule.yaml, which adds a `minReplicas != 0`
+        # guard so scale-to-zero HPAs (kubernetes/components/zeroscaler) don't
+        # alert permanently. Re-check that copy against upstream on chart bumps.
+        KubeHpaMaxedOut: true
     alertmanager:
       route:
         main:
