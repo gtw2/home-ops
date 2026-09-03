@@ -21,21 +21,6 @@ spec:
     - name: device
       value: /dev/nvme.*
       matchType: "=~"
----
-apiVersion: observability.giantswarm.io/v1alpha2
-kind: Silence
-metadata:
-  name: zeroscaler-hpa-maxed-out
-spec:
-  # Zeroscaler HPAs (kubernetes/components/zeroscaler) run minReplicas 0 /
-  # maxReplicas 1, so at rest desired == max and KubeHpaMaxedOut always fires.
-  # Keep this list in sync when adding the component to another app.
-  matchers:
-    - name: alertname
-      value: KubeHpaMaxedOut
-    - name: horizontalpodautoscaler
-      value: (agregarr|garage|immich-server|kopia|plex|radarr|romm|sabnzbd|sonarr|zigbee)
-      matchType: "=~"
 # ---
 # # yaml-language-server: $schema=https://kube-schemas.pages.dev/observability.giantswarm.io/silence_v1alpha2.json
 # apiVersion: observability.giantswarm.io/v1alpha2
