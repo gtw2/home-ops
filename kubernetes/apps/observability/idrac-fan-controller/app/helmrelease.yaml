@@ -1,0 +1,91 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app idrac-fan-controller
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    controllers:
+      idrac-fan-controller:
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: docker.io/7adrian/dell_idrac_fan_controller_with_line_interpolation
+              tag: latest@sha256:531a78eb8da8345b3727d96efab606eb4f4469c99b04556d679cfb93eba9f9d1
+            env:
+              TZ: ${TIMEZONE}
+              IDRAC_HOST: idrac.internal
+              FAN_SPEED: 25
+              CPU_TEMPERATURE_THRESHOLD: 65
+              CHECK_INTERVAL: 15
+              DISABLE_THIRD_PARTY_PCIE_CARD_DELL_DEFAULT_COOLING_RESPONSE: true
+              ENABLE_LINE_INTERPOLATION: true
+              CPU_TEMPERATURE_FOR_START_LINE_INTERPOLATION: 45
+              HIGH_FAN_SPEED: 70
+            envFrom:
+              - secretRef:
+                  name: idrac-fan-controller-secret
+            probes:
+              liveness: { enabled: false }
+              readiness: { enabled: false }
+              startup: { enabled: false }
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                # Memory only. A CPU limit is deliberately omitted: throttling
+                # during the 60s termination window could stall the two
+                # ipmitool calls the SIGTERM trap has to complete.
+                memory: 64Mi
+    defaultPodOptions:
+      # SAFETY: the shutdown path is two synchronous ipmitool round-trips to the
+      # BMC (restore Dell profile, re-enable third-party PCIe cooling response).
+      # iDRAC7 can take seconds to answer under load. The 30s default would risk
+      # SIGKILL mid-restore, which leaves the fans pinned with nothing polling.
+      terminationGracePeriodSeconds: 60
+      # SAFETY: node memory pressure must not evict the only process that can
+      # release the fans. system-cluster-critical also raises its preemption
+      # priority so it is not the thing that gets bumped for capacity.
+      priorityClassName: system-cluster-critical
+      # SAFETY: Kubernetes' default tolerations for these taints are 300s. If a
+      # node goes unreachable, that is five minutes before the pod is marked for
+      # deletion and rescheduled — five minutes of fans held at a static speed
+      # by a controller nobody is talking to. 30s bounds that window.
+      #
+      # Note this only helps when the node comes back: an unreachable node never
+      # delivers the SIGTERM, so the trap does not run. Recovery is the new pod
+      # re-establishing control, not the old pod cleaning up.
+      tolerations:
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 30
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000

@@ -1,0 +1,66 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# The container exports no metrics, so there is nothing to scrape. What is worth
+# alerting on is the failure mode described in ../readme.md: the fans are held at
+# a static speed and the process that is supposed to be adjusting them is gone.
+#
+# These rules are zeroscaler-aware. `replicas == 0` is the *expected* state while
+# iDRAC is off the network (see ../ks.yaml), so a bare replicas==0 alert would
+# fire on every legitimate scale-down. Each rule below distinguishes "scaled away
+# on purpose" from "should be running and isn't".
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: idrac-fan-controller-rules
+spec:
+  groups:
+    - name: idrac-fan-controller.rules
+      rules:
+        # iDRAC is answering, so the zeroscaler should have this at 1 replica.
+        # It doesn't — the pod is failing to schedule, crashlooping, or its
+        # Secret is missing. The fans are on Dell's default profile (safe) but
+        # the controller is not doing its job.
+        - alert: IdracFanControllerNotRunning
+          expr: |-
+            kube_deployment_status_replicas_available{namespace="observability", deployment="idrac-fan-controller"} == 0
+            and on() (max(probe_success{job="idrac_probe"}) == 1)
+          for: 10m
+          annotations:
+            summary: >-
+              idrac-fan-controller has had no available replica for 10 minutes
+              while iDRAC is reachable — it should be running. Check the pod,
+              its ExternalSecret, and the securityContext.
+          labels:
+            severity: critical
+
+        # The BMC is off the network. The zeroscaler has scaled the controller
+        # away, and its SIGTERM trap could not reach iDRAC to restore Dell's
+        # profile — so the fans are most likely still pinned at their last
+        # commanded speed with nothing adjusting them. This is the one that
+        # precedes a thermal incident.
+        - alert: IdracUnreachable
+          expr: |-
+            probe_success{job="idrac_probe"} == 0
+          for: 15m
+          annotations:
+            summary: >-
+              idrac.internal has been unreachable for 15 minutes. The fan
+              controller is scaled to zero and the R730xd fans are probably
+              still pinned — restore Dell control by hand if the chassis is
+              warm (see the runbook in the idrac-fan-controller readme).
+          labels:
+            severity: critical
+
+        # Neither of the above can fire if the Deployment itself is gone.
+        - alert: IdracFanControllerAbsent
+          expr: |-
+            absent(kube_deployment_status_replicas_available{namespace="observability", deployment="idrac-fan-controller"})
+          for: 15m
+          annotations:
+            summary: >-
+              The idrac-fan-controller Deployment no longer exists. Confirm it
+              was removed deliberately and that the fans were handed back to
+              Dell's dynamic profile on the way out.
+          labels:
+            severity: critical

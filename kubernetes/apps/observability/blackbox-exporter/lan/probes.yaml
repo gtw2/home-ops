@@ -14,7 +14,6 @@ spec:
         # - expanse.internal
         # - garage-door.internal
         # - hdhomerun.internal
-        # - idrac.internal
         # - jetkvm-0.internal
         # - jetkvm-1.internal
         # - jetkvm-2.internal
@@ -28,9 +27,11 @@ spec:
         - tank.internal
         - unifi.internal
         # - zwave-controller.internal
-        # NOTE: zigbee-controller.internal has its own Probe below (lan-zigbee) so it
-        # carries a stable `job` label for the zeroscaler HPA. Keeping it here too
-        # would duplicate the series.
+        # NOTE: zigbee-controller.internal and idrac.internal each have their own
+        # Probe below (lan-zigbee, lan-idrac) so they carry a stable `job` label
+        # for their zeroscaler HPA. Keeping them here too would duplicate the
+        # series — and because the HPA *sums* every series the external metric
+        # returns, a duplicate silently pins the workload at 1 replica forever.
   metricRelabelings:
     - targetLabel: service
       replacement: blackbox-exporter-lan
@@ -71,6 +72,35 @@ spec:
     staticConfig:
       static:
         - zigbee-controller.internal
+  metricRelabelings:
+    - targetLabel: service
+      replacement: blackbox-exporter-lan
+      action: replace
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/probe_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: lan-idrac
+spec:
+  # `jobName` pins the `job` label on probe_success, which is the whole contract
+  # with the zeroscaler HPA on idrac-fan-controller. This probe must stay a
+  # single target: a second one on this job would make the HPA's sum exceed its
+  # target of 1 and silently stop the scaler working.
+  #
+  # ICMP is a proxy for "the BMC is on the network", not for "IPMI works" —
+  # blackbox has no UDP prober, and IPMI is UDP 623. iDRAC answering ping while
+  # refusing IPMI auth would keep the controller scheduled but non-functional;
+  # that case is caught by the alerts in
+  # ../../idrac-fan-controller/app/prometheusrule.yaml, not here.
+  jobName: idrac_probe
+  module: icmp
+  prober:
+    url: blackbox-exporter-lan.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - idrac.internal
   metricRelabelings:
     - targetLabel: service
       replacement: blackbox-exporter-lan
