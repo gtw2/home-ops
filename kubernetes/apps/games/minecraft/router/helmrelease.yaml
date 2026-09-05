@@ -67,7 +67,7 @@ spec:
             image:
               repository: itzg/mc-router
               # renovate: datasource=docker depName=itzg/mc-router
-              tag: 1.46.4
+              tag: 1.46.5
             args:
               - --in-kube-cluster
               - --kube-namespace=games
