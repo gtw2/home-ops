@@ -55,22 +55,33 @@ spec:
             keyGeneration: 2
           csi:
             # Rotate the four CSI client keys (rbd/cephfs, node/provisioner)
-            # off aes. These are still generation 1, created under Ceph
-            # 19.2.3 — i.e. before the CVE-2025-30156 fix existed.
+            # to the secure aes256k cipher for CVE-2025-30156.
             #
-            # auth_preferred_cipher is already aes256k, so the new generation
-            # is created with the secure cipher; no keyType needed here.
-            #
-            # keepPriorKeyCountMax retains the generation-1 key so a client
-            # that cannot negotiate aes256k falls back instead of losing its
-            # mount. Drop it to 0 only after the rotation is confirmed.
+            # keyType MUST be set explicitly. The rook-ceph-cluster chart
+            # defaults it to `aes` ("required when Kubernetes nodes don't run
+            # Linux kernel 7.0+"), and that default overrides the mon map's
+            # auth_preferred_cipher. Omitting it here does not fall back to
+            # the preferred cipher — it silently re-applies aes, which is how
+            # generation 2 ended up insecure. Talos 1.14 backported aes256k
+            # to its 6.18 kernel, so the chart default's premise is not true
+            # for this cluster.
+            keyType: aes256k
+            # Generation bump makes the rotation deterministic; the CRD only
+            # says changing keyType "may" initiate one.
             keyRotationPolicy: KeyGeneration
-            keyGeneration: 2
+            keyGeneration: 3
+            # Keeps generation 2 valid during migration. Prior keys are NOT
+            # retired automatically at 1 — a follow-up must set this to 0 to
+            # delete the leftover aes keys, and only then will
+            # AUTH_INSECURE_CLIENT_KEY_TYPE clear. Do that once RBD and
+            # CephFS mounts are confirmed working on the aes256k key.
             keepPriorKeyCountMax: 1
           rbdMirrorPeer:
-            # Same rotation for the rbd-mirror-peer key (also generation 1,
-            # Ceph 19.2.3). Userspace client, never gated on kernel support.
-            # No keepPriorKeyCountMax here — the CRD only offers it on csi.
+            # Done: rotated to generation 2 / aes256k and no longer reported
+            # by AUTH_INSECURE_CLIENT_KEY_TYPE. It has no chart default for
+            # keyType, so it correctly picked up the mon map's
+            # auth_preferred_cipher — which is what csi above could not.
+            # No keepPriorKeyCountMax here; the CRD only offers it on csi.
             keyRotationPolicy: KeyGeneration
             keyGeneration: 2
           # NOTE: allowedCiphers is deliberately NOT set here. Restricting it
