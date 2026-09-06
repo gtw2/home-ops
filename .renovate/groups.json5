@@ -82,5 +82,19 @@
         commitMessageTopic: "{{{groupName}}} group",
       },
     },
+    {
+      description: "Talos Group — Talos gates which Kubernetes minor is reachable, so these must move together",
+      groupName: "Talos",
+      // Deliberately unrestricted by datasource: installer-base/kubelet are docker,
+      // aqua:siderolabs/talos comes in via the mise manager.
+      matchPackageNames: [
+        "/siderolabs\\/installer-base$/",
+        "/siderolabs\\/kubelet$/",
+        "/siderolabs\\/talos$/",
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
   ],
 }

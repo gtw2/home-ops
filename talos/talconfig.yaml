@@ -235,3 +235,4 @@ controlPlane:
   patches:
     - "@./patches/controller/api-access.yaml"
     - "@./patches/controller/cluster.yaml"
+    - "@./patches/controller/kube-components.yaml"

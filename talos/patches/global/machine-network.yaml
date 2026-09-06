@@ -1,5 +1,7 @@
-machine:
-  network:
-    disableSearchDomain: true
-    nameservers:
-      - 10.10.40.1
+# was machine.network.{nameservers,disableSearchDomain}, deprecated in Talos 1.14
+apiVersion: v1alpha1
+kind: ResolverConfig
+nameservers:
+  - address: 10.10.40.1
+searchDomains:
+  disableDefault: true

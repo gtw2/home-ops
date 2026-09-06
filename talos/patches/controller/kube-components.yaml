@@ -1,0 +1,54 @@
+# Kubernetes control plane components, migrated out of v1alpha1 for Talos 1.14.
+#
+# Talos 1.14 deprecated .cluster.{apiServer,controllerManager,scheduler,proxy};
+# talhelper generates the replacement documents, so setting both is rejected.
+# See ./cluster.yaml for what remains on v1alpha1.
+---
+apiVersion: v1alpha1
+kind: KubeAPIServerConfig
+# was .cluster.apiServer.certSANs — renamed to certExtraSANs in 1.14
+certExtraSANs:
+  - k8s.internal
+extraArgs:
+  enable-aggregator-routing: "true"
+  feature-gates: MutatingAdmissionPolicy=true,HPAScaleToZero=true
+  runtime-config: admissionregistration.k8s.io/v1beta1=true
+---
+apiVersion: v1alpha1
+kind: KubeControllerManagerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+  feature-gates: HPAScaleToZero=true
+---
+apiVersion: v1alpha1
+kind: KubeProxyConfig
+# was .cluster.proxy.disabled: true
+enabled: false
+---
+apiVersion: v1alpha1
+kind: KubeSchedulerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+config:
+  profiles:
+    - schedulerName: default-scheduler
+      plugins:
+        score:
+          disabled:
+            - name: ImageLocality
+      pluginConfig:
+        - name: PodTopologySpread
+          args:
+            defaultingType: List
+            defaultConstraints:
+              - maxSkew: 1
+                topologyKey: kubernetes.io/hostname
+                whenUnsatisfiable: ScheduleAnyway
+---
+# was .cluster.apiServer.admissionControl: {$$patch: delete}
+# talhelper emits a PodSecurity KubeAdmissionControlConfig by default; drop the
+# whole document. $$ escapes talhelper's variable substitution.
+apiVersion: v1alpha1
+kind: KubeAdmissionControlConfig
+name: PodSecurity
+$$patch: delete
