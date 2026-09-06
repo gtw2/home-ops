@@ -66,16 +66,26 @@ spec:
             # to its 6.18 kernel, so the chart default's premise is not true
             # for this cluster.
             keyType: aes256k
-            # Generation bump makes the rotation deterministic; the CRD only
-            # says changing keyType "may" initiate one.
             keyRotationPolicy: KeyGeneration
+            # Generation 3 was the aes256k rotation (a generation bump is what
+            # deterministically triggers one; the CRD only promises changing
+            # keyType "may"). Deliberately NOT bumped further here:
+            # keepPriorKeyCountMax acts on prior keys that already exist, so
+            # dropping it to 0 retires generation 2 on its own; bumping the
+            # generation would mint a generation 4 and immediately create a
+            # fresh prior, defeating the point.
             keyGeneration: 3
-            # Keeps generation 2 valid during migration. Prior keys are NOT
-            # retired automatically at 1 — a follow-up must set this to 0 to
-            # delete the leftover aes keys, and only then will
-            # AUTH_INSECURE_CLIENT_KEY_TYPE clear. Do that once RBD and
-            # CephFS mounts are confirmed working on the aes256k key.
-            keepPriorKeyCountMax: 1
+            # Generation 3 (aes256k) is live and verified — RBD and CephFS
+            # both provisioned, mounted and written. Dropping the retained
+            # generation-2 aes keys is what actually clears
+            # AUTH_INSECURE_CLIENT_KEY_TYPE.
+            #
+            # This also removes the fallback, which is the real test: a plugin
+            # that cannot negotiate aes256k now fails visibly instead of
+            # quietly continuing on the old key. Reversible — raising this
+            # back re-creates a prior key, unlike allowedCiphers, which needs
+            # a mon restart to undo.
+            keepPriorKeyCountMax: 0
           rbdMirrorPeer:
             # Done: rotated to generation 2 / aes256k and no longer reported
             # by AUTH_INSECURE_CLIENT_KEY_TYPE. It has no chart default for
