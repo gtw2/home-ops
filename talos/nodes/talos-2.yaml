@@ -1,0 +1,7 @@
+---
+hostname: talos-2
+controlPlane: true
+installDiskSerial: S6S1NS0T907444Z
+# bond0 = 10G LACP data path; bond1 = 2.5G out-of-band management (VLAN 5)
+address: 10.10.40.22/24
+mgmtAddress: 10.10.5.22/24

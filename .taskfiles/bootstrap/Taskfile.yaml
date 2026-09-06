@@ -7,17 +7,25 @@ tasks:
   talos:
     desc: Bootstrap the Talos cluster
     dir: '{{.TALOS_DIR}}'
+    # Assumes talsecret.sops.yaml and clusterconfig/talosconfig already exist.
+    # Creating them from scratch is still an open item — see docs/talos.md.
     cmds:
-      - '[ -f talsecret.sops.yaml ] || talhelper gensecret | sops --filename-override talos/talsecret.sops.yaml --encrypt /dev/stdin > talsecret.sops.yaml'
-      - talhelper genconfig
-      - talhelper gencommand apply --extra-flags="--insecure" | bash
-      - until talhelper gencommand bootstrap | bash; do sleep 10; done
-      - until talhelper gencommand kubeconfig --extra-flags="{{.ROOT_DIR}} --force" | bash; do sleep 10; done
+      - for f in nodes/*.yaml; do
+          n=$(basename "$f" .yaml);
+          ip=$(yq '.address | split("/") | .[0]' "$f");
+          task talos:render NODE="$n" | talosctl --nodes "$ip" apply-config --insecure --file /dev/stdin;
+        done
+      - until talosctl --nodes {{.BOOTSTRAP_IP}} bootstrap; do sleep 10; done
+      - until talosctl --nodes {{.BOOTSTRAP_IP}} kubeconfig {{.ROOT_DIR}} --force; do sleep 10; done
+    vars:
+      BOOTSTRAP_IP:
+        sh: yq '.address | split("/") | .[0]' {{.TALOS_DIR}}/nodes/talos-1.yaml
     preconditions:
       - test -f {{.ROOT_DIR}}/.sops.yaml
       - test -f {{.SOPS_AGE_KEY_FILE}}
-      - test -f {{.TALOS_DIR}}/talconfig.yaml
-      - which talhelper talosctl sops
+      - test -f {{.TALOS_DIR}}/talsecret.sops.yaml
+      - test -f {{.TALOS_DIR}}/machineconfig.yaml.j2
+      - which minijinja-cli talosctl sops yq
 
   apps:
     desc: Bootstrap apps into the Talos cluster
