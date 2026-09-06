@@ -54,12 +54,38 @@ spec:
             keyRotationPolicy: KeyGeneration
             keyGeneration: 2
           csi:
-            keyType: aes # aes256k requires kernel 7.0+ (nodes are on 6.18)
+            # Rotate the four CSI client keys (rbd/cephfs, node/provisioner)
+            # off aes. These are still generation 1, created under Ceph
+            # 19.2.3 — i.e. before the CVE-2025-30156 fix existed.
+            #
+            # auth_preferred_cipher is already aes256k, so the new generation
+            # is created with the secure cipher; no keyType needed here.
+            #
+            # keepPriorKeyCountMax retains the generation-1 key so a client
+            # that cannot negotiate aes256k falls back instead of losing its
+            # mount. Drop it to 0 only after the rotation is confirmed.
+            keyRotationPolicy: KeyGeneration
+            keyGeneration: 2
+            keepPriorKeyCountMax: 1
+          rbdMirrorPeer:
+            # Same rotation for the rbd-mirror-peer key (also generation 1,
+            # Ceph 19.2.3). Userspace client, never gated on kernel support.
+            # No keepPriorKeyCountMax here — the CRD only offers it on csi.
+            keyRotationPolicy: KeyGeneration
+            keyGeneration: 2
+          # NOTE: allowedCiphers is deliberately NOT set here. Restricting it
+          # to [aes256k] removes aes from the mon map and locks out any client
+          # still holding an aes key — CSI included. It is a separate change,
+          # made only once `ceph health detail` reports zero entities on aes.
+          # Recovery from a lockout is mon_auth_emergency_allowed_ciphers,
+          # which is not runtime-settable and needs a mon restart.
       healthCheck:
         muteHealthWarning:
-          # CSI keys must stay on aes until nodes reach kernel 7.0+, so aes
-          # stays in the allowed cipher list and these client/allow/creatable
-          # warnings cannot be resolved yet — mute them.
+          # Talos 1.14 backported aes256k to its 6.18 kernel
+          # (siderolabs/pkgs@84c1b87), so the kernel-client gate is cleared —
+          # crypto_krb5_* and ceph_crypto_key_prepare are present on all four
+          # nodes. These mutes stay until the CSI rotation above completes and
+          # allowedCiphers is restricted; unmute one at a time as each clears.
           AUTH_INSECURE_CLIENT_KEY_TYPE:
             policy: mute
           AUTH_INSECURE_KEYS_ALLOWED:
