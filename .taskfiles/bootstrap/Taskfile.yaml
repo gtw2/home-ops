@@ -4,26 +4,72 @@ version: '3'
 
 tasks:
 
+  talos-secrets:
+    desc: Generate the encrypted Talos secrets bundle (first-time cluster setup only)
+    dir: '{{.TALOS_DIR}}'
+    # `talosctl gen secrets` emits exactly the shape machineconfig.yaml.j2
+    # consumes (cluster.*, secrets.*, trustdinfo.*, certs.*) — it is the same
+    # bundle format talhelper used, so no conversion is needed.
+    #
+    # Refuses to overwrite: regenerating this on a live cluster mints a new PKI
+    # and orphans every existing node and secret.
+    cmd: >-
+      talosctl gen secrets -o - |
+      sops --filename-override talos/talsecret.sops.yaml --encrypt /dev/stdin
+      > talsecret.sops.yaml
+    status:
+      - test -f {{.TALOS_DIR}}/talsecret.sops.yaml
+    preconditions:
+      - test -f {{.ROOT_DIR}}/.sops.yaml
+      - test -f {{.SOPS_AGE_KEY_FILE}}
+      - which talosctl sops
+
+  talosconfig:
+    desc: Generate the Talos client config from the secrets bundle
+    dir: '{{.TALOS_DIR}}'
+    # Derived, not secret-bearing beyond the admin cert — safe to regenerate at
+    # any time. The admin cert is reissued from the same CA, so an existing
+    # talosconfig keeps working too.
+    cmds:
+      - mkdir -p clusterconfig
+      # Process substitution as an ARGUMENT, not a `< <(...)` stdin redirect —
+      # task's shell interpreter hangs on the redirect form.
+      - >-
+        talosctl gen config --with-secrets <(sops -d talsecret.sops.yaml)
+        --output-types talosconfig -o clusterconfig/talosconfig --force
+        {{.CLUSTER_NAME}} {{.ENDPOINT}}
+      - talosctl --talosconfig clusterconfig/talosconfig config endpoint {{.CONTROLPLANE_IPS}}
+    vars:
+      CLUSTER_NAME:
+        sh: yq -r '.clusterName' {{.TALOS_DIR}}/cluster.yaml
+      ENDPOINT:
+        sh: yq -r '.endpoint' {{.TALOS_DIR}}/cluster.yaml
+      CONTROLPLANE_IPS:
+        sh: for f in {{.TALOS_DIR}}/nodes/*.yaml; do yq -r 'select(.controlPlane == true) | .address | split("/") | .[0]' "$f"; done | grep -v '^$' | tr '\n' ' '
+    preconditions:
+      - test -f {{.TALOS_DIR}}/talsecret.sops.yaml
+      - test -f {{.SOPS_AGE_KEY_FILE}}
+      - which talosctl sops yq
+
   talos:
     desc: Bootstrap the Talos cluster
     dir: '{{.TALOS_DIR}}'
-    # Assumes talsecret.sops.yaml and clusterconfig/talosconfig already exist.
-    # Creating them from scratch is still an open item — see docs/talos.md.
     cmds:
+      - task: talos-secrets
+      - task: talosconfig
       - for f in nodes/*.yaml; do
           n=$(basename "$f" .yaml);
-          ip=$(yq '.address | split("/") | .[0]' "$f");
+          ip=$(yq -r '.address | split("/") | .[0]' "$f");
           task talos:render NODE="$n" | talosctl --nodes "$ip" apply-config --insecure --file /dev/stdin;
         done
       - until talosctl --nodes {{.BOOTSTRAP_IP}} bootstrap; do sleep 10; done
       - until talosctl --nodes {{.BOOTSTRAP_IP}} kubeconfig {{.ROOT_DIR}} --force; do sleep 10; done
     vars:
       BOOTSTRAP_IP:
-        sh: yq '.address | split("/") | .[0]' {{.TALOS_DIR}}/nodes/talos-1.yaml
+        sh: for f in {{.TALOS_DIR}}/nodes/*.yaml; do yq -r 'select(.controlPlane == true) | .address | split("/") | .[0]' "$f"; done | grep -v '^$' | head -1
     preconditions:
       - test -f {{.ROOT_DIR}}/.sops.yaml
       - test -f {{.SOPS_AGE_KEY_FILE}}
-      - test -f {{.TALOS_DIR}}/talsecret.sops.yaml
       - test -f {{.TALOS_DIR}}/machineconfig.yaml.j2
       - which minijinja-cli talosctl sops yq
 
@@ -36,4 +82,3 @@ tasks:
       - test -f {{.KUBECONFIG}}
       - test -f {{.ROOT_DIR}}/.sops.yaml
       - test -f {{.SCRIPTS_DIR}}/bootstrap-apps.sh
-      - test -f {{.SOPS_AGE_KEY_FILE}}

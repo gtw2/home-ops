@@ -65,13 +65,32 @@ a static `hostname`, and Talos serialises the unset enum back out as
 `auto: false`, which it will not accept as input — so a config read off a live
 node is not directly re-appliable without dropping that field.
 
+## Bootstrap
+
+```sh
+task bootstrap:talos-secrets   # once, ever — generates talsecret.sops.yaml
+task bootstrap:talosconfig     # generates clusterconfig/talosconfig
+task bootstrap:talos           # both of the above, then apply + bootstrap
+```
+
+`talosctl gen secrets` emits exactly the shape `machineconfig.yaml.j2` consumes
+(`cluster.*`, `secrets.*`, `trustdinfo.*`, `certs.*`) — the same bundle format
+talhelper used, so no conversion is involved.
+
+`talos-secrets` is guarded by a `status:` check and will not overwrite an
+existing `talsecret.sops.yaml`. Regenerating it against a live cluster would
+mint a new PKI and orphan every node and every encrypted secret.
+
+`talosconfig` is safe to re-run at any time: it reissues the admin client
+certificate from the same CA, so previously issued configs keep working. The
+endpoints are derived from whichever `nodes/*.yaml` have `controlPlane: true`.
+
+Note both tasks pass secrets via process substitution as an *argument*
+(`--with-secrets <(sops -d ...)`). The `< <(...)` stdin-redirect form hangs
+under task's shell interpreter.
+
 ## Open items
 
-- **Bootstrap from scratch.** `task bootstrap:talos` assumes
-  `talsecret.sops.yaml` and `clusterconfig/talosconfig` already exist. Both were
-  originally produced by `talhelper gensecret`/`genconfig`; regenerating them
-  needs `talosctl gen secrets` plus a shape conversion, which has not been
-  written or tested.
 - **talhelper bug.** `KubeEtcdEncryptionConfig` should preserve Talos's `key2`
   naming and `identity` provider for pre-1.14 clusters, and should be patchable.
   Not yet filed upstream.
