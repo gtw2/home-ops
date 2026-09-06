@@ -1,0 +1,28 @@
+---
+# Cluster-wide values for machineconfig.yaml.j2.
+# Per-node values live in ./nodes/<hostname>.yaml; secrets come from
+# talsecret.sops.yaml at render time and are never written to disk.
+
+clusterName: kubernetes
+endpoint: https://10.10.40.20:6443
+vip: 10.10.40.20
+
+# renovate: datasource=docker depName=ghcr.io/siderolabs/installer-base
+talosVersion: v1.14.0
+# renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
+kubernetesVersion: v1.37.0
+
+# Image Factory schematic (i915, intel-ucode, mei, nfsrahead, thunderbolt +
+# kernel args). Regenerate at factory.talos.dev if extensions change.
+schematic: f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
+
+dnsDomain: cluster.local
+podSubnets: ["10.42.0.0/16"]
+serviceSubnets: ["10.43.0.0/16"]
+
+nameserver: 10.10.40.1
+gateway: 10.10.40.1
+nodeSubnet: 10.10.40.0/24
+
+certSANs: ["127.0.0.1", "10.10.40.20"]
+apiServerExtraSANs: ["k8s.internal"]

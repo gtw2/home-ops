@@ -1,0 +1,261 @@
+---
+# Talos machine config, rendered per node by `task talos:render NODE=<hostname>`.
+#
+# Context comes from three sources, merged by minijinja:
+#   cluster.yaml            cluster-wide values
+#   nodes/<hostname>.yaml   per-node values (4 scalars + role)
+#   talsecret.sops.yaml     PKI and tokens, decrypted to a pipe at render time
+#
+# Replaces talhelper. See docs/talos.md for why.
+version: v1alpha1
+debug: false
+persist: true
+machine:
+  type: {{ "controlplane" if controlPlane else "worker" }}
+  token: {{ trustdinfo.token }}
+  ca:
+    crt: {{ certs.os.crt }}
+    key: {{ certs.os.key if controlPlane else '""' }}
+  certSANs:
+{% for san in certSANs %}
+    - {{ san }}
+{% endfor %}
+  kubelet:
+    image: ghcr.io/siderolabs/kubelet:{{ kubernetesVersion }}
+    extraMounts:
+      - destination: /var/mnt/local-hostpath
+        type: bind
+        source: /var/mnt/local-hostpath
+        options: [bind, rshared, rw]
+    extraConfig:
+      serializeImagePulls: false
+    defaultRuntimeSeccompProfileEnabled: true
+    nodeIP:
+      validSubnets:
+        - {{ nodeSubnet }}
+    disableManifestsDirectory: true
+  network:
+    nameservers:
+      - {{ nameserver }}
+    disableSearchDomain: true
+  install:
+    diskSelector:
+      serial: {{ installDiskSerial }}
+    image: factory.talos.dev/installer/{{ schematic }}:{{ talosVersion }}
+    wipe: false
+    grubUseUKICmdline: true
+  files:
+    - op: create
+      path: /etc/cri/conf.d/20-customization.part
+      permissions: 0o0
+      content: |
+        [plugins."io.containerd.cri.v1.images"]
+          discard_unpacked_layers = false
+        [plugins."io.containerd.cri.v1.runtime"]
+          cdi_spec_dirs = ["/var/cdi/static", "/var/cdi/dynamic"]
+          device_ownership_from_security_context = true
+    - op: overwrite
+      path: /etc/nfsmount.conf
+      permissions: 0o644
+      content: |
+        [ NFSMount_Global_Options ]
+        nfsvers=4.2
+        hard=True
+        nconnect=16
+        noatime=True
+  sysctls:
+    fs.inotify.max_user_instances: "8192"      # Watchdog
+    fs.inotify.max_user_watches: "1048576"     # Watchdog
+    net.core.default_qdisc: fq                 # 10Gb/s
+    net.core.rmem_max: "67108864"              # 10Gb/s | Cloudflared / QUIC
+    net.core.wmem_max: "67108864"              # 10Gb/s | Cloudflared / QUIC
+    net.ipv4.neigh.default.gc_thresh1: "4096"  # Prevent ARP cache overflows
+    net.ipv4.neigh.default.gc_thresh2: "8192"  # Prevent ARP cache overflows
+    net.ipv4.neigh.default.gc_thresh3: "16384" # Prevent ARP cache overflows
+    net.ipv4.ping_group_range: 0 2147483647    # Allow Ping
+    net.ipv4.tcp_congestion_control: bbr       # 10Gb/s
+    net.ipv4.tcp_fastopen: "3"                 # Send and accept data in the opening SYN packet
+    net.ipv4.tcp_mtu_probing: "1"              # 10Gb/s | Jumbo frames
+    net.ipv4.tcp_notsent_lowat: "131072"       # Allow Ping
+    net.ipv4.tcp_rmem: 4096 87380 33554432     # 10Gb/s
+    net.ipv4.tcp_slow_start_after_idle: "0"    # Allow Ping
+    net.ipv4.tcp_window_scaling: "1"           # 10Gb/s
+    net.ipv4.tcp_wmem: 4096 65536 33554432     # 10Gb/s
+    sunrpc.tcp_max_slot_table_entries: "128"   # 10Gb/s | NFS
+    sunrpc.tcp_slot_table_entries: "128"       # 10Gb/s | NFS
+    user.max_user_namespaces: "11255"          # User Namespaces
+    vm.nr_hugepages: "1024"                    # PostgreSQL
+  features:
+{% if controlPlane %}
+    kubernetesTalosAPIAccess:
+      enabled: true
+      allowedRoles:
+        - os:admin
+      allowedKubernetesNamespaces:
+        - actions-runner-system
+        - system-upgrade
+{% endif %}
+    diskQuotaSupport: true
+    kubePrism:
+      enabled: true
+      port: 7445
+    hostDNS:
+      enabled: true
+      forwardKubeDNSToHost: true
+  nodeLabels:
+    node.kubernetes.io/gpu: "true"
+cluster:
+  id: {{ cluster.id }}
+  secret: {{ cluster.secret }}
+  controlPlane:
+    endpoint: {{ endpoint }}
+  clusterName: {{ clusterName }}
+  network:
+    cni:
+      name: none                               # Cilium
+    dnsDomain: {{ dnsDomain }}
+    podSubnets: {{ podSubnets }}
+    serviceSubnets: {{ serviceSubnets }}
+  token: {{ secrets.bootstraptoken }}
+  ca:
+    crt: {{ certs.k8s.crt }}
+    key: {{ certs.k8s.key if controlPlane else '""' }}
+  discovery:
+    enabled: true
+    registries:
+      kubernetes:
+        disabled: true
+      service: {}
+{% if controlPlane %}
+  secretboxEncryptionSecret: {{ secrets.secretboxencryptionsecret }}
+  aggregatorCA:
+    crt: {{ certs.k8saggregator.crt }}
+    key: {{ certs.k8saggregator.key }}
+  serviceAccount:
+    key: {{ certs.k8sserviceaccount.key }}
+  apiServer:
+    image: registry.k8s.io/kube-apiserver:{{ kubernetesVersion }}
+    extraArgs:
+      enable-aggregator-routing: "true"
+      feature-gates: MutatingAdmissionPolicy=true,HPAScaleToZero=true
+      runtime-config: admissionregistration.k8s.io/v1beta1=true
+    certSANs:
+{% for san in certSANs + apiServerExtraSANs %}
+      - {{ san }}
+{% endfor %}
+    disablePodSecurityPolicy: true
+    auditPolicy:
+      apiVersion: audit.k8s.io/v1
+      kind: Policy
+      rules:
+        - level: Metadata
+  controllerManager:
+    image: registry.k8s.io/kube-controller-manager:{{ kubernetesVersion }}
+    extraArgs:
+      bind-address: 0.0.0.0
+      feature-gates: HPAScaleToZero=true
+  proxy:
+    disabled: true                             # Cilium kube-proxy replacement
+    image: registry.k8s.io/kube-proxy:{{ kubernetesVersion }}
+  scheduler:
+    image: registry.k8s.io/kube-scheduler:{{ kubernetesVersion }}
+    extraArgs:
+      bind-address: 0.0.0.0
+    config:
+      apiVersion: kubescheduler.config.k8s.io/v1
+      kind: KubeSchedulerConfiguration
+      profiles:
+        - schedulerName: default-scheduler
+          plugins:
+            score:
+              disabled:
+                - name: ImageLocality
+          pluginConfig:
+            - name: PodTopologySpread
+              args:
+                defaultingType: List
+                defaultConstraints:
+                  - maxSkew: 1
+                    topologyKey: kubernetes.io/hostname
+                    whenUnsatisfiable: ScheduleAnyway
+  etcd:
+    ca:
+      crt: {{ certs.etcd.crt }}
+      key: {{ certs.etcd.key }}
+    extraArgs:
+      listen-metrics-urls: http://0.0.0.0:2381
+    advertisedSubnets:
+      - {{ nodeSubnet }}
+  coreDNS:
+    disabled: true                             # CoreDNS is managed by Flux
+  allowSchedulingOnControlPlanes: true
+{% endif %}
+---
+apiVersion: v1alpha1
+kind: HostnameConfig
+# `auto` is intentionally omitted: it conflicts with a static hostname, and
+# Talos serialises the unset enum back out as `auto: false`, which it will not
+# accept as input.
+hostname: {{ hostname }}
+---
+apiVersion: v1alpha1
+kind: UserVolumeConfig
+name: local-hostpath
+provisioning:
+  diskSelector:
+    match: disk.model == "CT1000P3SSD8" && !system_disk
+  minSize: 1TB
+{% for alias, bus, driver in [
+     ("bond1-m0", "0000:57:00.0", "igc"),
+     ("bond1-m1", "0000:5a:00.0", "igc"),
+     ("bond0-m0", "0000:02:00.0", "i40e"),
+     ("bond0-m1", "0000:02:00.1", "i40e"),
+   ] %}
+---
+apiVersion: v1alpha1
+kind: LinkAliasConfig
+name: {{ alias }}
+selector:
+  match: glob("{{ bus }}", link.bus_path) && glob("{{ driver }}", link.driver)
+{% endfor %}
+---
+# 2.5G out-of-band management on VLAN 5 — independent of the 10G bond0 path.
+apiVersion: v1alpha1
+kind: BondConfig
+name: bond1
+links: [bond1-m0, bond1-m1]
+bondMode: active-backup
+miimon: 100
+mtu: 1500
+addresses:
+  - address: {{ mgmtAddress }}
+---
+apiVersion: v1alpha1
+kind: BondConfig
+name: bond0
+links: [bond0-m0, bond0-m1]
+bondMode: 802.3ad
+miimon: 1000
+xmitHashPolicy: layer3+4
+lacpRate: fast
+mtu: 9000
+addresses:
+  - address: {{ address }}
+routes:
+  - gateway: {{ gateway }}
+{% if controlPlane %}
+---
+apiVersion: v1alpha1
+kind: Layer2VIPConfig
+name: {{ vip }}
+link: bond0
+{% endif %}
+{% for vlan in [20, 90] %}
+---
+apiVersion: v1alpha1
+kind: VLANConfig
+name: bond0.{{ vlan }}
+vlanID: {{ vlan }}
+parent: bond0
+mtu: 9000
+{% endfor %}
