@@ -119,19 +119,25 @@ spec:
           allowedCiphers: [aes256k]
       healthCheck:
         muteHealthWarning:
-          # Talos 1.14 backported aes256k to its 6.18 kernel
-          # (siderolabs/pkgs@84c1b87), so the kernel-client gate is cleared —
-          # crypto_krb5_* and ceph_crypto_key_prepare are present on all four
-          # nodes. These mutes stay until the CSI rotation above completes and
-          # allowedCiphers is restricted; unmute one at a time as each clears.
+          # All four CVE-2025-30156 warnings are resolved: every auth entity
+          # is on aes256k and the mon map allows only aes256k.
+          #
+          # policy is flipped to unmute rather than the entries being deleted.
+          # Ceph's mutes here are sticky, so removing the keys would only stop
+          # Rook managing them — the warnings would stay suppressed in Ceph
+          # indefinitely, hiding any future regression. Rook needs an explicit
+          # unmute to clear them.
+          #
+          # Once `ceph health detail` shows no mute list, these entries can be
+          # dropped entirely; at that point there is nothing left to unmute.
           AUTH_INSECURE_CLIENT_KEY_TYPE:
-            policy: mute
+            policy: unmute
           AUTH_INSECURE_KEYS_ALLOWED:
-            policy: mute
+            policy: unmute
           AUTH_INSECURE_KEYS_CREATABLE:
-            policy: mute
+            policy: unmute
           AUTH_INSECURE_ROTATING_SERVICE_KEY_TYPE:
-            policy: mute
+            policy: unmute
       dashboard:
         enabled: true
         urlPrefix: /
