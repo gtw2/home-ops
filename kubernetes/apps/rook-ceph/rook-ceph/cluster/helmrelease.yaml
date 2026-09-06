@@ -94,12 +94,29 @@ spec:
             # No keepPriorKeyCountMax here; the CRD only offers it on csi.
             keyRotationPolicy: KeyGeneration
             keyGeneration: 2
-          # NOTE: allowedCiphers is deliberately NOT set here. Restricting it
-          # to [aes256k] removes aes from the mon map and locks out any client
-          # still holding an aes key — CSI included. It is a separate change,
-          # made only once `ceph health detail` reports zero entities on aes.
-          # Recovery from a lockout is mon_auth_emergency_allowed_ciphers,
-          # which is not runtime-settable and needs a mon restart.
+          # Final step of CVE-2025-30156: stop the mons accepting the
+          # vulnerable aes cipher at all. Until this is set, the mon map
+          # advertises auth_allowed_ciphers = [aes, aes256k] and the
+          # authentication bypass remains reachable regardless of what key
+          # types the clients happen to use.
+          #
+          # Safe to set now, and only now: all 17 auth entities (mon, mgr,
+          # osd, mds, admin, exporter, crash, the four csi keys and
+          # rbd-mirror-peer) are on aes256k, and `ceph health detail` reports
+          # zero entities with insecure key types. Setting this while any
+          # client still held an aes key would lock that client out.
+          #
+          # This is the one step in the sequence that is not cheaply
+          # reversible. Recovery from a lockout is the
+          # mon_auth_emergency_allowed_ciphers config, which is NOT
+          # runtime-settable — it requires restarting the mons. Reverting
+          # this file alone would not restore access.
+          #
+          # Expect the CephCluster to enter Progressing while the mons are
+          # reconfigured, which fails Flux's health gate and briefly marks
+          # dependent kustomizations not-ready. That is transient; judge it by
+          # `ceph health`, not the Flux tree.
+          allowedCiphers: [aes256k]
       healthCheck:
         muteHealthWarning:
           # Talos 1.14 backported aes256k to its 6.18 kernel
