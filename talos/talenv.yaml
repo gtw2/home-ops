@@ -16,4 +16,4 @@
 # for Talos upgrades until this is unpinned.
 talosVersion: v1.13.10
 # renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
-kubernetesVersion: v1.36.4
+kubernetesVersion: v1.37.0
