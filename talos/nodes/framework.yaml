@@ -9,15 +9,19 @@ hostname: framework
 profile: amd-ai
 controlPlane: false
 
-# TODO(hardware): `talosctl -n <maintenance-ip> get disks`
-installDiskSerial: CHANGEME-INSTALL-DISK-SERIAL
+# nvme0n1. The box has two identical Lexar NM790 4TB drives, so an exact
+# model match would be ambiguous — this one is pinned by serial as the OS disk,
+# and the other falls out of the `!system_disk` selector below.
+installDiskSerial: NLW513W101388P2202
 
-# TODO(hardware): `talosctl -n <maintenance-ip> get links` -> permanentAddr of
-# the onboard NIC. Matched by MAC rather than PCI path: this box has a single
-# onboard NIC, so the MAC is the stabler identifier. (Also note the plan doc's
-# warning that adding an OCuLink eGPU later renames NICs — a MAC match survives
-# that, a bus_path match would not.)
-primaryNic: "00:00:00:00:00:00" # CHANGEME
+# Onboard Realtek RTL8126 5GbE (r8169, bus 0000:bf:00.0). Matched by MAC
+# rather than PCI path: adding an OCuLink eGPU later renames NICs and shifts
+# bus paths (see docs/llm-gpu-tier-plan.md), which a MAC match survives.
+#
+# NOTE: the link negotiated at 1000 Mbit, not 5000 — the NIC is 5GbE, so that
+# is the switch port or cable, not the hardware. Worth chasing: 5x on cold
+# model loads for the price of a cable.
+primaryNic: "9c:bf:0d:01:01:ee"
 
 # Single onboard NIC — no out-of-band bond1/VLAN 5 path, so no mgmtAddress.
 #
@@ -25,7 +29,13 @@ primaryNic: "00:00:00:00:00:00" # CHANGEME
 # 10.10.40.0/24 and every other node runs bond0 at 9000. A 1500-MTU host on that
 # same L2 segment has no router in the path to fragment or signal "packet too
 # big", so large OSD reads black-hole while small ops keep working — which is
-# exactly the model-loading path. Confirm the NIC does jumbo frames.
+# exactly the model-loading path.
+#
+# UNVERIFIED: jumbo support on this r8169/RTL8126 has not been proven end to
+# end. It could not be tested from the workstation, which sits on another subnet
+# behind a 1500-MTU hop. After the first apply, check that the link comes up at
+# 9000 and that Ceph reads work — if not, the fallback is dropping the whole
+# 10.10.40.0/24 segment to 1500, not just this node.
 address: 10.10.40.25/24
 mtu: 9000
 
@@ -34,8 +44,8 @@ mtu: 9000
 # node the pod is pinned here anyway, so ceph-block's "survives reschedule"
 # argument does not buy much.
 #
-# TODO(hardware): confirm this matches only the non-OS NVMe —
-# `talosctl -n <maintenance-ip> get disks` and narrow to an exact model if the
-# box has more than one spare drive.
+# Resolves to nvme1n1 (Lexar NM790 4TB, NLW513W101323P2202) — the drive that
+# is not the OS disk. Both NVMes are the same model, so !system_disk is what
+# disambiguates them; do not switch this to a model match.
 localHostpathMatch: '!system_disk && disk.transport == "nvme"'
-localHostpathMinSize: 1TB
+localHostpathMinSize: 3TB
