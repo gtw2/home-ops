@@ -1,51 +1,14 @@
 ---
-# Framework Desktop (AMD Ryzen AI Max+ 395 "Strix Halo", gfx1151,
-# 128GB unified LPDDR5x ~256 GB/s). Dedicated local-LLM serving node.
-# See docs/llm-gpu-tier-plan.md.
-#
-# ⚠️  THREE VALUES BELOW MUST COME OFF THE REAL HARDWARE before applying.
-#     See docs/talos.md → "Adding the AI worker".
 hostname: framework
 profile: amd-ai
 controlPlane: false
 
-# nvme0n1. The box has two identical Lexar NM790 4TB drives, so an exact
-# model match would be ambiguous — this one is pinned by serial as the OS disk,
-# and the other falls out of the `!system_disk` selector below.
 installDiskSerial: NLW513W101388P2202
 
-# Onboard Realtek RTL8126 5GbE (r8169, bus 0000:bf:00.0). Matched by MAC
-# rather than PCI path: adding an OCuLink eGPU later renames NICs and shifts
-# bus paths (see docs/llm-gpu-tier-plan.md), which a MAC match survives.
-#
-# NOTE: the link negotiated at 1000 Mbit, not 5000 — the NIC is 5GbE, so that
-# is the switch port or cable, not the hardware. Worth chasing: 5x on cold
-# model loads for the price of a cable.
 primaryNic: "9c:bf:0d:01:01:ee"
 
-# Single onboard NIC — no out-of-band bond1/VLAN 5 path, so no mgmtAddress.
-#
-# MTU 9000 is NOT optional: Ceph's public_network and cluster_network are both
-# 10.10.40.0/24 and every other node runs bond0 at 9000. A 1500-MTU host on that
-# same L2 segment has no router in the path to fragment or signal "packet too
-# big", so large OSD reads black-hole while small ops keep working — which is
-# exactly the model-loading path.
-#
-# UNVERIFIED: jumbo support on this r8169/RTL8126 has not been proven end to
-# end. It could not be tested from the workstation, which sits on another subnet
-# behind a 1500-MTU hop. After the first apply, check that the link comes up at
-# 9000 and that Ceph reads work — if not, the fallback is dropping the whole
-# 10.10.40.0/24 segment to 1500, not just this node.
 address: 10.10.40.25/24
 mtu: 9000
 
-# Second NVMe, for model weights. Keeping GGUFs local turns a multi-minute
-# network read on every cold start into a local one; on a tainted single-GPU
-# node the pod is pinned here anyway, so ceph-block's "survives reschedule"
-# argument does not buy much.
-#
-# Resolves to nvme1n1 (Lexar NM790 4TB, NLW513W101323P2202) — the drive that
-# is not the OS disk. Both NVMes are the same model, so !system_disk is what
-# disambiguates them; do not switch this to a model match.
 localHostpathMatch: '!system_disk && disk.transport == "nvme"'
 localHostpathMinSize: 3TB
