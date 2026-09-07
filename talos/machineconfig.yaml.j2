@@ -116,12 +116,16 @@ machine:
       forwardKubeDNSToHost: true
   nodeLabels:
 {% if profile == "amd-ai" %}
-    # Following the reference Strix Halo node (joryirving/home-ops skirk).
-    # `gpus: amd` is the workload selector; the role label marks the node as a
-    # ROCm target. docs/llm-gpu-tier-plan.md's June call of "Vulkan, no ROCm"
-    # is superseded — see that doc's Status note.
-    topology.kubernetes.io/gpus: amd
-    node-role.kubernetes.io/rocm-worker: "true"
+    # Both labels MUST sit under node.kubernetes.io/. The NodeRestriction
+    # admission plugin (enabled on this apiserver) only lets a kubelet self-set
+    # labels from an allowlist: node-role.kubernetes.io/* is blocked outright,
+    # and topology.kubernetes.io/ permits only region and zone. The reference
+    # node's `topology.kubernetes.io/gpus` + `node-role.kubernetes.io/rocm-worker`
+    # are both rejected here — Talos retries the patch forever and the labels
+    # never land. node.kubernetes.io/* is an allowed prefix, which is why the
+    # Intel nodes' node.kubernetes.io/gpu works.
+    node.kubernetes.io/gpu: "true"
+    node.kubernetes.io/gpu-vendor: amd
 {% else %}
     node.kubernetes.io/gpu: "true"
 {% endif %}

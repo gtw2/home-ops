@@ -130,9 +130,23 @@ Notes on the profile:
   that L2 segment has no router in the path to fragment or signal "packet too
   big", so large OSD reads black-hole while small ops keep working. Confirm the
   onboard NIC does jumbo frames.
-- **124GiB of the 128GB is reserved for the iGPU** (`amdgpu.gttsize=126976`,
-  `ttm.pages_limit=32505856`, 96GiB page pool). Values taken from a working
-  Strix Halo Talos node rather than derived.
+- **Node labels must sit under `node.kubernetes.io/`.** The NodeRestriction
+  admission plugin only lets a kubelet self-set labels from an allowlist:
+  `node-role.kubernetes.io/*` is blocked outright and `topology.kubernetes.io/`
+  permits only `region`/`zone`. Labels outside that allowlist fail silently from
+  the cluster's point of view — Talos retries the patch every ~15s forever and
+  `kubectl get node` simply never shows them. `node.kubernetes.io/*` is allowed,
+  which is why the Intel nodes' `node.kubernetes.io/gpu` works.
+- **Memory split is a BIOS decision, not a kernel-arg one.** As shipped, the
+  BIOS carves out 96GiB as dedicated VRAM, leaving the OS ~31GiB — so
+  `MemTotal` reads 31GiB, not 128. The `ttm.pages_limit=32505856` (124GiB) and
+  `ttm.page_pool_size` args size *GTT*, which borrows from system RAM, so they
+  cannot reach their nominal values with only 31GiB present. The alternative is
+  setting BIOS UMA to its minimum and letting GTT allocate dynamically from a
+  ~127GiB system pool. The current split works and gives the GPU plenty; it is
+  just less flexible, and 31GiB is tight enough to make the `OOMConfig` above
+  matter more, not less. `amdgpu.gttsize` also now warns as deprecated in favour
+  of `ttm.pages_limit`.
 - **The `OOMConfig` is not optional.** amdgpu GTT pins system RAM the kernel
   OOM-killer cannot reclaim, so a runaway GPU pod deadlocks the node while Talos
   stays healthy — which means the hardware watchdog never fires. The userspace
