@@ -1,7 +1,11 @@
 ---
 hostname: talos-1
+profile: intel
 controlPlane: true
 installDiskSerial: S7M3NL0X923685W
 # bond0 = 10G LACP data path; bond1 = 2.5G out-of-band management (VLAN 5)
 address: 10.10.40.21/24
 mgmtAddress: 10.10.5.21/24
+mtu: 9000
+localHostpathDiskModel: CT1000P3SSD8
+localHostpathMinSize: 1TB

@@ -89,6 +89,55 @@ Note both tasks pass secrets via process substitution as an *argument*
 (`--with-secrets <(sops -d ...)`). The `< <(...)` stdin-redirect form hangs
 under task's shell interpreter.
 
+## Hardware profiles
+
+Nodes select a `profile` in `nodes/<node>.yaml`, which picks the Image Factory
+schematic and the network topology:
+
+| profile  | hardware                        | network                                    |
+| -------- | ------------------------------- | ------------------------------------------ |
+| `intel`  | Intel NUC-class, dual NIC       | 10G LACP `bond0` + 2.5G mgmt `bond1` (VLAN 5), VLANs 20/90, MTU 9000 |
+| `amd-ai` | Framework Desktop, Strix Halo   | single onboard NIC, one-link `bond0`, MTU 1500 |
+
+Kernel cmdline args live in the **schematic**, not machineconfig — Talos 1.14's
+multi-document config covers sysctl/sysfs/modules only. Changing a kernel arg
+mints a new schematic id and needs a Talos upgrade to take effect.
+
+## Adding the AI worker
+
+`talos-5` is a Framework Desktop (Ryzen AI Max, 128GB unified memory) dedicated
+to AI workloads. Three values in `nodes/talos-5.yaml` must come off the real
+hardware before it can be applied — boot it in maintenance mode and read them:
+
+```sh
+talosctl -n <maintenance-ip> get disks   # -> installDiskSerial
+talosctl -n <maintenance-ip> get links   # -> primaryNic (permanentAddr of the onboard NIC)
+```
+
+The third is `address`, currently scaffolded as `10.10.40.25/24`.
+
+Notes on the profile:
+
+- **Dedicated by taint.** `llm-workload=true:NoSchedule`, so only tolerating
+  pods land here and the GTT-pinned memory is not contended. Labels are
+  `topology.kubernetes.io/gpus: amd` and
+  `node-role.kubernetes.io/rocm-worker: "true"`.
+- **124GiB of the 128GB is reserved for the iGPU** (`amdgpu.gttsize=126976`,
+  `ttm.pages_limit=32505856`, 96GiB page pool). Values taken from a working
+  Strix Halo Talos node rather than derived.
+- **The `OOMConfig` is not optional.** amdgpu GTT pins system RAM the kernel
+  OOM-killer cannot reclaim, so a runaway GPU pod deadlocks the node while Talos
+  stays healthy — which means the hardware watchdog never fires. The userspace
+  OOM manager kills the heaviest user pod under sustained memory PSI pressure
+  instead.
+- **Storage consumer only.** No Ceph OSD: the CephCluster `devicePathFilter`
+  targets Samsung MZQL2 drives. No `local-hostpath` volume either — set
+  `localHostpathDiskModel` if a scratch volume for model weights is wanted.
+
+Still to do at the Kubernetes layer, separate from machineconfig: the AMD GPU
+device plugin (or GPU Operator with driver installation disabled), which
+advertises `amd.com/gpu` and exposes `/dev/dri` + `/dev/kfd` to pods.
+
 ## Open items
 
 - **talhelper bug.** `KubeEtcdEncryptionConfig` should preserve Talos's `key2`

@@ -1,0 +1,29 @@
+---
+# Framework Desktop (AMD Ryzen AI Max / Strix Halo, 128GB unified memory).
+# Dedicated AI worker — tainted llm-workload=true:NoSchedule.
+#
+# ⚠️  THREE VALUES BELOW MUST BE FILLED IN FROM THE ACTUAL HARDWARE before this
+#     node can be applied. See docs/talos.md → "Adding the AI worker".
+hostname: talos-5
+profile: amd-ai
+controlPlane: false
+
+# TODO(hardware): `talosctl -n <ip> get disks` in maintenance mode.
+installDiskSerial: CHANGEME-INSTALL-DISK-SERIAL
+
+# TODO(hardware): MAC of the onboard NIC — `talosctl -n <ip> get links`.
+# Matched on permanent_addr rather than a PCI path: unlike the Intel nodes this
+# box has a single onboard NIC, and the MAC is the stabler identifier.
+primaryNic: "00:00:00:00:00:00" # CHANGEME
+
+# Single 5GbE onboard NIC — no out-of-band bond1/VLAN 5 path, so no
+# mgmtAddress. Standard MTU, not the 9000 the 10G LACP fabric uses.
+address: 10.10.40.25/24
+mtu: 1500
+
+# No local-hostpath volume: the Ceph OSD devicePathFilter targets Samsung
+# MZQL2 drives and this node is a storage consumer only. Set
+# localHostpathDiskModel + localHostpathMinSize if a scratch volume is wanted
+# for model weights.
+localHostpathDiskModel: ""
+localHostpathMinSize: ""
