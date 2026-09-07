@@ -1,7 +1,19 @@
 # Local-LLM GPU Tier — Implementation Plan
 
 > Status: **planned / not implemented**. Reference design for when the hardware is
-> reorganized. Created 2026-06. Engine/architecture choices validated against the
+> reorganized. Created 2026-06.
+>
+> ⚠️ **2026-09: the AMD GPU access decision below is superseded.** "Vulkan +
+> `/dev/dri`, no ROCm operator" rested on ROCm-on-`gfx1151` being nightly-only
+> until "ROCm 8 (~mid-2026)" — that date has passed. Current llama.cpp
+> benchmarks on Strix Halo make it a two-phase tradeoff rather than a clear win:
+> ROCm ~21% faster prefill, Vulkan ~25% faster generation on a 30B, with the
+> generation gap nearly closing at 122B. Much of the "Vulkan wins" folklore also
+> measures untuned HIP — hipBLASLt routing moves 7B prefill from ~349 to ~986
+> tok/s. The Talos node config (`talos/nodes/framework.yaml`) is backend-neutral:
+> the `amdgpu` extension provides both `/dev/dri` and `/dev/kfd`. Follow the
+> reference implementation and measure both on the actual models before
+> committing in phase 3. Engine/architecture choices validated against the
 > reference implementation at <https://github.com/joryirving/home-ops>.
 
 ## Goal

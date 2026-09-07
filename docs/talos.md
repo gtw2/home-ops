@@ -119,9 +119,12 @@ The third is `address`, currently scaffolded as `10.10.40.25/24`.
 Notes on the profile:
 
 - **Dedicated by taint.** `llm-workload=true:NoSchedule`, so only tolerating
-  pods land here and the GTT-pinned memory is not contended. The only label is
-  `topology.kubernetes.io/gpus: amd` — the plan doc locks in Vulkan + `/dev/dri`
-  with no ROCm operator, so a `rocm-worker` role label would be misleading.
+  pods land here and the GTT-pinned memory is not contended. Labels are
+  `topology.kubernetes.io/gpus: amd` (the workload selector) and
+  `node-role.kubernetes.io/rocm-worker: "true"`, matching the reference Strix
+  Halo node. The backend choice lives in the llama.cpp container image, not
+  here — the `amdgpu` extension provides both `/dev/dri` and `/dev/kfd`, so this
+  node config supports Vulkan or ROCm without change.
 - **MTU 9000, not 1500.** Ceph's `public_network` and `cluster_network` are both
   `10.10.40.0/24` and every other node runs `bond0` at 9000. A 1500-MTU host on
   that L2 segment has no router in the path to fragment or signal "packet too

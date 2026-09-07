@@ -116,10 +116,12 @@ machine:
       forwardKubeDNSToHost: true
   nodeLabels:
 {% if profile == "amd-ai" %}
-    # Vulkan + /dev/dri, no ROCm operator (see docs/llm-gpu-tier-plan.md), so
-    # deliberately no rocm-worker role label. This is the selector the llm
-    # workloads actually key on.
+    # Following the reference Strix Halo node (joryirving/home-ops skirk).
+    # `gpus: amd` is the workload selector; the role label marks the node as a
+    # ROCm target. docs/llm-gpu-tier-plan.md's June call of "Vulkan, no ROCm"
+    # is superseded — see that doc's Status note.
     topology.kubernetes.io/gpus: amd
+    node-role.kubernetes.io/rocm-worker: "true"
 {% else %}
     node.kubernetes.io/gpu: "true"
 {% endif %}
