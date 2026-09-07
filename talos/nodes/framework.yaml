@@ -1,0 +1,41 @@
+---
+# Framework Desktop (AMD Ryzen AI Max+ 395 "Strix Halo", gfx1151,
+# 128GB unified LPDDR5x ~256 GB/s). Dedicated local-LLM serving node.
+# See docs/llm-gpu-tier-plan.md.
+#
+# ⚠️  THREE VALUES BELOW MUST COME OFF THE REAL HARDWARE before applying.
+#     See docs/talos.md → "Adding the AI worker".
+hostname: framework
+profile: amd-ai
+controlPlane: false
+
+# TODO(hardware): `talosctl -n <maintenance-ip> get disks`
+installDiskSerial: CHANGEME-INSTALL-DISK-SERIAL
+
+# TODO(hardware): `talosctl -n <maintenance-ip> get links` -> permanentAddr of
+# the onboard NIC. Matched by MAC rather than PCI path: this box has a single
+# onboard NIC, so the MAC is the stabler identifier. (Also note the plan doc's
+# warning that adding an OCuLink eGPU later renames NICs — a MAC match survives
+# that, a bus_path match would not.)
+primaryNic: "00:00:00:00:00:00" # CHANGEME
+
+# Single onboard NIC — no out-of-band bond1/VLAN 5 path, so no mgmtAddress.
+#
+# MTU 9000 is NOT optional: Ceph's public_network and cluster_network are both
+# 10.10.40.0/24 and every other node runs bond0 at 9000. A 1500-MTU host on that
+# same L2 segment has no router in the path to fragment or signal "packet too
+# big", so large OSD reads black-hole while small ops keep working — which is
+# exactly the model-loading path. Confirm the NIC does jumbo frames.
+address: 10.10.40.25/24
+mtu: 9000
+
+# Second NVMe, for model weights. Keeping GGUFs local turns a multi-minute
+# network read on every cold start into a local one; on a tainted single-GPU
+# node the pod is pinned here anyway, so ceph-block's "survives reschedule"
+# argument does not buy much.
+#
+# TODO(hardware): confirm this matches only the non-OS NVMe —
+# `talosctl -n <maintenance-ip> get disks` and narrow to an exact model if the
+# box has more than one spare drive.
+localHostpathMatch: '!system_disk && disk.transport == "nvme"'
+localHostpathMinSize: 1TB

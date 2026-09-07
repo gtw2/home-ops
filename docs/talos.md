@@ -105,8 +105,8 @@ mints a new schematic id and needs a Talos upgrade to take effect.
 
 ## Adding the AI worker
 
-`talos-5` is a Framework Desktop (Ryzen AI Max, 128GB unified memory) dedicated
-to AI workloads. Three values in `nodes/talos-5.yaml` must come off the real
+`framework` is a Framework Desktop (Ryzen AI Max, 128GB unified memory) dedicated
+to AI workloads. Three values in `nodes/framework.yaml` must come off the real
 hardware before it can be applied — boot it in maintenance mode and read them:
 
 ```sh
@@ -119,9 +119,14 @@ The third is `address`, currently scaffolded as `10.10.40.25/24`.
 Notes on the profile:
 
 - **Dedicated by taint.** `llm-workload=true:NoSchedule`, so only tolerating
-  pods land here and the GTT-pinned memory is not contended. Labels are
-  `topology.kubernetes.io/gpus: amd` and
-  `node-role.kubernetes.io/rocm-worker: "true"`.
+  pods land here and the GTT-pinned memory is not contended. The only label is
+  `topology.kubernetes.io/gpus: amd` — the plan doc locks in Vulkan + `/dev/dri`
+  with no ROCm operator, so a `rocm-worker` role label would be misleading.
+- **MTU 9000, not 1500.** Ceph's `public_network` and `cluster_network` are both
+  `10.10.40.0/24` and every other node runs `bond0` at 9000. A 1500-MTU host on
+  that L2 segment has no router in the path to fragment or signal "packet too
+  big", so large OSD reads black-hole while small ops keep working. Confirm the
+  onboard NIC does jumbo frames.
 - **124GiB of the 128GB is reserved for the iGPU** (`amdgpu.gttsize=126976`,
   `ttm.pages_limit=32505856`, 96GiB page pool). Values taken from a working
   Strix Halo Talos node rather than derived.
@@ -130,9 +135,16 @@ Notes on the profile:
   stays healthy — which means the hardware watchdog never fires. The userspace
   OOM manager kills the heaviest user pod under sustained memory PSI pressure
   instead.
-- **Storage consumer only.** No Ceph OSD: the CephCluster `devicePathFilter`
-  targets Samsung MZQL2 drives. No `local-hostpath` volume either — set
-  `localHostpathDiskModel` if a scratch volume for model weights is wanted.
+- **Storage consumer only, but model weights are local.** No Ceph OSD — the
+  CephCluster `devicePathFilter` targets Samsung MZQL2 drives. Model weights do
+  live on a local `local-hostpath` volume on the second NVMe rather than the
+  `ceph-block` PVC the plan doc originally specified: a cold GGUF load off Ceph
+  is a multi-minute network read (~5.7 min for a 40GB model on 1GbE, ~70s on
+  5GbE), and on a tainted single-GPU node the pod is pinned here anyway, so
+  ceph-block's "survives reschedule" argument buys little.
+- **`localHostpathMatch` is a full CEL expression**, single-quoted on render. An
+  expression beginning with `!` is a YAML *tag* if emitted bare — talosctl
+  accepts it, other parsers reject it, and they do not agree on the value.
 
 Still to do at the Kubernetes layer, separate from machineconfig: the AMD GPU
 device plugin (or GPU Operator with driver installation disabled), which

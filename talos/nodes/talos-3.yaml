@@ -7,5 +7,5 @@ installDiskSerial: S6S1NS0T700972J
 address: 10.10.40.23/24
 mgmtAddress: 10.10.5.23/24
 mtu: 9000
-localHostpathDiskModel: CT1000P3SSD8
+localHostpathMatch: disk.model == "CT1000P3SSD8" && !system_disk
 localHostpathMinSize: 1TB

@@ -116,8 +116,10 @@ machine:
       forwardKubeDNSToHost: true
   nodeLabels:
 {% if profile == "amd-ai" %}
+    # Vulkan + /dev/dri, no ROCm operator (see docs/llm-gpu-tier-plan.md), so
+    # deliberately no rocm-worker role label. This is the selector the llm
+    # workloads actually key on.
     topology.kubernetes.io/gpus: amd
-    node-role.kubernetes.io/rocm-worker: "true"
 {% else %}
     node.kubernetes.io/gpu: "true"
 {% endif %}
@@ -214,16 +216,22 @@ kind: HostnameConfig
 # Talos serialises the unset enum back out as `auto: false`, which it will not
 # accept as input.
 hostname: {{ hostname }}
-{% if localHostpathDiskModel %}
 ---
+# Backs the openebs-hostpath storage class via the kubelet extraMount above.
+# Selector is a full CEL expression so nodes can match on model, transport or
+# size — the Intel nodes pin an exact model, the AI node just takes the
+# non-system NVMe.
 apiVersion: v1alpha1
 kind: UserVolumeConfig
 name: local-hostpath
 provisioning:
   diskSelector:
-    match: disk.model == "{{ localHostpathDiskModel }}" && !system_disk
+    # Single-quoted: a CEL expression starting with `!` is a YAML tag if left
+    # bare, which parsers disagree about — talosctl accepts it, PyYAML rejects
+    # it. The expressions use double quotes internally, so single quotes here
+    # are safe; keep it that way.
+    match: '{{ localHostpathMatch }}'
   minSize: {{ localHostpathMinSize }}
-{% endif %}
 {% if profile == "amd-ai" %}
 ---
 # Single onboard NIC. Bonded with one link so a second can be added later
