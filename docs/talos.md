@@ -89,6 +89,84 @@ Note both tasks pass secrets via process substitution as an *argument*
 (`--with-secrets <(sops -d ...)`). The `< <(...)` stdin-redirect form hangs
 under task's shell interpreter.
 
+## Hardware profiles
+
+Nodes select a `profile` in `nodes/<node>.yaml`, which picks the Image Factory
+schematic and the network topology:
+
+| profile  | hardware                        | network                                    |
+| -------- | ------------------------------- | ------------------------------------------ |
+| `intel`  | Intel NUC-class, dual NIC       | 10G LACP `bond0` + 2.5G mgmt `bond1` (VLAN 5), VLANs 20/90, MTU 9000 |
+| `amd-ai` | Framework Desktop, Strix Halo   | single onboard NIC, one-link `bond0`, MTU 1500 |
+
+Kernel cmdline args live in the **schematic**, not machineconfig — Talos 1.14's
+multi-document config covers sysctl/sysfs/modules only. Changing a kernel arg
+mints a new schematic id and needs a Talos upgrade to take effect.
+
+## Adding the AI worker
+
+`framework` is a Framework Desktop (Ryzen AI Max, 128GB unified memory) dedicated
+to AI workloads. Three values in `nodes/framework.yaml` must come off the real
+hardware before it can be applied — boot it in maintenance mode and read them:
+
+```sh
+talosctl -n <maintenance-ip> get disks   # -> installDiskSerial
+talosctl -n <maintenance-ip> get links   # -> primaryNic (permanentAddr of the onboard NIC)
+```
+
+The third is `address`, currently scaffolded as `10.10.40.25/24`.
+
+Notes on the profile:
+
+- **Dedicated by taint.** `llm-workload=true:NoSchedule`, so only tolerating
+  pods land here and the GTT-pinned memory is not contended. Labels are
+  `topology.kubernetes.io/gpus: amd` (the workload selector) and
+  `node-role.kubernetes.io/rocm-worker: "true"`, matching the reference Strix
+  Halo node. The backend choice lives in the llama.cpp container image, not
+  here — the `amdgpu` extension provides both `/dev/dri` and `/dev/kfd`, so this
+  node config supports Vulkan or ROCm without change.
+- **MTU 9000, not 1500.** Ceph's `public_network` and `cluster_network` are both
+  `10.10.40.0/24` and every other node runs `bond0` at 9000. A 1500-MTU host on
+  that L2 segment has no router in the path to fragment or signal "packet too
+  big", so large OSD reads black-hole while small ops keep working. Confirm the
+  onboard NIC does jumbo frames.
+- **Node labels must sit under `node.kubernetes.io/`.** The NodeRestriction
+  admission plugin only lets a kubelet self-set labels from an allowlist:
+  `node-role.kubernetes.io/*` is blocked outright and `topology.kubernetes.io/`
+  permits only `region`/`zone`. Labels outside that allowlist fail silently from
+  the cluster's point of view — Talos retries the patch every ~15s forever and
+  `kubectl get node` simply never shows them. `node.kubernetes.io/*` is allowed,
+  which is why the Intel nodes' `node.kubernetes.io/gpu` works.
+- **Memory split is a BIOS decision, not a kernel-arg one.** As shipped, the
+  BIOS carves out 96GiB as dedicated VRAM, leaving the OS ~31GiB — so
+  `MemTotal` reads 31GiB, not 128. The `ttm.pages_limit=32505856` (124GiB) and
+  `ttm.page_pool_size` args size *GTT*, which borrows from system RAM, so they
+  cannot reach their nominal values with only 31GiB present. The alternative is
+  setting BIOS UMA to its minimum and letting GTT allocate dynamically from a
+  ~127GiB system pool. The current split works and gives the GPU plenty; it is
+  just less flexible, and 31GiB is tight enough to make the `OOMConfig` above
+  matter more, not less. `amdgpu.gttsize` also now warns as deprecated in favour
+  of `ttm.pages_limit`.
+- **The `OOMConfig` is not optional.** amdgpu GTT pins system RAM the kernel
+  OOM-killer cannot reclaim, so a runaway GPU pod deadlocks the node while Talos
+  stays healthy — which means the hardware watchdog never fires. The userspace
+  OOM manager kills the heaviest user pod under sustained memory PSI pressure
+  instead.
+- **Storage consumer only, but model weights are local.** No Ceph OSD — the
+  CephCluster `devicePathFilter` targets Samsung MZQL2 drives. Model weights do
+  live on a local `local-hostpath` volume on the second NVMe rather than the
+  `ceph-block` PVC the plan doc originally specified: a cold GGUF load off Ceph
+  is a multi-minute network read (~5.7 min for a 40GB model on 1GbE, ~70s on
+  5GbE), and on a tainted single-GPU node the pod is pinned here anyway, so
+  ceph-block's "survives reschedule" argument buys little.
+- **`localHostpathMatch` is a full CEL expression**, single-quoted on render. An
+  expression beginning with `!` is a YAML *tag* if emitted bare — talosctl
+  accepts it, other parsers reject it, and they do not agree on the value.
+
+Still to do at the Kubernetes layer, separate from machineconfig: the AMD GPU
+device plugin (or GPU Operator with driver installation disabled), which
+advertises `amd.com/gpu` and exposes `/dev/dri` + `/dev/kfd` to pods.
+
 ## Open items
 
 - **talhelper bug.** `KubeEtcdEncryptionConfig` should preserve Talos's `key2`

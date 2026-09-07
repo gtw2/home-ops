@@ -12,9 +12,17 @@ talosVersion: v1.14.0
 # renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
 kubernetesVersion: v1.37.0
 
-# Image Factory schematic (i915, intel-ucode, mei, nfsrahead, thunderbolt +
-# kernel args). Regenerate at factory.talos.dev if extensions change.
-schematic: f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
+# Image Factory schematics, selected per node by `profile` in nodes/<node>.yaml.
+# Kernel cmdline args live in the schematic, NOT in machineconfig — changing one
+# mints a new id and needs a Talos upgrade to take effect.
+schematics:
+  # Intel NUC-class nodes: i915, intel-ucode, mei, nfsrahead, thunderbolt.
+  intel: f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
+  # AMD Strix Halo (Framework Desktop): amdgpu, amd-ucode, nfsrahead.
+  # Kernel args reserve 124GiB of the 128GB unified memory for the iGPU
+  # (amdgpu.gttsize=126976, ttm.pages_limit=32505856) with a 96GiB page pool,
+  # plus amd_iommu=off / amd_pstate=active / pcie_aspm=off.
+  amd-ai: 1e65defaa48f525a0e46bd236d924a08d246044464f7954fdf5e4a6a45484f11
 
 dnsDomain: cluster.local
 podSubnets: ["10.42.0.0/16"]

@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: amd-gpu-dra-driver
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: k8s-gpu-dra-driver
+      version: v1.0.1
+      sourceRef:
+        kind: HelmRepository
+        name: rocm
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    cdi:
+      # Must match containerd's cdi_spec_dirs from talos/machineconfig.yaml.j2
+      # (/var/cdi/static, /var/cdi/dynamic). The chart defaults to /var/run/cdi
+      # and the reference implementation uses /run/cdi — either would leave
+      # containerd unable to find the generated CDI specs, so the GPU would
+      # never be injected into the pod.
+      dynamicPath: /var/cdi/dynamic
+    kubeletPlugin:
+      # Only the Framework Desktop has an AMD GPU. gpu-vendor rather than the
+      # reference's topology.kubernetes.io/gpus: NodeRestriction blocks a
+      # kubelet from self-setting labels outside its allowlist, so that label
+      # cannot exist on this cluster — see docs/talos.md.
+      nodeSelector:
+        node.kubernetes.io/gpu-vendor: amd
+      # The node is tainted so only LLM workloads land on it; the driver has to
+      # tolerate that to run there at all.
+      tolerations:
+        - key: llm-workload
+          operator: Exists
+          effect: NoSchedule

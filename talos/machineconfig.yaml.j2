@@ -29,6 +29,18 @@ machine:
         options: [bind, rshared, rw]
     extraConfig:
       serializeImagePulls: false
+{% if profile == "amd-ai" %}
+      # Dedicate the node: only pods tolerating llm-workload land here, so the
+      # GTT-pinned GPU memory is not competing with general workloads.
+      registerWithTaints:
+        - key: llm-workload
+          value: "true"
+          effect: NoSchedule
+{% endif %}
+{% if profile == "amd-ai" %}
+    extraArgs:
+      max-pods: "50"
+{% endif %}
     defaultRuntimeSeccompProfileEnabled: true
     nodeIP:
       validSubnets:
@@ -41,7 +53,7 @@ machine:
   install:
     diskSelector:
       serial: {{ installDiskSerial }}
-    image: factory.talos.dev/installer/{{ schematic }}:{{ talosVersion }}
+    image: factory.talos.dev/installer/{{ schematics[profile] }}:{{ talosVersion }}
     wipe: false
     grubUseUKICmdline: true
   files:
@@ -103,7 +115,20 @@ machine:
       enabled: true
       forwardKubeDNSToHost: true
   nodeLabels:
+{% if profile == "amd-ai" %}
+    # Both labels MUST sit under node.kubernetes.io/. The NodeRestriction
+    # admission plugin (enabled on this apiserver) only lets a kubelet self-set
+    # labels from an allowlist: node-role.kubernetes.io/* is blocked outright,
+    # and topology.kubernetes.io/ permits only region and zone. The reference
+    # node's `topology.kubernetes.io/gpus` + `node-role.kubernetes.io/rocm-worker`
+    # are both rejected here — Talos retries the patch forever and the labels
+    # never land. node.kubernetes.io/* is an allowed prefix, which is why the
+    # Intel nodes' node.kubernetes.io/gpu works.
     node.kubernetes.io/gpu: "true"
+    node.kubernetes.io/gpu-vendor: amd
+{% else %}
+    node.kubernetes.io/gpu: "true"
+{% endif %}
 cluster:
   id: {{ cluster.id }}
   secret: {{ cluster.secret }}
@@ -198,13 +223,43 @@ kind: HostnameConfig
 # accept as input.
 hostname: {{ hostname }}
 ---
+# Backs the openebs-hostpath storage class via the kubelet extraMount above.
+# Selector is a full CEL expression so nodes can match on model, transport or
+# size — the Intel nodes pin an exact model, the AI node just takes the
+# non-system NVMe.
 apiVersion: v1alpha1
 kind: UserVolumeConfig
 name: local-hostpath
 provisioning:
   diskSelector:
-    match: disk.model == "CT1000P3SSD8" && !system_disk
-  minSize: 1TB
+    # Single-quoted: a CEL expression starting with `!` is a YAML tag if left
+    # bare, which parsers disagree about — talosctl accepts it, PyYAML rejects
+    # it. The expressions use double quotes internally, so single quotes here
+    # are safe; keep it that way.
+    match: '{{ localHostpathMatch }}'
+  minSize: {{ localHostpathMinSize }}
+{% if profile == "amd-ai" %}
+---
+# Single onboard NIC. Bonded with one link so a second can be added later
+# without renumbering addresses or rewriting this block.
+apiVersion: v1alpha1
+kind: LinkAliasConfig
+name: bond0-m0
+selector:
+  match: mac(link.permanent_addr) == "{{ primaryNic }}"
+---
+apiVersion: v1alpha1
+kind: BondConfig
+name: bond0
+links: [bond0-m0]
+bondMode: active-backup
+miimon: 100
+mtu: {{ mtu }}
+addresses:
+  - address: {{ address }}
+routes:
+  - gateway: {{ gateway }}
+{% else %}
 {% for alias, bus, driver in [
      ("bond1-m0", "0000:57:00.0", "igc"),
      ("bond1-m1", "0000:5a:00.0", "igc"),
@@ -238,7 +293,7 @@ bondMode: 802.3ad
 miimon: 1000
 xmitHashPolicy: layer3+4
 lacpRate: fast
-mtu: 9000
+mtu: {{ mtu }}
 addresses:
   - address: {{ address }}
 routes:
@@ -257,5 +312,31 @@ kind: VLANConfig
 name: bond0.{{ vlan }}
 vlanID: {{ vlan }}
 parent: bond0
-mtu: 9000
+mtu: {{ mtu }}
 {% endfor %}
+{% endif %}
+{% if profile == "amd-ai" %}
+---
+# Hardware watchdog: if the node wedges hard, reset it rather than leaving a
+# dead worker in the cluster.
+apiVersion: v1alpha1
+kind: WatchdogTimerConfig
+device: /dev/watchdog0
+timeout: 5m
+---
+# amdgpu GTT pins system RAM that the kernel OOM-killer cannot reclaim, so a
+# runaway GPU pod can deadlock the node while Talos itself stays healthy —
+# meaning the watchdog above never fires. This userspace OOM manager kills the
+# heaviest user pod under sustained memory PSI pressure instead.
+#
+# The ranking deliberately drops the default `memory_max.hasValue()` guard:
+# GPU pods here all set memory limits and would otherwise score 0.0, leaving no
+# victim. System and Podruntime stay at 0.0 so kubelet and containerd are never
+# selected. Raise the trigger threshold if it fires under normal load, but keep
+# margin — unreclaimable GTT means too high risks the deadlock it exists to stop.
+apiVersion: v1alpha1
+kind: OOMConfig
+triggerExpression: 'memory_full_avg10 > 20.0 && d_memory_full_avg10 > 0.0 && time_since_trigger > duration("500ms")'
+cgroupRankingExpression: "{Besteffort: 1.0, Burstable: 0.5, Guaranteed: 0.0, Podruntime: 0.0, System: 0.0}[class] * double(memory_current.orValue(0u))"
+sampleInterval: 100ms
+{% endif %}

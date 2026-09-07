@@ -1,0 +1,13 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: rocm
+  namespace: flux-system
+spec:
+  interval: 1h
+  # Upstream ROCm chart repo. The reference implementation pulls this through a
+  # personal OCI mirror; sourcing it directly avoids depending on someone else's
+  # registry for a cluster-critical driver.
+  url: https://rocm.github.io/k8s-gpu-dra-driver
