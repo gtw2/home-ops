@@ -1,0 +1,406 @@
+---
+# Ten things that actually went wrong in this cluster. Each one was diagnosed by
+# hand, so the answer key is what the fix turned out to be - not what a plausible
+# answer looks like. Scores are only meaningful against that bar.
+#
+# Adding a task: prefer an incident you personally debugged, write the checks
+# from the fix that worked, and give `regex_any` several phrasings so the task
+# scores understanding rather than vocabulary. See README.md.
+
+tasks:
+
+  # ------------------------------------------------------------------ diagnosis
+
+  - id: csi-node-tolerations
+    category: diagnosis
+    notes: >-
+      Hit when the Framework joined. No PVC of any kind could mount on it.
+      Rook 1.20 moved CSI config into the ceph-csi-operator subchart, so the
+      old csi.pluginTolerations key silently does nothing.
+    prompt: |
+      A new node `framework` joined the cluster carrying the taint
+      `llm-workload=true:NoSchedule`. Pods that tolerate the taint schedule onto
+      it fine, but any pod that mounts a PVC is stuck:
+
+        Events:
+          Warning  FailedMount  kubelet
+            MountVolume.MountDevice failed for volume "pvc-8f2c...":
+            driver name rook-ceph.cephfs.csi.ceph.com not found in the list of
+            registered CSI drivers
+
+      Meanwhile:
+
+        $ kubectl -n rook-ceph get daemonset csi-cephfsplugin
+        NAME               DESIRED   CURRENT   READY   NODE SELECTOR   AGE
+        csi-cephfsplugin   4         4         4       <none>          61d
+
+      The cluster has 5 nodes. Ceph itself is HEALTH_OK and other nodes mount
+      volumes normally.
+
+      Explain the cause and give the minimal fix.
+    checks:
+      - kind: regex_any
+        label: names the taint/toleration mechanism
+        patterns: ['tolerat']
+      - kind: regex_any
+        label: identifies the CSI node plugin as what is missing
+        patterns: ['daemon ?set', 'node ?plugin', 'nodeplugin', 'csi-cephfsplugin']
+      - kind: regex_any
+        label: connects it to the llm-workload taint
+        patterns: ['llm-workload']
+      - kind: regex_any
+        # The insight is "the plugin is absent from that one node", however it
+        # is worded - via the DESIRED count, or by naming the node directly.
+        # An earlier version of this check only accepted the count and scored a
+        # correct diagnosis as a miss.
+        label: locates the missing plugin pod on that specific node
+        patterns: ['4 of 5', '4/5', 'only 4', 'fifth node', 'desired',
+                   'cannot schedule (on|onto)', "can.t schedule (on|onto)",
+                   'not (be )?sched', "isn.t sched", 'never sched',
+                   'not running on', 'no .{0,20}plugin pod', 'without the plugin']
+
+  - id: openwebui-persistentconfig
+    category: diagnosis
+    notes: >-
+      Env was correct in the pod for hours while the app used a value seeded
+      into Postgres on first launch. Nothing in the UI hints at this.
+    prompt: |
+      Open WebUI runs in Kubernetes with Postgres persistence. Its Deployment
+      sets these environment variables, confirmed present inside the running
+      container:
+
+        ENABLE_OPENAI_API=true
+        OPENAI_API_BASE_URL=http://litellm.llm.svc.cluster.local:4000/v1
+        ENABLE_OLLAMA_API=false
+
+      The pod restarted cleanly and is Ready. But the model list is empty, and
+      the application is still sending requests to an Ollama host configured
+      months ago. Querying the app's own settings at runtime shows
+      `openai.enable = False` and `ollama.base_urls = ["http://old-host:11434"]`.
+
+      Why is the environment being ignored, and what is the fix?
+    checks:
+      - kind: regex_any
+        label: names PersistentConfig
+        patterns: ['persistent ?config']
+      - kind: regex_any
+        label: explains env seeds storage once, then loses authority
+        patterns: ['first (launch|start|boot|run)', 'only.*seed', 'seed.*database',
+                   'stored in the (database|db)', 'saved to the (database|db)',
+                   'database takes precedence', 'db value (wins|takes)']
+      - kind: regex_any
+        label: gives a working fix
+        patterns: ['ENABLE_PERSISTENT_CONFIG', 'admin (panel|settings|ui)']
+
+  - id: gtt-vs-vram
+    category: hardware
+    notes: >-
+      Real numbers from the Framework Desktop. The kernel arg looks like it
+      grants 124GiB and does not.
+    prompt: |
+      An AMD Strix Halo mini-PC has 128GB of unified memory. Its BIOS carves out
+      96GiB as dedicated VRAM for the iGPU. The OS boots with kernel arguments
+      including `ttm.pages_limit=32505856` (124GiB) intending to give the GPU
+      almost all of memory.
+
+      At runtime the kernel reports:
+
+        MemTotal:                        31GiB
+        mem_info_vram_total:             96GiB
+        mem_info_gtt_total:              31GiB
+
+      The operator expected `mem_info_gtt_total` to be about 124GiB. Explain why
+      it is 31GiB instead, and what would actually have to change to give the GPU
+      a single pool of roughly 124GiB.
+    checks:
+      - kind: regex_any
+        label: explains GTT is backed by system RAM
+        patterns: ['system (ram|memory)', 'host (ram|memory)', 'borrow',
+                   'shared memory', 'main memory']
+      - kind: regex_any
+        label: identifies the BIOS carve-out as the cause of the 31GiB ceiling
+        patterns: ['96', 'carve', 'uma', 'dedicated vram', 'reserved']
+      - kind: regex_any
+        label: ttm.pages_limit is a ceiling, not an allocation
+        patterns: ['ceiling', 'upper (bound|limit)', 'maximum', 'cap', 'not an allocation',
+                   'cannot exceed', 'limited by']
+      - kind: regex_any
+        label: correct fix is lowering the BIOS carve-out
+        patterns: ['bios', 'uma', 'firmware']
+
+  # ------------------------------------------------------------------ reasoning
+
+  - id: waitforidle-deadlock
+    category: reasoning
+    notes: >-
+      A fail-closed liveness assumption. The setting meant to protect in-flight
+      requests prevents the rollout that would fix a crashlooping pod.
+    prompt: |
+      A Kubernetes operator manages inference Deployments. Its rollout policy is:
+
+        rolloutPolicy:
+          waitForIdle: true
+          idleTimeoutSeconds: 86400
+
+      When a spec change arrives, the operator asks the *currently running* pod
+      whether it is busy by calling its `/slots` endpoint. If it cannot get a
+      clear "idle" answer it defers the rollout and retries, up to
+      `idleTimeoutSeconds`.
+
+      An operator pushes a config change to fix a pod that is in
+      CrashLoopBackOff. The new spec is never applied. The operator logs, every
+      few seconds:
+
+        deferring rollout: current pod is busy
+
+      Explain precisely why this happens and what property of the check is
+      responsible.
+    checks:
+      - kind: regex_any
+        label: identifies the fail-closed behaviour
+        patterns: ['fail.?clos', 'treated as busy', 'counts as busy', 'assumed.*busy',
+                   'interprets.*(as )?busy', 'cannot (answer|respond|reply)',
+                   'connection refused', 'unreachable.*busy', 'no response.*busy']
+      - kind: regex_any
+        label: names the deadlock / circularity
+        patterns: ['deadlock', 'catch.?22', 'circular', 'chicken.and.egg',
+                   'never (be )?(applied|replaced|rolled)', 'blocks (its own|the very)',
+                   'fix.*cannot.*(apply|roll|deploy)']
+      - kind: regex_any
+        label: notes the 24h consequence of the timeout value
+        patterns: ['86400', '24 ?h', 'twenty.?four', 'a (full )?day']
+
+  - id: false-green-router-mode
+    category: reasoning
+    notes: >-
+      The hardest one here, and the one that fooled a careful reviewer: every
+      status surface said healthy while the service served nothing.
+    prompt: |
+      An InferenceService reports `Ready`, its Deployment is Available, and its
+      HTTP `/health` probe returns 200. The operator emitted a warning on every
+      reconcile advising that `skipModelInit: true` be set, so it was set.
+
+      Since then the server process starts with:
+
+        llama-server --host 0.0.0.0 --port 8080 --model "" --ctx-size 262144
+
+      Requests to `/v1/chat/completions` return an error saying no model is
+      available, but every Kubernetes status surface is green and no probe fails.
+
+      Explain what has gone wrong and why the health signals are misleading.
+    checks:
+      - kind: regex_any
+        label: identifies the empty --model argument
+        patterns: ['--model ""', "--model ''", 'empty (model|--model|string)',
+                   'no model (path|file|specified|given|set)', 'blank']
+      - kind: regex_any
+        label: explains skipModelInit removed the weight staging
+        patterns: ['skipmodelinit', 'init ?container', 'download', 'stag', 'fetch.*weight',
+                   'never (downloaded|staged|fetched)']
+      - kind: regex_any
+        label: explains /health does not prove a model is loaded
+        patterns: ['health.*(does not|doesn.t|only)', 'process.*(alive|running|up)',
+                   'server (is )?(up|running|listening)', 'liveness.*not.*readiness',
+                   'not.*(check|verify|prove).*model']
+      - kind: regex_none
+        label: does not recommend an unrelated resource bump
+        patterns: ['increase the memory limit', 'raise the memory limit',
+                   'add more (gpu )?memory', 'out of memory']
+
+  # -------------------------------------------------------------------- k8s depth
+
+  - id: noderestriction-labels
+    category: k8s-depth
+    notes: >-
+      Talos retries the label patch forever and it never lands. Nothing logs an
+      error at cluster level, which is what makes it expensive to find.
+    prompt: |
+      A node's machine configuration asks the kubelet to register itself with the
+      label `topology.kubernetes.io/gpus: amd`. The node is healthy and joined.
+      A workload selects on that label:
+
+        nodeSelector:
+          topology.kubernetes.io/gpus: amd
+
+      The pod stays Pending with "0/5 nodes are available: 5 node(s) didn't match
+      Pod's node affinity/selector". `kubectl get node <name> --show-labels`
+      never shows the label, no matter how long you wait, and the node's own
+      agent logs show it retrying the patch every 15 seconds.
+
+      Explain why the label never appears, and give a label that would work.
+    checks:
+      - kind: regex_any
+        label: names the NodeRestriction admission plugin
+        patterns: ['noderestriction', 'node restriction']
+      - kind: regex_any
+        label: explains kubelets may only self-set allowlisted labels
+        patterns: ['allow.?list', 'white.?list', 'permitted', 'restricted set',
+                   'only.*(region|zone)', 'cannot set.*label', 'not allowed to set']
+      - kind: regex_any
+        label: notes topology.kubernetes.io allows only region/zone
+        patterns: ['region', 'zone']
+      - kind: regex_any
+        label: proposes a workable alternative label
+        patterns: ['node\.kubernetes\.io/', 'kubectl label', 'control plane',
+                   'out of band', 'different prefix', 'custom.*(domain|prefix)']
+      - kind: regex_none
+        # Observed hallucination: a 422 from label-value casing, with the claim
+        # that topology.kubernetes.io "would still be accepted technically".
+        # Both are the opposite of what happens, and confidently wrong here is
+        # worse than silent - this is the failure the task exists to catch.
+        label: does not invent a label-validation or casing failure
+        patterns: ['422', 'must be (strictly )?lowercase',
+                   'label (value )?validation', 'invalid label (value|syntax)',
+                   'unprocessable']
+
+  - id: flux-crd-ordering
+    category: k8s-depth
+    prompt: |
+      A Flux Kustomization named `litellm` applies a custom resource:
+
+        apiVersion: litellm.home-operations.com/v1alpha1
+        kind: LiteLLMProxy
+
+      The CRD for that kind is installed by a HelmRelease in a *different* Flux
+      Kustomization named `litellm-operator`. On a fresh cluster, `litellm`
+      fails with:
+
+        no matches for kind "LiteLLMProxy" in version
+        "litellm.home-operations.com/v1alpha1"
+
+      It succeeds if you simply wait and let it retry. Give the change that makes
+      this deterministic on a fresh bootstrap, and explain why one field alone is
+      not enough.
+    checks:
+      - kind: regex_any
+        label: names dependsOn
+        patterns: ['dependson', 'depends ?on']
+      - kind: regex_any
+        label: names the health-gating field
+        patterns: ['wait: ?true', '`wait`', 'wait.*true', 'health ?check']
+      - kind: regex_any
+        label: explains why dependsOn alone is insufficient
+        patterns: ['applied.*not.*ready', 'reconciled.*not.*(ready|health)',
+                   'without wait', 'only.*applied', 'does not wait',
+                   'ready.*before', 'establish']
+
+  # --------------------------------------------------------------------- agentic
+
+  - id: tool-call-triage
+    category: tool-use
+    notes: >-
+      The capability that decides whether a model is usable in an agent loop at
+      all. A model that answers in prose here cannot drive anything.
+    system: |
+      You are an SRE assistant with cluster access. Use the provided tools to
+      gather facts. Do not guess or describe what you would run - call the tool.
+    prompt: |
+      Something is wrong in the `llm` namespace: a user reports the chat model is
+      unreachable. Start your investigation.
+    tools:
+      - type: function
+        function:
+          name: kubectl_get
+          description: List Kubernetes resources of a given kind in a namespace.
+          parameters:
+            type: object
+            properties:
+              resource:
+                type: string
+                description: Resource kind, e.g. pods, deployments, events.
+              namespace:
+                type: string
+                description: Namespace to query.
+            required: [resource, namespace]
+      - type: function
+        function:
+          name: kubectl_logs
+          description: Fetch logs for a named pod.
+          parameters:
+            type: object
+            properties:
+              pod: {type: string}
+              namespace: {type: string}
+              container: {type: string}
+            required: [pod, namespace]
+    max_tokens: 4096
+    checks:
+      - kind: tool_call
+        label: calls kubectl_get on pods in the llm namespace
+        name: kubectl_get
+        arguments:
+          resource: pods
+          namespace: llm
+
+  - id: structured-triage
+    category: structured-output
+    notes: >-
+      Mirrors an issue groomer: the caller parses the response, so prose is a
+      hard failure regardless of how good the prose is.
+    system: You reply with JSON only. No prose, no code fences.
+    prompt: |
+      Classify this alert for an on-call queue.
+
+        ALERT: CephFilesystemDegraded
+        SUMMARY: 1 of 3 MDS daemons is down; filesystem is serving reads and
+                 writes from standby-replay. No client errors observed. Started
+                 4 minutes ago.
+
+      Respond with a JSON object with exactly these keys:
+        "severity":  one of "page", "ticket", "ignore"
+        "component": a short lowercase string
+        "urgent":    boolean
+    response_format:
+      type: json_object
+    max_tokens: 4096
+    checks:
+      - kind: json_valid
+        label: response parses as JSON
+      - kind: json_field
+        label: severity is the ticket tier, not a page
+        path: severity
+        equals: ticket
+      - kind: json_field
+        label: urgent is false
+        path: urgent
+        equals: false
+      - kind: json_field
+        label: component present
+        path: component
+
+  # ---------------------------------------------------------------- long context
+
+  - id: long-context-cache-binding
+    category: long-context
+    notes: >-
+      Answer requires joining an InferenceService to a PVC defined in a
+      different file, with the whole llm and rook-ceph namespaces in between.
+    context_globs:
+      - "kubernetes/apps/llm/**/*.yaml"
+      - "kubernetes/apps/rook-ceph/**/*.yaml"
+      - "kubernetes/apps/kube-system/**/*.yaml"
+      - "kubernetes/apps/observability/**/*.yaml"
+      - "kubernetes/apps/database/**/*.yaml"
+      - "kubernetes/apps/network/**/*.yaml"
+      - "kubernetes/apps/storage/**/*.yaml"
+    prompt: |
+      Using only the manifests above:
+
+      The InferenceService `llama-strix` overrides the operator's shared model
+      cache with its own claim. Name the storage class that ultimately backs that
+      claim, and state whether the pod could be rescheduled onto a different node
+      without losing access to the cached weights. Explain in one or two
+      sentences.
+    checks:
+      - kind: regex_any
+        label: names the storage class
+        patterns: ['openebs-hostpath']
+      - kind: regex_any
+        label: names the intermediate claim
+        patterns: ['llmkube-framework-cache']
+      - kind: regex_any
+        label: concludes the volume is node-local
+        patterns: ['node.?local', 'local to (the|that|a) node', 'pinned',
+                   'tied to (the|that|a single)', 'cannot be resched',
+                   'not be resched', 'same node', 'only on.*node',
+                   'would (not|lose)', "can.t be resched"]

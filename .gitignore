@@ -17,5 +17,9 @@ talosconfig
 .private/
 .task/
 .venv/
+__pycache__/
+*.pyc
 .DS_Store
 Thumbs.db
+# LLM eval runs (promote one to scripts/llm-eval/baseline/ to keep it)
+scripts/llm-eval/results/

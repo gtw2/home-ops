@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: '3'
+
+vars:
+  EVAL: '{{.ROOT_DIR}}/scripts/llm-eval/eval.py'
+  RESULTS: '{{.ROOT_DIR}}/scripts/llm-eval/results'
+
+tasks:
+
+  eval:
+    desc: Score a model on real cluster failures [MODEL=required] [REPEAT=1] [TASK=] [CATEGORY=]
+    cmd: >-
+      uv run {{.EVAL}}
+      --model {{.MODEL}}
+      --repeat {{.REPEAT}}
+      {{if .TASK}}--task {{.TASK}}{{end}}
+      {{if .CATEGORY}}--category {{.CATEGORY}}{{end}}
+      {{if .VERBOSE}}--verbose{{end}}
+    vars:
+      REPEAT: '{{.REPEAT | default 1}}'
+    requires:
+      vars: [MODEL]
+    preconditions:
+      - test -f {{.KUBECONFIG}}
+      - kubectl --namespace llm get service litellm
+      - which uv kubectl
+
+  eval:models:
+    desc: List the models litellm currently serves
+    cmd: kubectl --namespace llm get litellmmodels --output custom-columns='MODEL:.spec.modelName,BACKEND:.spec.params.model,MODE:.spec.info.mode'
+    preconditions:
+      - which kubectl
+
+  eval:check:
+    desc: Render every eval prompt and compile every check without calling a model
+    cmd: uv run {{.EVAL}} --model dry --dry-run {{if .VERBOSE}}--verbose{{end}}
+    preconditions:
+      - which uv
+
+  eval:compare:
+    desc: Compare the most recent report per model side by side
+    cmd: uv run {{.EVAL}} --compare $(ls -1t {{.RESULTS}}/*.json | awk -F- '!seen[$NF]++' | tr '\n' ' ')
+    preconditions:
+      - test -n "$(ls -A {{.RESULTS}}/*.json 2>/dev/null)"
+      - which uv
