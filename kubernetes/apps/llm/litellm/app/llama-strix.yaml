@@ -29,11 +29,11 @@ metadata:
     krr/ignore: "true"
 spec:
   modelRef: llama-strix
-  # The operator classifies this source as runtime-resolved (llama-server
-  # fetches the repo itself at startup) and warns on every reconcile that the
-  # download init container must be turned off. Leaving it on is what produced
-  # "Degraded: Model not found" - the init container had no resolved path.
-  skipModelInit: true
+  # Do NOT set skipModelInit here, despite the operator's MissingSkipModelInit
+  # warning on every reconcile. Following that advice makes it pass --model ""
+  # to llama-server, which then starts in router mode with zero models loaded,
+  # answers /health, and goes Ready while serving nothing. The init container
+  # staging the weights is what actually produces a usable --model path.
   # modelCache:
   #   claimName: llmkube-skirk-cache
   runtime: llamacpp
