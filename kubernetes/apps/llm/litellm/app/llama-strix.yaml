@@ -40,8 +40,13 @@ spec:
     - llama-server
   replicas: 1
   priority: high
+  # node.kubernetes.io/gpu-vendor, not the reference's topology.kubernetes.io/
+  # gpus: NodeRestriction only lets a kubelet self-set labels from an allowlist,
+  # which permits topology.kubernetes.io/{region,zone} and nothing else under
+  # that prefix. Talos retries the patch forever and the label never appears, so
+  # a pod selecting on it stays Pending (docs/talos.md).
   nodeSelector:
-    topology.kubernetes.io/gpus: amd
+    node.kubernetes.io/gpu-vendor: amd
   tolerations:
     - key: llm-workload
       operator: Exists
