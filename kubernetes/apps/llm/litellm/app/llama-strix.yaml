@@ -45,7 +45,12 @@ spec:
     # cannot be replaced by a spec change for 24h - the fix and the thing it
     # fixes deadlock. Five minutes keeps the intent (do not cut off in-flight
     # requests) while bounding the stall. Raise it once the service is warm.
-    waitForIdle: true
+    # Off while bringing the service up: the check asks the CURRENT pod's
+    # /slots whether it is busy and treats any failure as busy, so a pod that
+    # is down (connection refused) or in router mode (no /slots) blocks its own
+    # replacement. Turn it back on once the service is genuinely serving and
+    # draining in-flight requests is worth something.
+    waitForIdle: false
     idleTimeoutSeconds: 300
   command:
     - llama-server
