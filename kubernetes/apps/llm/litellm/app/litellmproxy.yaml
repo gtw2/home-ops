@@ -1,0 +1,112 @@
+---
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMProxy
+metadata:
+  name: litellm
+spec:
+  # Models are rendered into the proxy's config file rather than stored in the
+  # database, so the LiteLLMModel CRs stay the source of truth and a database
+  # restore cannot resurrect a model that was deleted from git.
+  applyMode: file
+  image: ghcr.io/berriai/litellm-database:v1.100.0@sha256:2657abe0f6a9c01a78d74825be2785964d439ac030d9d4befdce8257c37a3741
+  replicas: 2
+  service:
+    port: 4000
+    type: ClusterIP
+  route:
+    hostnames: ["litellm.${SECRET_DOMAIN}"]
+    parentRefs:
+      - name: envoy-external
+        namespace: network
+        sectionName: https
+  env:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: litellm
+          key: DATABASE_URL
+    - name: LITELLM_LOG
+      value: INFO
+    - name: LITELLM_MODE
+      value: PRODUCTION
+    - name: PROXY_BASE_URL
+      value: https://litellm.${SECRET_DOMAIN}
+    # SSO. GENERIC_CLIENT_ID/SECRET come from the litellm Secret below.
+    - name: AUTO_REDIRECT_UI_LOGIN_TO_SSO
+      value: "true"
+    - name: GENERIC_AUTHORIZATION_ENDPOINT
+      value: https://sso.${SECRET_DOMAIN}/application/o/authorize/
+    - name: GENERIC_TOKEN_ENDPOINT
+      value: https://sso.${SECRET_DOMAIN}/application/o/token/
+    - name: GENERIC_USERINFO_ENDPOINT
+      value: https://sso.${SECRET_DOMAIN}/application/o/userinfo/
+    - name: GENERIC_SCOPE
+      value: openid email profile litellm_role
+    - name: GENERIC_USER_ROLE_ATTRIBUTE
+      value: litellm_role
+    - name: PROXY_LOGOUT_URL
+      value: https://sso.${SECRET_DOMAIN}/application/o/litellm/end-session/
+    # Shared dragonfly: with replicas > 1 the router's cooldown state and the
+    # response cache have to be shared, or each replica cools down backends on
+    # its own view of the world.
+    - name: REDIS_HOST
+      value: dragonfly.database.svc.cluster.local
+    - name: REDIS_PORT
+      value: "6379"
+  envFrom:
+    - secretRef:
+        name: litellm
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 2Gi
+  livenessProbe:
+    httpGet:
+      path: /health/liveliness
+      port: 4000
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 30
+  readinessProbe:
+    httpGet:
+      path: /health/readiness
+      port: 4000
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+  routerSettings:
+    redis_host: os.environ/REDIS_HOST
+    redis_port: os.environ/REDIS_PORT
+    routing_strategy: simple-shuffle
+    cooldown_time: 30
+    enable_pre_call_checks: true
+  litellmSettings:
+    success_callback:
+      - prometheus
+    failure_callback:
+      - prometheus
+    require_auth_for_metrics_endpoint: false
+    cache: true
+    cache_params:
+      type: redis
+      host: os.environ/REDIS_HOST
+      port: os.environ/REDIS_PORT
+      ttl: 300
+    # A cold Strix Halo request (prompt processing on a long context) can run
+    # well past a default 10m timeout.
+    request_timeout: 1200
+    num_retries: 2
+    retry_after: 5
+  generalSettings:
+    health_check_endpoint: /v1/health
+    store_model_in_db: false
+  extraConfig:
+    environment:
+      - REDIS_HOST
+      - REDIS_PORT
+  apiAccess:
+    masterKeyRef:
+      name: litellm
+      key: LITELLM_MASTER_KEY

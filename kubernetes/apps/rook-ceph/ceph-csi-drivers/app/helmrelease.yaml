@@ -18,6 +18,16 @@ spec:
         grpcTimeout: 150
         kernelMountOptions:
           ms_mode: prefer-crc
+        # The Framework is dedicated by llm-workload=true:NoSchedule. Without
+        # this the node plugin DaemonSet never lands there, so no Ceph volume
+        # can be mounted on it - including llmkube's shared model cache, the
+        # only RWX storage in the cluster. Tolerating a taint only permits
+        # scheduling; nothing changes on the other nodes.
+        nodePlugin:
+          tolerations:
+            - key: llm-workload
+              operator: Exists
+              effect: NoSchedule
         controllerPlugin:
           replicas: 2
       nfs:
@@ -29,5 +39,12 @@ spec:
         name: rook-ceph.rbd.csi.ceph.com
         snapshotPolicy: volumeSnapshot
         grpcTimeout: 150
+        # Same reasoning as cephfs above; RBD is what any future block PVC on
+        # that node would use.
+        nodePlugin:
+          tolerations:
+            - key: llm-workload
+              operator: Exists
+              effect: NoSchedule
         controllerPlugin:
           replicas: 2

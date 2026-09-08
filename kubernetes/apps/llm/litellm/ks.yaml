@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app litellm
+  namespace: &namespace llm
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    # CRDs: LiteLLMProxy/LiteLLMModel/LiteLLMVirtualKey from the operator,
+    # Model/InferenceService from llmkube.
+    - name: litellm-operator
+      namespace: *namespace
+    - name: llmkube
+      namespace: *namespace
+    - name: cloudnative-pg-cluster
+      namespace: database
+    - name: dragonfly-cluster
+      namespace: database
+    - name: external-secrets-stores
+      namespace: external-secrets
+  # A Job's pod template is immutable: changing the postgres-init image or env
+  # fails a plain apply, so let Flux recreate it.
+  force: true
+  interval: 1h
+  path: ./kubernetes/apps/llm/litellm/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  wait: false

@@ -1,0 +1,113 @@
+---
+apiVersion: inference.llmkube.dev/v1alpha1
+kind: Model
+metadata:
+  name: llama-strix
+spec:
+  # A repo prefix plus files: the operator stages the listed artifacts into the
+  # shared model cache (CephFS) and hands files[0] to llama.cpp. ~16.5GiB.
+  # Filename confirmed against the repo on 2026-09-07; unsloth does rename
+  # quant files between uploads, and a wrong name fails at download time, not
+  # at apply time. Public repo, so no sourceSecretRef is needed; a gated one needs an
+  # ExternalSecret holding HF_TOKEN and `sourceSecretRef: {name: <secret>}`.
+  source: hf://unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF
+  files:
+    - Qwen3-30B-A3B-Instruct-2507-UD-Q4_K_XL.gguf
+  format: gguf
+  quantization: UD-Q4_K_XL
+  hardware:
+    # rocm is the HIP tier for AMD; it and vulkan both resolve to the DRA
+    # device rather than an amd.com/gpu extended resource, and differ only in
+    # the runtime image the operator selects.
+    accelerator: rocm
+    gpu:
+      enabled: true
+      vendor: amd
+      # A ~30B A3B MoE at Q4 is ~16.5GiB of weights against 128GB of unified
+      # memory, so every layer goes to the GPU.
+      layers: 99
+      resourceClaims:
+        - name: gpu
+          resourceClaimTemplateName: framework-gpu
+---
+apiVersion: inference.llmkube.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: llama-strix
+spec:
+  modelRef: llama-strix
+  runtime: llamacpp
+  # image is deliberately unset: for accelerator rocm the operator picks its own
+  # hardware-validated ROCm llama.cpp build. If Strix Halo needs a newer ROCm
+  # than that image ships, pin docker.io/kyuz0/amd-strix-halo-toolboxes here.
+  replicas: 1
+  priority: high
+  # node.kubernetes.io/gpu-vendor, not the reference's topology.kubernetes.io/
+  # gpus: NodeRestriction will not let the kubelet self-set a label outside its
+  # allowlist, so that one cannot exist on this cluster (docs/talos.md).
+  nodeSelector:
+    node.kubernetes.io/gpu-vendor: amd
+  tolerations:
+    - key: llm-workload
+      operator: Exists
+      effect: NoSchedule
+  contextSize: 131072
+  parallelSlots: 2
+  flashAttention: true
+  jinja: true
+  # q8_0 KV halves the cache footprint at 128K context for no measurable
+  # quality loss on this model class.
+  cacheTypeK: q8_0
+  cacheTypeV: q8_0
+  batchSize: 2048
+  uBatchSize: 512
+  resources:
+    # The weights live in GTT (kernel-owned, not charged to the container
+    # cgroup), so this limit covers llama.cpp's own heap, not the model.
+    cpu: "500m"
+    memory: 16Gi
+  endpoint:
+    port: 8080
+    type: ClusterIP
+  extraArgs:
+    - --alias
+    - llama-strix
+    - --cont-batching
+    - --cache-prompt
+    # Qwen3 Instruct's recommended sampling.
+    - --temp
+    - "0.7"
+    - --top-p
+    - "0.8"
+    - --top-k
+    - "20"
+    - --min-p
+    - "0"
+    - --presence-penalty
+    - "0"
+    # 16 physical cores on the Ryzen AI Max; leave SMT siblings alone.
+    - --threads
+    - "16"
+  probeOverrides:
+    # The first start downloads ~16.5GiB into the cache before llama.cpp even
+    # begins loading, so the startup probe has to allow an hour.
+    startup:
+      httpGet:
+        path: /health
+        port: 8080
+      periodSeconds: 10
+      failureThreshold: 360
+    liveness:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      failureThreshold: 6
+    readiness:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      failureThreshold: 6

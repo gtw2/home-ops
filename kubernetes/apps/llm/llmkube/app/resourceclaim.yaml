@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/resource.k8s.io/resourceclaimtemplate_v1.json
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: framework-gpu
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            # Published by the ROCm k8s-gpu-dra-driver DaemonSet in kube-system.
+            deviceClassName: gpu.amd.com
+            # The Framework's Strix Halo iGPU is a single device and the node is
+            # dedicated to one inference workload at a time, so All is just "the
+            # GPU in this node". The reference implementation also sets
+            # adminAccess for shared access; that needs the DRAAdminAccess
+            # feature gate plus a resource.k8s.io/admin-access namespace label,
+            # neither of which this cluster has.
+            allocationMode: All

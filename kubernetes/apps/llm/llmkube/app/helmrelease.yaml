@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: llmkube
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: llmkube
+  interval: 1h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    # The controller is a plain reconciler - it never touches the GPU, so it
+    # stays off the tainted Framework node with everything else.
+    controllerManager:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 256Mi
+        limits:
+          memory: 1Gi
+    modelCache:
+      enabled: true
+      # One shared cache instead of perService: the model weights are tens of
+      # GB and every InferenceService that uses the same file should read the
+      # same copy. Shared means one PVC, so it has to be RWX - ceph-filesystem
+      # is the only RWX class here (openebs-hostpath is node-local RWO, and its
+      # provisioner helper pod does not tolerate the llm-workload taint, so it
+      # cannot provision on the Framework at all).
+      mode: shared
+      accessMode: ReadWriteMany
+      storageClass: ceph-filesystem
+      size: 200Gi
+    # Creates the critical/high/normal/low/batch classes that
+    # InferenceService.spec.priority selects from.
+    priorityClasses:
+      enabled: true
+    prometheus:
+      # Scrapes llama.cpp's /metrics off every inference pod and relabels
+      # inference.llmkube.dev/{service,model,runtime} onto the series. Enable
+      # exactly one discovery path for these pods - do not also turn on
+      # metrics.emitScrapeAnnotations, or every target is scraped twice.
+      inferencePodMonitor:
+        enabled: true
+    grafana:
+      dashboards:
+        enabled: false

@@ -1,0 +1,37 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: litellm-operator
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: litellm-operator
+  interval: 1h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controller:
+      logLevel: info
+      leaderElection:
+        enabled: true
+    llmkube:
+      # Every llmkube InferenceService is registered with the proxy under its
+      # own name automatically. The hand-written LiteLLMModels in litellm/app
+      # add a second, tuned alias (llama-strix-chat) with sampling defaults and
+      # token limits - a distinct modelName, so it never collides with the
+      # auto-registered entry.
+      autoRegister: true
+    resources:
+      requests:
+        cpu: 25m
+        memory: 128Mi
+      limits:
+        memory: 512Mi

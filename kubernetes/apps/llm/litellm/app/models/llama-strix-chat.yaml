@@ -1,0 +1,24 @@
+---
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMModel
+metadata:
+  name: llama-strix-chat
+spec:
+  # Distinct from the InferenceService name, which the operator auto-registers
+  # untuned. This is the alias clients should ask for.
+  modelName: llama-strix-chat
+  proxyRef: litellm
+  params:
+    model: openai/llama-strix
+    apiBase: http://llama-strix.llm.svc.cluster.local:8080/v1
+    # llama.cpp serves without auth inside the cluster; litellm still insists on
+    # a non-empty key.
+    apiKey: sk-llmkube-noauth
+    additional:
+      temperature: 0.7
+      top_p: 0.8
+  info:
+    mode: chat
+    maxInputTokens: 131072
+    maxOutputTokens: 32768
+    supportsFunctionCalling: true

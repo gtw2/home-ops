@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/servicemonitor_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: &app litellm
+  labels: &labels
+    app.kubernetes.io/instance: *app
+    app.kubernetes.io/name: *app
+spec:
+  # The Service is created by the operator, not by this Kustomization, so these
+  # are its labels rather than ones set here. Check them against the live
+  # Service (and the port name) the first time this reconciles.
+  selector:
+    matchLabels:
+      <<: *labels
+  namespaceSelector:
+    matchNames:
+      - llm
+  targetLabels:
+    - app.kubernetes.io/instance
+    - app.kubernetes.io/name
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
