@@ -29,6 +29,13 @@ spec:
               repository: ghcr.io/open-webui/open-webui
               tag: v0.11.3@sha256:41daa0cf2561a5d4c8d1ff31ee2a98d93ab4d3ac2605cac69366ff6a3374a933
             env:
+              # Most of open-webui's settings are PersistentConfig: env seeds
+              # the database on FIRST launch and is ignored on every start
+              # after that, so changing a value here silently does nothing.
+              # This makes env authoritative again, which is the only way the
+              # connection below can live in git. Everything not declared here
+              # falls back to upstream defaults rather than a stored value.
+              ENABLE_PERSISTENT_CONFIG: "false"
               # Models come from litellm in the llm namespace, which fronts the
               # llama.cpp InferenceService on the Framework. OPENAI_API_KEY is
               # the litellm virtual key, pulled from the secret below - the
