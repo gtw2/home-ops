@@ -4,27 +4,18 @@ kind: Model
 metadata:
   name: llama-strix
 spec:
-  # A repo prefix plus files: the operator stages the listed artifacts into the
-  # shared model cache (CephFS) and hands files[0] to llama.cpp. ~16.5GiB.
-  # Filename confirmed against the repo on 2026-09-07; unsloth does rename
-  # quant files between uploads, and a wrong name fails at download time, not
-  # at apply time. Public repo, so no sourceSecretRef is needed; a gated one needs an
-  # ExternalSecret holding HF_TOKEN and `sourceSecretRef: {name: <secret>}`.
-  source: hf://unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF
+  source: hf://unsloth/Qwen3.6-35B-A3B-MTP-GGUF
   files:
-    - Qwen3-30B-A3B-Instruct-2507-UD-Q4_K_XL.gguf
+    - Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf
+    - mmproj-F16.gguf
+  mmproj: mmproj-F16.gguf
   format: gguf
   quantization: UD-Q4_K_XL
   hardware:
-    # rocm is the HIP tier for AMD; it and vulkan both resolve to the DRA
-    # device rather than an amd.com/gpu extended resource, and differ only in
-    # the runtime image the operator selects.
     accelerator: rocm
     gpu:
       enabled: true
       vendor: amd
-      # A ~30B A3B MoE at Q4 is ~16.5GiB of weights against 128GB of unified
-      # memory, so every layer goes to the GPU.
       layers: 99
       resourceClaims:
         - name: gpu
@@ -34,36 +25,38 @@ apiVersion: inference.llmkube.dev/v1alpha1
 kind: InferenceService
 metadata:
   name: llama-strix
+  labels:
+    krr/ignore: "true"
 spec:
   modelRef: llama-strix
+  # modelCache:
+  #   claimName: llmkube-skirk-cache
   runtime: llamacpp
-  # image is deliberately unset: for accelerator rocm the operator picks its own
-  # hardware-validated ROCm llama.cpp build. If Strix Halo needs a newer ROCm
-  # than that image ships, pin docker.io/kyuz0/amd-strix-halo-toolboxes here.
+  image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-6.4.4@sha256:1c655ca0443655f2e7603d054770b07cd8c79267145728b3261295f005053947
+  rolloutPolicy:
+    waitForIdle: true
+    idleTimeoutSeconds: 86400
+  command:
+    - llama-server
   replicas: 1
   priority: high
-  # node.kubernetes.io/gpu-vendor, not the reference's topology.kubernetes.io/
-  # gpus: NodeRestriction will not let the kubelet self-set a label outside its
-  # allowlist, so that one cannot exist on this cluster (docs/talos.md).
   nodeSelector:
-    node.kubernetes.io/gpu-vendor: amd
+    topology.kubernetes.io/gpus: amd
   tolerations:
     - key: llm-workload
       operator: Exists
       effect: NoSchedule
-  contextSize: 131072
+  contextSize: 262144
   parallelSlots: 2
   flashAttention: true
   jinja: true
-  # q8_0 KV halves the cache footprint at 128K context for no measurable
-  # quality loss on this model class.
   cacheTypeK: q8_0
   cacheTypeV: q8_0
-  batchSize: 2048
-  uBatchSize: 512
+  reasoningBudget: 16384
+  reasoningBudgetMessage: "Stop reasoning and produce the implementation, tool call, or final answer."
+  batchSize: 6144
+  uBatchSize: 2048
   resources:
-    # The weights live in GTT (kernel-owned, not charged to the container
-    # cgroup), so this limit covers llama.cpp's own heap, not the model.
     cpu: "500m"
     memory: 16Gi
   endpoint:
@@ -72,25 +65,46 @@ spec:
   extraArgs:
     - --alias
     - llama-strix
+    - --image-min-tokens
+    - "1024"
     - --cont-batching
+    - --spec-type
+    - draft-mtp
+    - --spec-draft-p-min
+    - "0.75"
+    - --spec-draft-n-max
+    - "3"
+    - --spec-draft-type-k
+    - q8_0
+    - --spec-draft-type-v
+    - q8_0
     - --cache-prompt
-    # Qwen3 Instruct's recommended sampling.
+    - --cache-ram
+    - "4096"
+    - --kv-unified
+    - --checkpoint-min-step
+    - "32768"
     - --temp
-    - "0.7"
+    - "0.6"
     - --top-p
-    - "0.8"
+    - "0.95"
     - --top-k
     - "20"
     - --min-p
     - "0"
     - --presence-penalty
     - "0"
-    # 16 physical cores on the Ryzen AI Max; leave SMT siblings alone.
+    - --repeat-penalty
+    - "1"
     - --threads
     - "16"
+    - --threads-batch
+    - "21"
+    - --load-mode
+    - none
+    - --chat-template-kwargs
+    - '{"preserve_thinking":true}'
   probeOverrides:
-    # The first start downloads ~16.5GiB into the cache before llama.cpp even
-    # begins loading, so the startup probe has to allow an hour.
     startup:
       httpGet:
         path: /health
