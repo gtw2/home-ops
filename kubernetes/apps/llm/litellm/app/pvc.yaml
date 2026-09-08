@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/persistentvolumeclaim_v1.json
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: llmkube-framework-cache
+spec:
+  # Node-local NVMe on the Framework (nvme1n1p1, 4.1TB, labelled
+  # u-local-hostpath) instead of the operator's shared CephFS cache. The weights
+  # are read at every start, so keeping them off the network is the whole point
+  # of this claim. 500Gi is a reservation, not an allocation - hostpath volumes
+  # are a directory, so the rest of the disk stays available for other claims.
+  #
+  # openebs-hostpath is WaitForFirstConsumer, so this stays Pending until the
+  # llama-strix pod schedules, which pins it to the Framework. The provisioner's
+  # helper pod copies the target node's taints into its own tolerations, so the
+  # llm-workload taint does not block provisioning.
+  #
+  # Disposable by design: it is a cache, so no Kopiur backup. Deleting it costs
+  # one re-download.
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: openebs-hostpath
+  resources:
+    requests:
+      storage: 500Gi

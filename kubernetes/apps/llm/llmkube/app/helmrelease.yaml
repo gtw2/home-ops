@@ -31,10 +31,15 @@ spec:
       enabled: true
       # One shared cache instead of perService: the model weights are tens of
       # GB and every InferenceService that uses the same file should read the
-      # same copy. Shared means one PVC, so it has to be RWX - ceph-filesystem
-      # is the only RWX class here (openebs-hostpath is node-local RWO, and its
-      # provisioner helper pod does not tolerate the llm-workload taint, so it
-      # cannot provision on the Framework at all).
+      # same copy. Shared means one PVC, so it has to be RWX, and
+      # ceph-filesystem is the only RWX class here.
+      #
+      # This is the default for services that do not say otherwise. A service
+      # pinned to one node is better off on that node's disk: llama-strix sets
+      # modelCache.claimName to a local openebs-hostpath claim so its weights
+      # never cross the network. (openebs-hostpath does work on the tainted
+      # Framework - the localpv helper pod copies the target node's taints into
+      # its own tolerations.)
       mode: shared
       accessMode: ReadWriteMany
       storageClass: ceph-filesystem

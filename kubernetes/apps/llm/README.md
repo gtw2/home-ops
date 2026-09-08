@@ -56,10 +56,12 @@ cluster infrastructure off it unless that infrastructure tolerates the taint:
   pulls on that node), node-exporter and the rest of the observability
   DaemonSets (no node metrics from the Framework).
 
-`openebs-hostpath` cannot be used on the Framework either — its provisioner
-helper pod does not tolerate the taint — so the model cache is CephFS RWX. That
-means weights stream over the network at pod start; the Framework has a single
-onboard NIC, so a cold start is bounded by that link, not by NVMe.
+The operator's shared cache is CephFS RWX, since `shared` mode needs one PVC
+reachable from anywhere. Weights would therefore stream over the network at
+every pod start, so `llama-strix` overrides it with `modelCache.claimName`
+pointing at a 500Gi `openebs-hostpath` claim on the Framework's own NVMe
+(`nvme1n1p1`, 4.1TB). openebs-hostpath provisions fine on the tainted node: the
+localpv helper pod copies the target node's taints into its own tolerations.
 
 ## Adding a model
 
