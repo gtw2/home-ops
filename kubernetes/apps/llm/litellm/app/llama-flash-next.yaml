@@ -27,7 +27,6 @@ spec:
     - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00001-of-00003.gguf
     - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00002-of-00003.gguf
     - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00003-of-00003.gguf
-    - MTP/mtp-Qwen3.8-Flash-Next-Q8_0.gguf
     - mmproj-F16.gguf
   mmproj: mmproj-F16.gguf
   format: gguf
@@ -105,22 +104,20 @@ spec:
   # First-class field rather than the raw --spec-* flags the previous model
   # used: the operator resolves the draft file's staged path itself, which is a
   # content-hash directory the manifest cannot know before the first reconcile.
-  # The non-shared MTP draft, NOT the "shared" variant the reference config
-  # uses. "shared" means it shares the parent model's embedding table, so it
-  # has no token_embd.weight of its own and cannot be loaded as a standalone
-  # draft: llama.cpp opens it through common_speculative_init_result and dies
-  # with `check_tensor_dims: tensor 'token_embd.weight' not found`, then
-  # "exiting due to model loading error", AFTER the main model has loaded fine.
+  # Speculative decoding is OFF for now, deliberately.
   #
-  # The same error also appears harmlessly much earlier, when the auto-fit pass
-  # probes the draft to size it and logs "failed to measure the memory of the
-  # extra model, fitting without it" before carrying on. Same message, one
-  # benign and one fatal - do not read the early one as the cause.
-  speculativeDecoding:
-    type: draft-mtp
-    draftModel: MTP/mtp-Qwen3.8-Flash-Next-Q8_0.gguf
-    nDraftMax: 3
-    pMin: 0.75
+  # Neither MTP file ships as a usable standalone draft. The "shared" variant
+  # fails on token_embd.weight; the non-shared one gets further and fails on
+  # output_hc_norm.weight - a tensor the MAIN model does have. That is the
+  # tell: MTP here is a prediction head meant to load attached to its parent,
+  # not an independent model, so --spec-type draft-mtp with a separate -md is
+  # the wrong mechanism. In both cases the main model loaded fine (~34s) and
+  # llama-server then exited 1 on the draft.
+  #
+  # The CRD also offers type "mtp" distinct from "draft-mtp", which is the
+  # likely path (head fused into the parent rather than a separate file).
+  # Worth revisiting as an optimisation once this is measured and serving -
+  # both MTP files stay staged on the node for that.
   resources:
     cpu: "500m"
     # Both request AND limit - llmkube maps this single value to each, and the
@@ -171,10 +168,6 @@ spec:
     # reference config carries both for the same reason.
     - --no-repack
     - --no-host
-    - --spec-draft-type-k
-    - q8_0
-    - --spec-draft-type-v
-    - q8_0
     - --cache-prompt
     - --kv-unified
     - --temp
