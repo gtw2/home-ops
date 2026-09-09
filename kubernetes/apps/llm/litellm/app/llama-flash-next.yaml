@@ -1,0 +1,159 @@
+---
+# Qwen3.8-Flash-Next, replacing Qwen3.6-35B-A3B on the Framework's iGPU.
+#
+# Deliberately keeps the name llama-strix: the LiteLLMModel, the virtual key and
+# Open WebUI all address the service by that name, so swapping the weights under
+# it leaves the whole downstream chain untouched. Rolling back is one line in
+# kustomization.yaml, not a coordinated edit across four files.
+#
+# Why this model suits Strix Halo specifically:
+#   - 512 experts, 10 active => ~2.4B active params/token, FEWER than the A3B it
+#     replaces, so throughput should hold up despite ~121B of expert weights.
+#   - Hybrid attention: only 12 of 48 layers are full attention (the rest are
+#     linear, constant-state), so the KV cache at the full 262144 context is
+#     ~3.0GiB at q8_0 rather than the tens of GiB a dense 48-layer model needs.
+# Budget at UD-Q3_K_XL: 83.8 weights + 2.6 MTP + 0.84 mmproj + 3.0 KV = 90.3GiB
+# of the 96GiB BIOS VRAM carve-out, leaving ~5.7GiB for compute buffers.
+apiVersion: inference.llmkube.dev/v1alpha1
+kind: Model
+metadata:
+  name: llama-strix
+spec:
+  source: hf://unsloth/Qwen3.8-Flash-Next-GGUF
+  # files[0] is the primary; the operator stages each entry at its repo-relative
+  # path under the cache key sha256(spec.source)[:16] = f869f01c859f8577.
+  files:
+    - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00001-of-00003.gguf
+    - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00002-of-00003.gguf
+    - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00003-of-00003.gguf
+    - MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
+    - mmproj-F16.gguf
+  mmproj: mmproj-F16.gguf
+  format: gguf
+  quantization: UD-Q3_K_XL
+  hardware:
+    accelerator: rocm
+    gpu:
+      enabled: true
+      vendor: amd
+      runtime: rocm
+      layers: 99
+      resourceClaims:
+        - name: gpu
+          resourceClaimTemplateName: framework-gpu
+---
+apiVersion: inference.llmkube.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: llama-strix
+  labels:
+    krr/ignore: "true"
+spec:
+  modelRef: llama-strix
+  # Do NOT set skipModelInit here, despite the operator's MissingSkipModelInit
+  # warning on every reconcile. Following that advice makes it pass --model ""
+  # to llama-server, which then starts in router mode with zero models loaded,
+  # answers /health, and goes Ready while serving nothing.
+  modelCache:
+    claimName: llmkube-framework-cache
+  runtime: llamacpp
+  # The reference config uses a private llama.cpp fork on Vulkan because
+  # qwen4exp predated upstream support. It does not any more: the architecture
+  # merged upstream in ggml-org/llama.cpp#27742 on 2026-08-27 19:32Z, and this
+  # image's llama.cpp (commit e70802a01) is from 22:05Z the same day - verified
+  # by 88 "qwen4exp" references in its libllama.so.0. So we stay on the stock
+  # ROCm image we already run rather than adopting a one-maintainer fork.
+  image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-6.4.4@sha256:1c655ca0443655f2e7603d054770b07cd8c79267145728b3261295f005053947
+  command:
+    - llama-server
+  rolloutPolicy:
+    # Off while bringing a new model up: the idle check asks the CURRENT pod's
+    # /slots whether it is busy and treats any failure as busy, so a pod that is
+    # down blocks its own replacement.
+    waitForIdle: false
+    idleTimeoutSeconds: 300
+  replicas: 1
+  priority: high
+  nodeSelector:
+    node.kubernetes.io/gpu-vendor: amd
+  tolerations:
+    - key: llm-workload
+      operator: Exists
+      effect: NoSchedule
+  contextSize: 262144
+  parallelSlots: 2
+  flashAttention: true
+  jinja: true
+  cacheTypeK: q8_0
+  cacheTypeV: q8_0
+  reasoningBudget: 16384
+  reasoningBudgetMessage: "Stop reasoning and produce the implementation, tool call, or final answer."
+  batchSize: 4096
+  uBatchSize: 2048
+  # First-class field rather than the raw --spec-* flags the previous model
+  # used: the operator resolves the draft file's staged path itself, which is a
+  # content-hash directory the manifest cannot know before the first reconcile.
+  speculativeDecoding:
+    type: draft-mtp
+    draftModel: MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
+    nDraftMax: 3
+    pMin: 0.75
+  resources:
+    cpu: "500m"
+    memory: 16Gi
+  endpoint:
+    port: 8080
+    type: ClusterIP
+  extraArgs:
+    - --alias
+    - llama-strix
+    - --image-min-tokens
+    - "1024"
+    - --cont-batching
+    - --spec-draft-type-k
+    - q8_0
+    - --spec-draft-type-v
+    - q8_0
+    - --cache-prompt
+    - --kv-unified
+    - --temp
+    - "1.0"
+    - --top-p
+    - "0.95"
+    - --top-k
+    - "20"
+    - --min-p
+    - "0"
+    - --presence-penalty
+    - "0"
+    - --repeat-penalty
+    - "1"
+    - --threads
+    - "16"
+    - --threads-batch
+    - "21"
+    - --chat-template-kwargs
+    - '{"reasoning_effort":"medium"}'
+  probeOverrides:
+    startup:
+      httpGet:
+        path: /health
+        port: 8080
+      periodSeconds: 10
+      # 84GiB of weights off local NVMe, so the startup window is much longer
+      # than the 35B model needed. 720 x 10s = 2h, matching the reference.
+      failureThreshold: 720
+    liveness:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      failureThreshold: 6
+    readiness:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      failureThreshold: 6

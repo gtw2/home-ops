@@ -9,7 +9,22 @@ resources:
   - ./litellmproxy.yaml
   - ./servicemonitor.yaml
   - ./virtualkey.yaml
-  # Model + InferenceService: the weights and the llama.cpp pod that serves them
-  - ./llama-strix.yaml
+  # Model + InferenceService: the weights and the llama.cpp pod that serves them.
+  #
+  # Exactly ONE of the two may be active. Both define the name llama-strix, so
+  # the LiteLLMModel, the virtual key and Open WebUI address whichever is live
+  # without knowing which model is behind it.
+  #
+  # To change models, or to roll back, move the comment - do not revert the
+  # commit. Both manifests are meant to stay in the tree: a revert would also
+  # take the flash-next config and everything learned writing it, and we would
+  # rebuild it from scratch the next time. Swapping the line is the whole
+  # operation; the weights of both models stay cached on the node, so going back
+  # costs one reconcile and no re-download.
+  #
+  #   ./llama-flash-next.yaml  Qwen3.8-Flash-Next  UD-Q3_K_XL  ~83.8GiB weights
+  #   ./llama-strix.yaml       Qwen3.6-35B-A3B     UD-Q4_K_XL  ~22.9GiB weights
+  - ./llama-flash-next.yaml
+  # - ./llama-strix.yaml
   # LiteLLMModel: how the proxy addresses that pod
   - ./models
