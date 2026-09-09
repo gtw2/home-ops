@@ -32,11 +32,19 @@ spec:
   format: gguf
   quantization: UD-Q3_K_XL
   hardware:
-    accelerator: rocm
+    # Vulkan, not ROCm, and not for legacy reasons - the HIP path is broken for
+    # this architecture on this GPU. On gfx1151 (Strix Halo) with ROCm,
+    # llama.cpp#27797 (open) reports any prompt of >=2 message segments
+    # degrading to '//////' garbage, and every chat turn has at least two; it
+    # also needs LLAMA_ATTN_ROT_DISABLE=1 just to emit valid output. #27856
+    # separately measured a HIP-path-specific decode collapse, ~20 tok/s down
+    # to ~5.5 past 2K context, which CUDA does not show. The reference config
+    # runs Vulkan on identical hardware for these reasons.
+    accelerator: vulkan
     gpu:
       enabled: true
       vendor: amd
-      runtime: rocm
+      runtime: vulkan
       layers: 99
       resourceClaims:
         - name: gpu
@@ -57,21 +65,16 @@ spec:
   modelCache:
     claimName: llmkube-framework-cache
   runtime: llamacpp
-  # Not the rocm-6.4.4 tag the rest of this repo used: that tag was last built
-  # 2026-08-27, hours after qwen4exp merged (#27742, 19:32Z) and one build
-  # before the fix this model needs. Loading Qwen3.8-Flash-Next on it fails with
-  #   check_tensor_dims: tensor 'token_embd.weight' not found
-  # which is llama.cpp#28355, titled "51B N-gram embedding table not loaded
-  # after build 10665" - our build was 10664. The tag is dead upstream, so no
-  # digest bump on it can ever fix this.
+  # Not the rocm-6.4.4 tag this repo used elsewhere: that tag was last built
+  # 2026-08-27, one llama.cpp build before the fix this model needs
+  # (llama.cpp#28355, "51B N-gram embedding table not loaded after build
+  # 10665"; ours was 10664), and it is no longer rebuilt, so no digest bump on
+  # it could ever fix that.
   #
-  # rocm-10.0 is rebuilt nightly. Verified before deploying, in a throwaway pod
-  # on this node: build 10867, 93 qwen4exp references in libllama.so.0 (against
-  # 10664 and 88), binary still at /usr/local/bin/llama-server so `command`
-  # below is unchanged. Its HEAD commit f3f1a8f27 is
-  # "disable lazy tensor loading by default on iGPUs" (#28326) - which is this
-  # class of hardware, and two days after the last qwen4exp follow-up.
-  image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:9239e48fc0d0050123b15645805863a0797b34e2328dbf5f76d742cc86c8e24c
+  # vulkan-radv rather than the rocm-10.0 tag: see the accelerator note above -
+  # ROCm loads this model but is a known-bad path for it on gfx1151. Same
+  # publisher, rebuilt nightly.
+  image: docker.io/kyuz0/amd-strix-halo-toolboxes:vulkan-radv@sha256:d4fd2c249a54d465e9796c0df72bc04db734574bee499ce07322017d5be2f363
   command:
     - llama-server
   rolloutPolicy:
