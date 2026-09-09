@@ -8,17 +8,14 @@ spec:
   # An Entry rather than an MCPServer: the workload runs in observability, next
   # to the Grafana instance whose Viewer token it holds, so that credential
   # never has to be copied into this namespace. toolhive just registers it.
-  remoteUrl: http://mcp-grafana.observability.svc.cluster.local:8000/mcp
-  transport: streamable-http
-  # Required, or the operator refuses the URL outright:
+  #
+  # Short form on purpose - do NOT expand this to the .svc.cluster.local FQDN.
+  # MCPServerEntry blocks private remote hosts, and the check is a substring
+  # match, so the fully-qualified name is rejected outright:
   #   remote URL host is not allowed: hostname
   #   "mcp-grafana.observability.svc.cluster.local" matches blocked internal
   #   hostname "cluster.local"
-  # Remote entries are assumed to be off-cluster and private addresses are
-  # blocked by default. This one genuinely is in-cluster, so declare it.
-  # The reference gets away without this only because its short-form host
-  # (mcp-grafana.observability:8000) does not contain the blocked substring -
-  # evading a substring match rather than declaring intent.
-  allowPrivateEndpoint: true
+  remoteUrl: http://mcp-grafana.observability:8000/mcp
+  transport: streamable-http
   groupRef:
     name: mcp-tools
