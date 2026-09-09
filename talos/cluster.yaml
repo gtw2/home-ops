@@ -22,7 +22,17 @@ schematics:
   # Kernel args reserve 124GiB of the 128GB unified memory for the iGPU
   # (amdgpu.gttsize=126976, ttm.pages_limit=32505856) with a 96GiB page pool,
   # plus amd_iommu=off / amd_pstate=active / pcie_aspm=off.
-  amd-ai: 1e65defaa48f525a0e46bd236d924a08d246044464f7954fdf5e4a6a45484f11
+  #
+  # nvme_core.default_ps_max_latency_us=0 disables NVMe APST. Talos defaults
+  # this to 100000us - 4x the upstream kernel's 25000 - which lets a drive enter
+  # its deepest power state. The Lexar NM790 (Maxio MAP1602) holding the model
+  # cache does not reliably wake from those: on 2026-09-09 it timed out on an
+  # admin Identify, failed controller reset (CSTS=0x0), and XFS shut the
+  # filesystem down. A warm reboot did not recover it; only removing power did.
+  # It is the idle drive that dies - weights are mmap'd once and then served
+  # from page cache, so it can sit hours with no I/O, while the identical
+  # sibling holding EPHEMERAL never idles and has never failed.
+  amd-ai: bae949941d550ad54348bc980f4823efde3418c0fa40da8b77f3484aec723199
 
 dnsDomain: cluster.local
 podSubnets: ["10.42.0.0/16"]
