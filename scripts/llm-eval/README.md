@@ -19,6 +19,39 @@ No arguments are needed to reach the cluster: the script port-forwards to
 `llm/litellm` secret. Point it elsewhere with `--base-url` / `--api-key`, which
 is how you score a hosted model against the same tasks.
 
+## Tools
+
+`--tools` offers the toolhive MCP gateway's tools alongside anything a task
+declares, and executes every call the model makes, feeding results back until it
+answers or hits `--max-tool-turns` (default 6). Without the flag nothing changes:
+one request per task, tool calls recorded but never executed. That is deliberate
+- the committed baselines are no-tools runs and have to stay reproducible.
+
+```sh
+task llm:eval -- --tools                 # port-forwards to llm/vmcp-mcp-gateway
+task llm:eval -- --tools --mcp-url URL   # or point somewhere explicitly
+```
+
+Reports are stamped `"tools": true|false`. A tools run and a no-tools run are
+different experiments on the same tasks, so `--compare` across that boundary is
+measuring two things at once.
+
+### Grading tool use
+
+The gateway runs toolhive's optimizer, so it advertises exactly two tools -
+`find_tool` and `call_tool` - no matter how many MCP servers are in the group.
+The model reaches a real tool by describing it, then invoking it through
+`call_tool`. That indirection means the OpenAI-level tool name is almost always
+`call_tool`, which is why there are two check kinds:
+
+- `tool_call` grades the OpenAI-level call (name plus arguments). Unchanged, and
+  it still works with tools off - it grades intent, not execution.
+- `tool_used` grades the *backend* tool the model actually reached, unwrapped
+  from `call_tool`'s `tool_name`. `names:` plus optional `any: false` to require
+  all of them. `used_any_tool` is the loose version: did it go to the cluster at
+  all, or answer from memory?
+
+
 ## What it measures
 
 | Category | Tasks | Why it is here |
