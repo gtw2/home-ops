@@ -35,6 +35,14 @@ spec:
               - --transport=streamable-http
               - --address=0.0.0.0:8000
               - --endpoint-path=/mcp
+              # Host/Origin validation is on by default and defaults to loopback
+              # variants of --address, so every in-cluster caller gets a bare
+              #   403 forbidden: host not allowed
+              # This is DNS-rebinding protection, and it applies to every route
+              # on this listener. The allowlist is the Host header the gateway
+              # actually sends, which is the short-form Service name its
+              # MCPServerEntry points at - not the FQDN. Deliberately not "*".
+              - --allowed-hosts=mcp-grafana.observability:8000,mcp-grafana.observability.svc.cluster.local:8000
             env:
               GRAFANA_URL: http://grafana-service.observability.svc.cluster.local:3000
               # Read from file rather than inlined: upstream re-reads this on
