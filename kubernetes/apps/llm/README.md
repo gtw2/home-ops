@@ -13,6 +13,10 @@ litellm/app/        # the proxy, its database, and the models it serves
   llama-strix.yaml    #   Model + InferenceService (llama.cpp on the Framework)
   models/             #   LiteLLMModel: how the proxy addresses that backend
   virtualkey.yaml     #   per-consumer API key, pushed to 1Password
+toolhive/           # MCP tooling: the operator, the servers, and the gateway
+  crds/ app/          #   operator install, split so CRDs land first
+  config/             #   MCPGroup, embedding model, VirtualMCPServer, route
+  mcp-servers/        #   one directory per MCP server (kubectl, flux)
 ```
 
 The split follows the reference: `llmkube/` holds only the operator and
@@ -74,6 +78,82 @@ defaults and token limits.
 GPU access: reference `framework-gpu` as the model's
 `resourceClaimTemplateName`. There is one GPU in this cluster, so there is one
 template.
+
+## Tools (MCP)
+
+The model can read the cluster itself rather than waiting for someone to paste a
+manifest into chat. `toolhive/` runs each MCP server as a pod and aggregates them
+behind one endpoint.
+
+```
+open-webui -> vmcp-mcp-gateway.llm:4483 -> { kubectl-mcp, flux-mcp } -> apiserver
+```
+
+Both servers are **read-only**, enforced by RBAC rather than by a flag:
+`kubectl-mcp-readonly` (aggregation, tracking the built-in `view` role) plus
+`kubectl-mcp-readonly-explicit` (everything aggregation misses). Kubernetes
+Secrets are excluded from both, as are exec/attach/proxy subresources. `flux-mcp`
+binds those same two roles and nothing else, so it can explain why a
+Kustomization is failing but cannot suspend, patch or delete one. The upstream
+reference also ships a `flux-mcp-write` role; adding it is a deliberate,
+separate commit, not an edit to `mcp-servers/flux/rbac.yaml`.
+
+The explicit role names every non-core apiGroup **in this cluster**, generated
+from `kubectl api-resources` rather than copied. Regenerate it when a new
+operator adds a CRD group, unless that operator ships an
+`aggregate-to-view` ClusterRole, in which case the aggregation picks it up for
+free.
+
+Tool selection is semantic: `VirtualMCPServer.config.optimizer` embeds the
+request and returns only the closest `maxToolsToReturn` (8) tool definitions,
+instead of spending context on every tool from every backend. The embeddings
+come from `toolhive-embed`, a CPU llama.cpp InferenceService on the talos nodes —
+it carries no `llm-workload` toleration, so the Framework stays dedicated to
+`llama-strix`. `embeddingProvider: openai` names a **wire protocol**, not a
+vendor; no key is set, and per the CRD an empty key omits the Authorization
+header, which is what a keyless in-cluster endpoint wants.
+
+### Before the first reconcile of toolhive
+
+**Create the 1Password `toolhive` item first**, with `MCP_GATEWAY_API_KEY` set to
+a random string. This is not just a convenience: if the ExternalSecret cannot
+produce `mcp-gateway-api-keys`, Envoy reports the SecurityPolicy as invalid and
+does not enforce it, which would leave `mcp.${SECRET_DOMAIN}` answering
+cluster-read queries to anything on the LAN. After reconcile, confirm the policy
+actually attached before trusting the route:
+
+```sh
+curl -so /dev/null -w '%{http_code}\n' https://mcp.${SECRET_DOMAIN}/mcp   # expect 401
+kubectl get securitypolicy -n llm mcp-gateway-api-key -o jsonpath='{.status.conditions}'
+```
+
+The route is on `envoy-internal`, not `envoy-external` — this endpoint can read
+every non-secret object in the cluster. Promoting it is a one-line `parentRefs`
+change, and the API key stays either way.
+
+### Wiring open-webui to it
+
+Add the tool server in **Settings -> Admin -> Integrations -> External Tool
+Servers**, type *MCP (Streamable HTTP)*, URL
+`http://vmcp-mcp-gateway.llm.svc.cluster.local:4483/mcp`. In-cluster, so it
+bypasses envoy and needs no API key.
+
+Do **not** set `TOOL_SERVER_CONNECTIONS` in the HelmRelease. It is a
+PersistentConfig variable: on an instance whose database already exists, the env
+var is read once at first boot and ignored forever after, so the change appears
+to apply and silently does nothing.
+
+### Adding another MCP server
+
+Create `toolhive/mcp-servers/<name>/` with an `MCPServer` (or `MCPServerEntry`
+for something already running elsewhere), `groupRef: mcp-tools`, and its own
+ServiceAccount if it needs cluster access. Add a Kustomization to
+`toolhive/ks.yaml` depending on `toolhive-config`, which owns the MCPGroup. The
+gateway discovers new backends at runtime; tool-name collisions are resolved by
+the `{workload}_` prefix.
+
+Everything is written against the `v1beta1` toolhive APIs. `v1alpha1` is still
+served but deprecated, and `v1beta1` is the storage version for every kind here.
 
 ## Known follow-ups
 

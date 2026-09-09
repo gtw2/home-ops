@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.networking.k8s.io/httproute_v1.json
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mcp-gateway
+  annotations:
+    # Unauthenticated probes are the expected state here: securitypolicy.yaml
+    # rejects anything without a valid x-api-key, so 401 is "healthy".
+    gatus.home-operations.com/endpoint: |-
+      conditions: ["[STATUS] == 401"]
+spec:
+  hostnames:
+    - mcp.${SECRET_DOMAIN}
+  # envoy-internal, not envoy-external. This endpoint can read every non-secret
+  # object in the cluster; it has no business being on the public gateway.
+  # Promoting it later is a one-line parentRefs change - keep the SecurityPolicy
+  # either way, since envoy-internal is still reachable from the whole LAN.
+  parentRefs:
+    - name: envoy-internal
+      namespace: network
+  rules:
+    - backendRefs:
+        - name: vmcp-mcp-gateway
+          port: 4483

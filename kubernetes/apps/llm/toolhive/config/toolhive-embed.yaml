@@ -1,0 +1,84 @@
+---
+apiVersion: inference.llmkube.dev/v1alpha1
+kind: Model
+metadata:
+  name: toolhive-embed
+spec:
+  # Filename verified against the repo on 2026-09-09. The repo publishes exactly
+  # two GGUFs (Q8_0 and f16); a wrong name here fails at download time, not at
+  # apply time, so re-check if this sits unapplied for a while.
+  source: hf://Qwen/Qwen3-Embedding-0.6B-GGUF
+  files:
+    - Qwen3-Embedding-0.6B-Q8_0.gguf
+  format: gguf
+  quantization: Q8_0
+  hardware:
+    accelerator: cpu
+---
+apiVersion: inference.llmkube.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: toolhive-embed
+  labels:
+    krr/ignore: "true"
+spec:
+  modelRef: toolhive-embed
+  runtime: llamacpp
+  image: ghcr.io/ggml-org/llama.cpp:server@sha256:17155a3ce4cc906728ec99a2814bf0b4eaffaf3b4872bad8c3affed310cdbc35
+  # Deliberately NOT overriding modelCache.claimName the way llama-strix does.
+  # That override points at an RWO local claim on the Framework's NVMe; this
+  # service must be readable from whichever talos node it lands on, and at
+  # ~640MiB the operator's shared CephFS RWX cache is the right home for it.
+  #
+  # No toleration for llm-workload=true:NoSchedule either, so this stays off the
+  # Framework entirely and leaves that node's GPU and memory to llama-strix.
+  replicas: 1
+  priority: normal
+  mode: embedding
+  contextSize: 32768
+  parallelSlots: 32
+  flashAttention: true
+  batchSize: 1024
+  uBatchSize: 1024
+  rolloutPolicy:
+    waitForIdle: true
+    idleTimeoutSeconds: 300
+  # llmkube maps resources.memory to BOTH request and limit, so this is 4Gi
+  # actually reserved on a talos node, not a ceiling.
+  resources:
+    cpu: "2"
+    memory: 4Gi
+  extraArgs:
+    - --alias
+    - toolhive-embed
+    - --cont-batching
+    - --kv-unified
+    - --threads
+    - "4"
+    - --threads-batch
+    - "8"
+    - --mmap
+  endpoint:
+    port: 8080
+    type: ClusterIP
+  probeOverrides:
+    startup:
+      httpGet:
+        path: /health
+        port: 8080
+      periodSeconds: 10
+      failureThreshold: 120
+    liveness:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      failureThreshold: 6
+    readiness:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      failureThreshold: 6

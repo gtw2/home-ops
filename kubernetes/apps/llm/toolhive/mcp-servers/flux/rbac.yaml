@@ -1,0 +1,40 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flux-mcp
+---
+# Read-only, deliberately. The upstream reference also ships a flux-mcp-write
+# ClusterRole granting create/patch/update/delete across every Flux API group,
+# which is what powers the MCP's reconcile/suspend/resume tools. It is not bound
+# here: a bad tool call with that role can suspend or delete Kustomizations
+# cluster-wide. Adding it later is one ClusterRole plus one binding, and should
+# be its own commit rather than a quiet edit to this file.
+#
+# Both roles come from mcp-servers/kubectl/rbac.yaml, which is why the flux-mcp
+# Kustomization dependsOn kubectl-mcp.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: flux-mcp-readonly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubectl-mcp-readonly
+subjects:
+  - kind: ServiceAccount
+    name: flux-mcp
+    namespace: llm
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: flux-mcp-readonly-explicit
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubectl-mcp-readonly-explicit
+subjects:
+  - kind: ServiceAccount
+    name: flux-mcp
+    namespace: llm

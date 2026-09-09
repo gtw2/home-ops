@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/toolhive.stacklok.dev/mcpserver_v1beta1.json
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: flux
+spec:
+  # Pinned to match the flux-operator actually running in flux-system. These
+  # two are released together and the MCP reads the operator's own report CRs,
+  # so keep the versions in step when either is bumped.
+  image: ghcr.io/controlplaneio-fluxcd/flux-operator-mcp:v0.59.0@sha256:ca1b36b93bb8fa22eb941af690c1788c5eddc12497eff645452f9710b2c389c0
+  transport: streamable-http
+  proxyMode: streamable-http
+  proxyPort: 8080
+  mcpPort: 8000
+  serviceAccount: flux-mcp
+  permissionProfile:
+    type: builtin
+    name: network
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: mcp
+          args:
+            - serve
+            - --transport=http
+            - --port=8000
+          env:
+            # In-cluster mode: no KUBECONFIG, so it authenticates as the pod's
+            # ServiceAccount and inherits exactly the read-only roles above.
+            - name: RUNTIME_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+  groupRef:
+    name: mcp-tools

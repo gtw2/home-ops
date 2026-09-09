@@ -1,0 +1,56 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/toolhive.stacklok.dev/virtualmcpserver_v1beta1.json
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: VirtualMCPServer
+metadata:
+  name: mcp-gateway
+spec:
+  groupRef:
+    name: mcp-tools
+  # Anonymous at the pod. Callers from inside the cluster (open-webui) reach the
+  # Service directly and are trusted; callers from the LAN come through
+  # envoy-internal, where securitypolicy.yaml enforces the x-api-key header.
+  incomingAuth:
+    type: anonymous
+  outgoingAuth:
+    source: discovered
+  config:
+    aggregation:
+      conflictResolution: prefix
+      conflictResolutionConfig:
+        prefixFormat: "{workload}_"
+    optimizer:
+      # "openai" is a WIRE PROTOCOL, not a vendor: the enum is tei|openai, and
+      # llama.cpp serves the OpenAI-shaped /v1/embeddings endpoint. Nothing
+      # leaves the cluster and there is no OpenAI account involved.
+      #
+      # No OPENAI_API_KEY is set anywhere. Per the CRD, an empty key omits the
+      # Authorization header, which is exactly what a keyless in-cluster
+      # endpoint like llama-server wants. Pointing at toolhive-embed directly
+      # rather than through litellm also drops a hop and a virtual key.
+      embeddingProvider: openai
+      embeddingModel: toolhive-embed
+      embeddingService: http://toolhive-embed.llm.svc.cluster.local:8080/v1
+      embeddingServiceTimeout: 180s
+      # The knob that matters at 22 tok/s: how many tool definitions get spent
+      # from the context budget on every turn. 8 is the CRD default.
+      maxToolsToReturn: 8
+  # The shared dragonfly runs --cluster_mode=emulated, where only db 0 exists,
+  # so separation from litellm's keys is by prefix rather than by db index.
+  # That instance has no auth configured, hence no passwordRef; the llm
+  # namespace is already in its dragonfly-allow-clients NetworkPolicy.
+  sessionStorage:
+    provider: redis
+    address: dragonfly.database.svc.cluster.local:6379
+    db: 0
+    keyPrefix: "toolhive:vmcp:"
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: vmcp
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 1Gi

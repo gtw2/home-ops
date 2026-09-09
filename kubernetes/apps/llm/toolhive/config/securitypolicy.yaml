@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.envoyproxy.io/securitypolicy_v1alpha1.json
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: mcp-gateway-api-key
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mcp-gateway
+  apiKeyAuth:
+    credentialRefs:
+      - group: ""
+        kind: Secret
+        name: mcp-gateway-api-keys
+    extractFrom:
+      - headers:
+          - x-api-key
+    # Strip the header before proxying so the key never reaches the vmcp pod
+    # or its logs.
+    sanitize: true

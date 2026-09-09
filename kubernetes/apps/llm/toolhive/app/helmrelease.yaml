@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: toolhive-operator
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: toolhive-operator
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    operator:
+      replicaCount: 1
+      # rbac.scope stays at the chart default of "cluster". Namespace scope would
+      # be tighter, but the chart refuses to combine it with the storage-version
+      # migrator, which is what keeps status.storedVersions clean so a future
+      # release can drop the deprecated v1alpha1 CRD versions. Everything here is
+      # written as v1beta1 already; this keeps it that way without manual etcd work.
+      resources:
+        requests:
+          cpu: 50m
+          memory: 256Mi
+        limits:
+          memory: 1Gi
+      gc:
+        gomemlimit: 450MiB
+        gogc: 75
