@@ -131,16 +131,26 @@ spec:
     - --image-min-tokens
     - "1024"
     - --cont-batching
-    # Both required to keep host RSS survivable. This image's HEAD commit is
-    # llama.cpp#28326, "disable lazy tensor loading by default on iGPUs", and
-    # that new default is what OOMKilled this pod at 16Gi and again at 24Gi:
-    # eager tensor reads stage ~84GiB of weights through system RAM on a node
-    # that only has 31GiB. mmap makes the weights file-backed and evictable
-    # rather than anonymous, and tensor-read-lazy restores the pre-#28326
-    # behaviour. The reference config sets the same pair.
+    # Both required, and both load-bearing on this hardware.
+    #
+    # mmap makes the ~84GiB of weights file-backed and evictable rather than
+    # anonymous; without it the pod was OOMKilled at 16Gi and again at 24Gi,
+    # staging weights through a node that only has 31GiB of system RAM.
+    #
+    # --lazy-mode reads certain tensors from disk on demand instead of keeping
+    # them resident, and this model is the case it exists for: its
+    # per_layer_token_embd.weight is [160, 320001536] - the ~51B n-gram/PLE
+    # table - which dominates the file. This image's HEAD commit is
+    # llama.cpp#28326, "disable lazy tensor loading by default on iGPUs", so
+    # the default is off for exactly this class of hardware and has to be
+    # forced back on. It requires mmap, hence the pair.
+    #
+    # NB it is --lazy-mode, not the reference config's --tensor-read-lazy:
+    # that spelling exists only in the fork the reference runs and is rejected
+    # outright here ("error: invalid argument: --tensor-read-lazy").
     - --load-mode
     - mmap
-    - --tensor-read-lazy
+    - --lazy-mode
     - "on"
     - --spec-draft-type-k
     - q8_0
