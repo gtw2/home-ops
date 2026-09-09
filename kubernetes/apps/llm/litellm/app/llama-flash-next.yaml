@@ -111,23 +111,22 @@ spec:
   # First-class field rather than the raw --spec-* flags the previous model
   # used: the operator resolves the draft file's staged path itself, which is a
   # content-hash directory the manifest cannot know before the first reconcile.
-  # Context-only speculative decoding: no draft model, which is the point.
+  # Speculative decoding is OFF, and BOTH routes to it are closed. Measured,
+  # not assumed - do not re-litigate without new numbers.
   #
-  # MTP does not work here. The CRD's "mtp" is only an alias for "draft-mtp",
-  # the same separate-draft mechanism that fails with either published MTP
-  # file: the shared one has no token_embd.weight, and the non-shared one dies
-  # on output_hc_norm.weight, a tensor the PARENT model has. MTP is a head
-  # meant to load fused to its parent, and upstream llama.cpp has no path for
-  # that today. The reference config gets away with it on a private fork.
+  # MTP: the CRD's "mtp" is only an alias for "draft-mtp", which needs a
+  # separate draft model, and neither published MTP file loads standalone. The
+  # shared one has no token_embd.weight; the non-shared one dies on
+  # output_hc_norm.weight, a tensor the PARENT model has. MTP is a head meant
+  # to load fused to its parent and upstream llama.cpp has no path for that.
   #
-  # ngram-cache speculates from n-grams already seen in the context instead of
-  # from a model, so it needs no second set of weights and no VRAM. It should
-  # suit this workload: the questions put to this model quote manifests and
-  # logs back, and the long-context task is 66k tokens of YAML the answer
-  # restates. Cheap to reverse if acceptance turns out to be poor - measure
-  # with scripts/llm-eval before and after rather than assuming.
-  speculativeDecoding:
-    type: ngram-cache
+  # ngram-cache: loads fine and needs no draft weights, but made generation
+  # roughly HALF as fast on this workload - 10.5-15.7 tok/s against 22.2
+  # without it. Acceptance is too low to pay for the verification passes: this
+  # model is asked reasoning questions and writes new prose rather than
+  # restating its context, so context n-grams rarely hit. The other
+  # context-only variants (ngram-simple, ngram-mod, ngram-map-k) work the same
+  # way; they would need evidence of different behaviour to be worth a rollout.
   resources:
     cpu: "500m"
     # Both request AND limit - llmkube maps this single value to each, and the
