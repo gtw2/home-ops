@@ -472,6 +472,7 @@ def ask(client: httpx.Client, base_url: str, key: str, model: str,
     elapsed = 0.0
     prompt_tokens = completion_tokens = 0
     all_calls: list[dict] = []
+    hit_tool_cap = False
     content = reasoning = ""
     finish_reason = None
 
@@ -514,8 +515,29 @@ def ask(client: httpx.Client, base_url: str, key: str, model: str,
         # Without a live MCP session a tool call is recorded and left alone, so
         # the tool_call check kind still grades intent. Executing needs somewhere
         # to execute.
-        if not calls or mcp is None or turns > max_tool_turns:
+        if not calls or mcp is None:
             break
+
+        if turns > max_tool_turns:
+            # Out of tool budget while the model is still calling tools. Take
+            # the last turn with tools switched off so it has to commit to an
+            # answer - a real client does the same rather than returning the
+            # user an empty message. Without this the run scores 0 on every
+            # content check for a reason that has nothing to do with what the
+            # model knows.
+            hit_tool_cap = True
+            messages.append({"role": "assistant",
+                             "content": message.get("content") or "",
+                             "tool_calls": calls})
+            for call in calls:
+                fn = call.get("function") or {}
+                messages.append({"role": "tool",
+                                 "tool_call_id": call.get("id", ""),
+                                 "content": "tool budget exhausted; answer now "
+                                            "from what you already have"})
+            payload["tool_choice"] = "none"
+            max_tool_turns = turns  # let exactly one more turn run, then stop
+            continue
 
         messages.append({"role": "assistant",
                          "content": message.get("content") or "",
@@ -539,6 +561,7 @@ def ask(client: httpx.Client, base_url: str, key: str, model: str,
         "tool_calls": all_calls,
         "tools_invoked": list(mcp.invoked) if mcp is not None else [],
         "turns": turns,
+        "hit_tool_cap": hit_tool_cap,
         "finish_reason": finish_reason,
         "latency": elapsed,
         "prompt_tokens": prompt_tokens,
@@ -563,7 +586,14 @@ def grade(task: Task, response: dict) -> dict:
     score = sum(r["passed"] for r in results) / len(results) if results else 0.0
     warnings = []
     truncated = response.get("finish_reason") == "length"
-    if not content and not tool_calls:
+    if response.get("hit_tool_cap"):
+        # Worth flagging even when it recovered on the forced turn: a model that
+        # needs every tool turn is thrashing, and that shows up as latency long
+        # before it shows up as a wrong answer.
+        warnings.append(f"used its whole tool budget "
+                        f"({len(response.get('tools_invoked') or [])} calls) "
+                        f"and had to be forced to answer")
+    if not content:
         # Distinguish "thought until it ran out of budget" from "said nothing":
         # the first is a real and comparable weakness, the second is a bug here.
         warnings.append(
