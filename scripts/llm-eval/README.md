@@ -135,3 +135,21 @@ the manifest dump is not written to disk.
 - **The tasks leak into the fix.** They describe incidents whose write-ups live
   in this repo, so a model trained on it would have an edge. Not a concern
   today; worth remembering if these are ever published.
+
+## Baselines
+
+`baseline/` holds one committed report per set of weights. They are named after
+the model, not the service: litellm serves whatever is live as
+`llama-strix-chat`, so the report's own filename and its `weights` field are the
+only record of what was actually measured.
+
+| weights | overall | tok/s |
+|---|---|---|
+| Qwen3.6-35B-A3B UD-Q4_K_XL (ROCm) | 77% | 57.2 |
+| Qwen3.8-Flash-Next UD-Q3_K_XL (Vulkan, no spec-decode) | 89% | 22.2 |
+
+Flash-Next wins 12 points and regresses on nothing, at ~2.6x slower generation.
+The gains are concentrated where a bigger model should help - `waitforidle-deadlock`
+33% -> 100%, `long-context` 67% -> 100%, `csi-node-tolerations` 75% -> 100% - which
+is a more convincing signal than the headline number, since a uniform lift would
+more likely mean the harness moved.

@@ -1,0 +1,435 @@
+{
+  "model": "llama-strix-chat",
+  "overall": 0.8933333333333333,
+  "by_category": {
+    "diagnosis": 0.6666666666666666,
+    "hardware": 1.0,
+    "reasoning": 1.0,
+    "k8s-depth": 0.8,
+    "tool-use": 1.0,
+    "structured-output": 1.0,
+    "long-context": 1.0
+  },
+  "median_latency": 76.34020815050462,
+  "mean_tokens_per_second": 22.170797952151933,
+  "repeat": 1,
+  "temperature": 0.0,
+  "timestamp": "2026-09-08T21:30:18-0400",
+  "tasks": [
+    {
+      "id": "csi-node-tolerations",
+      "category": "diagnosis",
+      "score": 1.0,
+      "latency": 63.88525509496685,
+      "tokens_per_second": 24.637923064723058,
+      "runs": [
+        {
+          "score": 1.0,
+          "checks": [
+            {
+              "kind": "regex_any",
+              "label": "names the taint/toleration mechanism",
+              "passed": true,
+              "detail": "matched 'tolerat'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "identifies the CSI node plugin as what is missing",
+              "passed": true,
+              "detail": "matched 'daemon ?set'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "connects it to the llm-workload taint",
+              "passed": true,
+              "detail": "matched 'llm-workload'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "locates the missing plugin pod on that specific node",
+              "passed": true,
+              "detail": "matched 'desired'"
+            }
+          ],
+          "warnings": [],
+          "reasoning_chars": 3136,
+          "latency": 63.88525509496685,
+          "tokens_per_second": 24.637923064723058,
+          "completion_tokens": 1574,
+          "prompt_tokens": 216,
+          "content": "## Root Cause\n\nThe DaemonSet `csi-cephfsplugin` is **not running on the `framework` node**.\n\nLook at the DESIRED count: **4**, not 5. The DaemonSet controller creates one pod per node, but it **skips nodes whose taints the pod template does not tolerate**. The default tolerations the DaemonSet controller injects cover only the well-known `node.kubernetes.io/*` taints (`not-ready`, `unreachable`, `disk-pressure`, \u2026). Your custom taint\n\n```\nllm-workload=true:NoSchedule\n```\n\nis not in that list, so the controller never schedules a CSI-plugin pod onto `framework`.\n\nBecause no `csi-cephfsplugin` pod is running there, the CSI driver socket (`/var/lib/kubelet/plugins/rook-ceph.cephfs.csi.ceph.com/csi.sock`) is never created, the driver is never registered with kubelet, and every `NodePublishVolume` / `NodeStageVolume` call fails with:\n\n> driver name rook-ceph.cephfs.csi.ceph.com not found in the list of registered CSI drivers\n\nThe application pods *can* land on the node (they carry the matching `tolerations`), but the storage sidecar cannot, so the mount hangs.\n\n## Minimal Fix\n\nAdd the missing toleration to the CSI DaemonSet's pod template:\n\n```bash\nkubectl -n rook-ceph patch daemonset csi-cephfsplugin \\\n  --type=json \\\n  -p='[{\n    \"op\": \"add\",\n    \"path\": \"/spec/template/spec/tolerations/-\",\n    \"value\": {\n      \"key\": \"llm-workload\",\n      \"operator\": \"Equal\",\n      \"value\": \"true\",\n      \"effect\": \"NoSchedule\"\n    }\n  }]'\n```\n\nThis triggers a rolling update of the DaemonSet. Once the new pod lands on `framework`, the CSI socket appears, the driver registers, and kubelet retries the mount automatically (the `FailedMount` event will be followed by a successful `MountedVolume`).\n\n### Verify\n\n```bash\n# DESIRED should now be 5\nkubectl -n rook-ceph get daemonset csi-cephfsplugin\n\n# Confirm the plugin pod is on the tainted node\nkubectl -n rook-ceph get pods -o wide | grep framework\n\n# The stuck pod should transition to Running within ~30 s\nkubectl get pod <stuck-pod> -w\n```\n\n### If you also use RBD volumes\n\nThe same problem will hit `csi-rbdplugin`. Apply the identical patch:\n\n```bash\nkubectl -n rook-ceph patch daemonset csi-rbdplugin \\\n  --type=json \\\n  -p='[{\"op\":\"add\",\"path\":\"/spec/template/spec/tolerations/-\",\n        \"value\":{\"key\":\"llm-workload\",\"operator\":\"Equal\",\n                 \"value\":\"true\",\"effect\":\"NoSchedule\"}}]'\n```\n\n### Longer-term hygiene\n\nIf you expect more custom-taint nodes in the future, consider adding a blanket toleration (`operator: Exists`) to the CSI DaemonSets via the Rook `CephCluster` CR (`spec.storage.storageClassDeviceSets` \u2192 `tolerations`, or the `csi` section), so every new tainted node is covered without a manual patch."
+        }
+      ]
+    },
+    {
+      "id": "openwebui-persistentconfig",
+      "category": "diagnosis",
+      "score": 0.3333333333333333,
+      "latency": 78.68888591206633,
+      "tokens_per_second": 24.844677584896598,
+      "runs": [
+        {
+          "score": 0.3333333333333333,
+          "checks": [
+            {
+              "kind": "regex_any",
+              "label": "names PersistentConfig",
+              "passed": false,
+              "detail": "none of ['persistent ?config']"
+            },
+            {
+              "kind": "regex_any",
+              "label": "explains env seeds storage once, then loses authority",
+              "passed": false,
+              "detail": "none of ['first (launch|start|boot|run)', 'only.*seed', 'seed.*database', 'stored in the (database|db)', 'saved to the (database|db)', 'database takes precedence', 'db value (wins|takes)']"
+            },
+            {
+              "kind": "regex_any",
+              "label": "gives a working fix",
+              "passed": true,
+              "detail": "matched 'admin (panel|settings|ui)'"
+            }
+          ],
+          "warnings": [],
+          "reasoning_chars": 3699,
+          "latency": 78.68888591206633,
+          "tokens_per_second": 24.844677584896598,
+          "completion_tokens": 1955,
+          "prompt_tokens": 164,
+          "content": "## Root Cause: Database-First Settings Override Environment Variables\n\nOpen WebUI treats environment variables as **first-boot defaults only**. The moment the Postgres database is initialised (the first time the app starts against an empty or new database), every setting is written into the `config` table. From that point forward, the application reads its configuration **exclusively from Postgres** and never consults `os.environ` again for those keys.\n\nYour sequence of events:\n\n1. Months ago the app started for the first time. `ENABLE_OLLAMA_API` was `true` (or unset, defaulting to `true`), and an Ollama host was configured via the UI. Those values were persisted into the `config` table.\n2. You later edited the Deployment to point at LiteLLM and set `ENABLE_OLLAMA_API=false`. The env vars are correctly injected into the container (you confirmed this), but they are **dead letters**\u2014the startup code sees that the `config` table already has rows and skips the env-var fallback path entirely.\n3. The runtime query you ran (`openai.enable = False`, `ollama.base_urls = [\"http://old-host:11434\"]`) is reading the **stale Postgres rows**, not the environment.\n\nThis is by design in Open WebUI's `Config` class: it calls `get_config()` which does a `SELECT` from the `config` table; the `os.getenv(...)` calls only appear in the `if not db_has_value` branch.\n\n---\n\n## The Fix\n\n### Option A \u2013 Update via the Admin UI (simplest)\n\n1. Log in as an admin \u2192 **Admin Panel \u2192 Settings \u2192 External Connections**.\n2. **OpenAI API**: toggle *Enable* to **on**, set *API Base URL* to\n   `http://litellm.llm.svc.cluster.local:4000/v1`, enter the API key if LiteLLM requires one.\n3. **Ollama API**: toggle *Enable* to **off**, and delete `http://old-host:11434` from the base-URL list.\n4. **Save**. The new values are written to Postgres and take effect immediately (no pod restart needed).\n\n### Option B \u2013 Patch the Postgres rows directly (no UI access)\n\n```bash\n# exec into the Postgres pod (or use psql from anywhere with network access)\npsql -h <pg-host> -U openwebui -d openwebui\n\n-- Inspect what's stored\nSELECT key, value FROM config\n WHERE key IN ('openai.enable',\n               'openai.api_base_url',\n               'ollama.enable',\n               'ollama.base_urls');\n\n-- Overwrite with the desired values\nUPDATE config SET value = 'true'\n WHERE key = 'openai.enable';\n\nUPDATE config SET value = 'http://litellm.llm.svc.cluster.local:4000/v1'\n WHERE key = 'openai.api_base_url';\n\nUPDATE config SET value = 'false'\n WHERE key = 'ollama.enable';\n\nUPDATE config SET value = '[]'\n WHERE key = 'ollama.base_urls';\n```\n\nThen restart the Open WebUI pod (or just hit the `/api/config` refresh endpoint) so the in-process `Config` singleton reloads.\n\n### Option C \u2013 Make env vars authoritative on every boot (prevent recurrence)\n\nIf you want the Deployment's env vars to **always** win over whatever is in Postgres, add an init-container or a `command` wrapper that upserts the config table from the environment before the app starts:\n\n```yaml\n# In the Open WebUI Deployment spec\ncommand:\n  - /bin/sh\n  - -c\n  - |\n    psql -h \"$PG_HOST\" -U \"$PG_USER\" -d \"$PG_DB\" <<SQL\n      INSERT INTO config (key, value) VALUES\n        ('openai.enable',      'true'),\n        ('openai.api_base_url', '${OPENAI_API_BASE_URL}'),\n        ('ollama.enable',      'false'),\n        ('ollama.base_urls',   '[]')\n      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;\n    SQL\n    exec /app/start.sh\n```\n\nThis makes the Deployment the single source of truth and eliminates the \"stale DB row\" class of bug entirely.\n\n---\n\n## Why the Pod Looks \"Healthy\"\n\nKubernetes readiness/liveness probes for Open WebUI typically just hit `/health` or `/api/health`, which returns `200` as long as the process is up and the DB is reachable. They do **not** validate that the model list is non-empty or that the configured endpoints are correct, so the pod reports `Ready` while the app is functionally pointed at a dead Ollama host.\n\n---\n\n**TL;DR** \u2013 The env vars are only read on the very first database initialisation. Your Postgres `config` table still holds the months-old Ollama settings. Update those rows (via the admin UI, `psql`, or a startup upsert script) and the app will pick up the LiteLLM endpoint immediately."
+        }
+      ]
+    },
+    {
+      "id": "gtt-vs-vram",
+      "category": "hardware",
+      "score": 1.0,
+      "latency": 154.3118050210178,
+      "tokens_per_second": 25.124454992098237,
+      "runs": [
+        {
+          "score": 1.0,
+          "checks": [
+            {
+              "kind": "regex_any",
+              "label": "explains GTT is backed by system RAM",
+              "passed": true,
+              "detail": "matched 'system (ram|memory)'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "identifies the BIOS carve-out as the cause of the 31GiB ceiling",
+              "passed": true,
+              "detail": "matched '96'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "ttm.pages_limit is a ceiling, not an allocation",
+              "passed": true,
+              "detail": "matched 'ceiling'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "correct fix is lowering the BIOS carve-out",
+              "passed": true,
+              "detail": "matched 'bios'"
+            }
+          ],
+          "warnings": [],
+          "reasoning_chars": 8161,
+          "latency": 154.3118050210178,
+          "tokens_per_second": 25.124454992098237,
+          "completion_tokens": 3877,
+          "prompt_tokens": 191,
+          "content": "## Why `mem_info_gtt_total` is 31 GiB\n\nThe short answer: **the BIOS carve-out is a hard, pre-OS partition of physical RAM, and `ttm.pages_limit` is a ceiling, not a reservation.** Neither the kernel nor TTM can hand the GPU memory that the firmware already removed from the system-RAM pool.\n\n### The memory topology the BIOS creates\n\nOn Strix Halo the iGPU has no discrete DRAM; it shares the LPDDR5X with the CPU. The BIOS \"UMA framebuffer / GPU memory\" setting tells the firmware to **remove** a chunk of physical pages from the memory map *before* the OS ever boots:\n\n| Region | Size | Who sees it |\n|---|---|---|\n| BIOS-carved \"dedicated VRAM\" | 96 GiB | GPU only (reported via ACPI/firmware tables to `amdgpu`) |\n| Remaining system RAM | 128 \u2212 96 = 32 GiB | OS page allocator \u2192 `MemTotal \u2248 31 GiB` |\n\nThose 96 GiB of physical pages are **not in the buddy allocator**. The kernel's page tables, `/proc/meminfo`, and the GART (Graphics Address Remapping Table) aperture can only reference pages the OS actually owns.\n\n### What each sysfs counter actually measures\n\n* **`mem_info_vram_total` (96 GiB)** \u2013 the fixed, contiguous region the firmware handed to the GPU. `amdgpu` registers it as a TTM memory type (`TTM_PL_VRAM`). Its size is dictated by the hardware/firmware; no kernel parameter can grow it.\n\n* **`mem_info_gtt_total` (\u2248 31 GiB)** \u2013 the amount of **system RAM** the GPU can reach through the GART aperture. It is backed by the OS page allocator, so it is bounded by `MemTotal`. The kernel reserved ~1 GiB for itself, leaving ~31 GiB.\n\n* **`ttm.pages_limit = 32 505 856` (\u2248 124 GiB)** \u2013 a **global upper bound** on how many 4 KiB pages TTM is *permitted* to allocate across all memory types. It is a `min()` guard, not a `reserve()`. TTM will happily accept a limit of 124 GiB, but it can only allocate from pools that actually contain pages. The VRAM pool has 96 GiB (firmware-fixed); the GTT pool has 31 GiB (system-RAM-fixed). The limit is never the binding constraint here.\n\nSo the operator's mental model\u2014\"set the limit high and the GPU gets the memory\"\u2014is inverted. The limit is a *cap*; the pools are *floors* set by firmware and the OS.\n\n### Why you can't just \"reclaim\" the 96 GiB at runtime\n\nThe carve-out is communicated to the OS through the ACPI memory map (or e820/UEFI memory map). The kernel's early boot code marks those pages as reserved or simply never maps them. There is no driver or sysfs knob that says \"give those pages back to the buddy allocator.\" The GPU driver reads the carve-out size from the firmware tables and registers it as `TTM_PL_VRAM`; it cannot reclassify those pages as GTT-backed system RAM.\n\n---\n\n## What would actually give the GPU a single ~124 GiB pool\n\nYou need to **eliminate the BIOS carve-out** so that all 128 GiB remains in the system-RAM pool, and let the GPU access everything through the GART/GTT path.\n\n### Step 1 \u2013 BIOS / firmware\n\nIn the UEFI setup (or via `fwupd`/vendor tooling if exposed):\n\n* Set **\"UMA framebuffer size\" / \"GPU memory\" / \"iGPU VRAM\"** to **0 MiB** (or the minimum the firmware allows, e.g. 16 MiB for the scanout buffer).\n* This stops the firmware from removing pages from the memory map. The OS will now see `MemTotal \u2248 127 GiB`.\n\n### Step 2 \u2013 Kernel / driver parameters\n\n```\nttm.pages_limit=32505856          # \u2248 124 GiB ceiling (now actually reachable)\namdgpu.gttsize=0                  # let the driver size GTT from available RAM\n                                  # (or set explicitly in MiB if you want a cap)\n```\n\nWith no VRAM carve-out, `amdgpu` registers **zero** `TTM_PL_VRAM` pages and puts everything into `TTM_PL_GTT`. The sysfs counters become:\n\n```\nmem_info_vram_total:   0 B          (or a tiny scanout buffer)\nmem_info_gtt_total:    ~124 GiB     (backed by the full system-RAM pool)\n```\n\nThe GPU now has a **single** ~124 GiB pool, accessed through the GART aperture.\n\n### Step 3 \u2013 Verify\n\n```bash\ncat /sys/class/drm/card0/device/mem_info_vram_total\ncat /sys/class/drm/card0/device/mem_info_gtt_total\ngrep MemTotal /proc/meminfo\n```\n\n`MemTotal` should be \u2248 127 GiB, and `mem_info_gtt_total` should track it (minus kernel/driver overhead).\n\n### Caveats\n\n* **GART aperture size.** Strix Halo's GART can cover the full 48-bit (or larger) physical address space, so a 124 GiB GTT is within hardware limits. On older APUs the aperture was capped (e.g. 256 GiB on some Zen 2 parts), but 124 GiB is well within range.\n* **Performance.** Without a dedicated VRAM carve-out, every GPU memory access goes through the GART page-table walk. For large working sets this is fine (the TLB caches the mappings), but for very small, latency-sensitive accesses the dedicated-VRAM path had a slight edge. For LLM inference / large-model workloads the unified pool is almost always the right trade-off.\n* **Kernel version.** Make sure you are on a kernel \u2265 6.10 (ideally 6.12+) where the `amdgpu` Strix Halo support and TTM accounting are mature. Older kernels had bugs where `gttsize` was misreported.\n* **`ttm.pages_limit` is still just a ceiling.** If you set it to 124 GiB but the system only has 127 GiB of RAM and the OS is using 3 GiB, TTM will never actually allocate 124 GiB unless a workload demands it. The parameter prevents TTM from *over*-committing; it does not pre-allocate.\n\n### TL;DR\n\nThe 96 GiB BIOS carve-out is a **firmware-level partition** that removes those pages from the OS's view before the kernel ever runs. GTT is backed by system RAM, so it can never exceed `MemTotal`. `ttm.pages_limit` is a maximum, not a reservation\u2014it cannot conjure memory the firmware already took away. To get a single ~124 GiB GPU pool, **set the BIOS iGPU memory carve-out to zero**, keep `ttm.pages_limit` at ~124 GiB, and let the entire 128 GiB live in the GTT/GART path."
+        }
+      ]
+    },
+    {
+      "id": "waitforidle-deadlock",
+      "category": "reasoning",
+      "score": 1.0,
+      "latency": 69.01263614499476,
+      "tokens_per_second": 24.734600724621107,
+      "runs": [
+        {
+          "score": 1.0,
+          "checks": [
+            {
+              "kind": "regex_any",
+              "label": "identifies the fail-closed behaviour",
+              "passed": true,
+              "detail": "matched 'fail.?clos'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "names the deadlock / circularity",
+              "passed": true,
+              "detail": "matched 'deadlock'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "notes the 24h consequence of the timeout value",
+              "passed": true,
+              "detail": "matched '24 ?h'"
+            }
+          ],
+          "warnings": [],
+          "reasoning_chars": 3769,
+          "latency": 69.01263614499476,
+          "tokens_per_second": 24.734600724621107,
+          "completion_tokens": 1707,
+          "prompt_tokens": 167,
+          "content": "## The Deadlock\n\nThe pod is in **CrashLoopBackOff**: its container is not running, so nothing is listening on the `/slots` port. When the operator issues its idle probe, the HTTP request fails (connection refused, timeout, or no endpoint at all). The operator receives **no response**, which is not a clear `\"idle\": true` answer.\n\nThe rollout policy says:\n\n> If it cannot get a clear \"idle\" answer it defers the rollout and retries.\n\nSo the operator interprets the missing response as \"not confirmed idle\" \u2192 logs *\"current pod is busy\"* \u2192 defers \u2192 sleeps a few seconds \u2192 retries \u2192 same failure \u2192 forever (up to 86 400 s).\n\nThe new spec that would *fix* the pod is the very thing the operator is refusing to apply, because the broken pod can never vouch for its own idleness. The system is in a **livelock**: the operator is actively working (retrying), but no progress is possible.\n\n## The Responsible Property: Fail-Closed Idle Check\n\nThe check is **fail-closed** (also called fail-safe in the conservative sense). It has exactly two outcomes it acts on:\n\n| `/slots` response | Operator's conclusion |\n|---|---|\n| `{\"idle\": true}` | Proceed with rollout |\n| Anything else \u2014 including a connection error, timeout, 5xx, or no pod at all | **Assume busy \u2192 defer** |\n\nThere is no third branch for *\"the pod is not running and therefore cannot possibly be serving inference.\"* The absence of a positive idle signal is **collapsed into the same bucket as a genuine \"I am mid-request\" signal**. The operator cannot distinguish:\n\n- *\"The pod is alive and processing a 40 GB model load\"* (truly busy), from\n- *\"The pod's container is in CrashLoopBackOff and no process is listening\"* (vacuously idle).\n\nBoth produce \"no clear idle answer,\" and the policy's default is to **defer**.\n\n## Why This Is a Design Flaw\n\nThe precondition for the rollout (`waitForIdle`) is **unsatisfiable in the exact scenario that motivates the rollout**. A pod healthy enough to answer `/slots` is a pod that probably doesn't need the fix; a pod that needs the fix (crashed, OOMKilled, misconfigured) is a pod that *cannot* answer `/slots`. The fail-closed check therefore guarantees that the operator will never apply the corrective spec through the normal path.\n\n## What Would Break the Cycle\n\nAny one of these would resolve the livelock:\n\n1. **Treat unreachability as a distinct state.** If the pod is in `CrashLoopBackOff`, `Error`, or `ContainerStatuses[].state.waiting.reason` indicates a crash, skip the idle check entirely \u2014 a non-running container is vacuously idle.\n2. **Fail-open on transport errors.** Distinguish \"the endpoint said *busy*\" from \"I could not reach the endpoint.\" The latter should not block a rollout that is *intended to replace the unreachable pod*.\n3. **Bypass on operator-initiated fixes.** If the spec change is explicitly targeting the broken pod (e.g., a label or annotation marks it as a corrective rollout), skip `waitForIdle`.\n4. **Short-circuit on pod phase.** If the pod's phase is not `Running`, there is no workload to drain; proceed immediately.\n\nUntil one of those is implemented, the operator will dutifully log *\"deferring rollout: current pod is busy\"* every few seconds for 24 hours, then give up \u2014 and the pod will still be in CrashLoopBackOff."
+        }
+      ]
+    },
+    {
+      "id": "false-green-router-mode",
+      "category": "reasoning",
+      "score": 1.0,
+      "latency": 80.78400057798717,
+      "tokens_per_second": 24.930679164071936,
+      "runs": [
+        {
+          "score": 1.0,
+          "checks": [
+            {
+              "kind": "regex_any",
+              "label": "identifies the empty --model argument",
+              "passed": true,
+              "detail": "matched '--model \"\"'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "explains skipModelInit removed the weight staging",
+              "passed": true,
+              "detail": "matched 'skipmodelinit'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "explains /health does not prove a model is loaded",
+              "passed": true,
+              "detail": "matched 'health.*(does not|doesn.t|only)'"
+            },
+            {
+              "kind": "regex_none",
+              "label": "does not recommend an unrelated resource bump",
+              "passed": true,
+              "detail": "clean"
+            }
+          ],
+          "warnings": [],
+          "reasoning_chars": 4116,
+          "latency": 80.78400057798717,
+          "tokens_per_second": 24.930679164071936,
+          "completion_tokens": 2014,
+          "prompt_tokens": 156,
+          "content": "## What Went Wrong\n\nThe operator's warning was **advisory, not prescriptive**. It detected that no model artifact was configured (no `storageUri`, no `modelFormat` resolving to a weights file, etc.) and said, in effect:\n\n> \"No model will be loaded. If this is intentional, set `skipModelInit: true` to suppress this warning.\"\n\nSetting the flag did not *fix* the missing model. It told the KServe runtime's init container / entrypoint wrapper to **skip the entire model-resolution step** \u2014 the step that would have downloaded or symlinked the weights and injected the real path into `--model`. The result is the literal empty string you see on the command line:\n\n```\nllama-server --host 0.0.0.0 --port 8080 --model \"\" --ctx-size 262144\n```\n\nllama-server treats `\"\"` as \"no model file supplied.\" It does **not** treat that as a fatal error. It starts the HTTP server, binds the socket, enters its event loop, and waits for requests. The process is alive, the port is open, and the HTTP layer is fully functional. Only the *inference* layer is empty.\n\n---\n\n## Why Every Health Signal Is Green\n\nEach layer is checking a different question, and none of them ask the one that matters.\n\n| Signal | What it actually verifies | What it *should* verify |\n|---|---|---|\n| **Pod Running** | The `llama-server` process has not exited. | \u2014 |\n| **Deployment `Available`** | All pods pass their **readiness probe**. | \u2014 |\n| **`/health` \u2192 200** | The HTTP server thread is up and the socket is accepting connections. | That a model is loaded and inference can be served. |\n| **InferenceService `Ready`** | The underlying Deployment is `Available` (and, depending on the runtime, that `/health` returned 200). | That the model is loaded and `/v1/chat/completions` can produce a completion. |\n\nThe critical gap is in llama-server's `/health` handler. In the llama.cpp codebase it is essentially:\n\n```cpp\n// simplified\nif (server_is_running) {\n    res.set_status(200);\n    res.set_content(\"OK\");\n}\n```\n\nIt confirms the **HTTP server loop** is alive. It does **not** inspect whether `params.model_path` resolved to a real file, whether weights were mmap'd, or whether the `llama_model` pointer is non-null. An empty `--model \"\"` passes this check trivially.\n\nBecause the readiness probe hits `/health`, Kubernetes marks the pod ready. The Deployment controller sees all replicas ready \u2192 `Available: True`. KServe's controller sees the Deployment available \u2192 `Ready: True`. Every status surface is green.\n\n---\n\n## The Semantic Mismatch\n\nThis is a textbook **liveness \u2260 functionality** problem:\n\n```\nKubernetes probes ask:   \"Is the process alive and answering HTTP?\"\nThe user needs:          \"Can this endpoint actually run inference?\"\n```\n\n`skipModelInit: true` was the right flag *if* you were, say, running a sidecar that loads the model via a shared volume and the runtime genuinely doesn't need to do anything. In this case it was used to **silence a warning about a real misconfiguration**, converting a loud, actionable operator event into a silent, green, broken deployment.\n\n---\n\n## How to Fix It\n\n1. **Remove `skipModelInit: true`** (or set it back to `false`).\n2. **Provide a real model.** Either:\n   - Set `spec.predictor.model.storageUri` to a URI the runtime can resolve (S3, PVC, OCI, etc.), **or**\n   - Mount the weights via a `PersistentVolumeClaim` / `initContainer` and point `--model` at the mounted path through the runtime's `args` / `env` overrides.\n3. **Add a functional readiness probe** that actually exercises inference, e.g.:\n\n   ```yaml\n   readinessProbe:\n     httpGet:\n       path: /v1/models          # returns the loaded model list\n       port: 8080\n     # or a small POST to /v1/chat/completions with a 1-token prompt\n   ```\n\n   A `/v1/models` check will return an empty list (or a 4xx) when no model is loaded, turning the probe red and surfacing the problem at the Deployment level instead of hiding it behind a 200 from `/health`.\n\n4. **Treat the operator warning as a gate, not noise.** The warning existed precisely because the operator could see that no model would be loaded. Suppressing it without addressing the root cause is what turned a visible misconfiguration into an invisible one."
+        }
+      ]
+    },
+    {
+      "id": "noderestriction-labels",
+      "category": "k8s-depth",
+      "score": 0.6,
+      "latency": 73.99153038894292,
+      "tokens_per_second": 25.124497225939304,
+      "runs": [
+        {
+          "score": 0.6,
+          "checks": [
+            {
+              "kind": "regex_any",
+              "label": "names the NodeRestriction admission plugin",
+              "passed": false,
+              "detail": "none of ['noderestriction', 'node restriction']"
+            },
+            {
+              "kind": "regex_any",
+              "label": "explains kubelets may only self-set allowlisted labels",
+              "passed": true,
+              "detail": "matched 'only.*(region|zone)'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "notes topology.kubernetes.io allows only region/zone",
+              "passed": true,
+              "detail": "matched 'zone'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "proposes a workable alternative label",
+              "passed": true,
+              "detail": "matched 'kubectl label'"
+            },
+            {
+              "kind": "regex_none",
+              "label": "does not invent a label-validation or casing failure",
+              "passed": false,
+              "detail": "hit forbidden '422'"
+            }
+          ],
+          "warnings": [],
+          "reasoning_chars": 5128,
+          "latency": 73.99153038894292,
+          "tokens_per_second": 25.124497225939304,
+          "completion_tokens": 1859,
+          "prompt_tokens": 159,
+          "content": "## Why the label never appears\n\n`topology.kubernetes.io/` is a **reserved label prefix**. It is a subdomain of `kubernetes.io/`, which Kubernetes reserves exclusively for its own system components (the API server, controller-manager, cloud-provider controller, etc.).\n\nWhen the kubelet reads its `nodeRegistration.labels` (or `--node-labels`) and tries to register/patch the Node object with `topology.kubernetes.io/gpus: amd`, the **API server's node-validation admission check rejects the write**. The relevant rule (in `pkg/apis/core/validation/validation.go`) rejects any label whose key prefix is `kubernetes.io` or a subdomain thereof, unless the request is made by a privileged system component. The kubelet is *not* privileged for this purpose.\n\nWhat you see in practice:\n\n1. The kubelet sends a `PATCH /api/v1/nodes/<name>` containing the label.\n2. The API server returns **422 Unprocessable** (or 403, depending on version) with a message like *\"cannot set label with reserved prefix kubernetes.io\"*.\n3. The kubelet logs the error, waits ~15 s, and retries forever.\n4. The label is **never persisted**, so `kubectl get node --show-labels` never shows it.\n5. The pod's `nodeSelector` can never match \u2192 the pod stays **Pending** with the \"didn't match Pod's node affinity/selector\" message.\n\nThe node itself is healthy and joined; the problem is purely that the label is illegal for the kubelet to set.\n\n## A label that works\n\nUse any prefix that is **not** a subdomain of `kubernetes.io`. For example:\n\n```yaml\n# kubelet config (nodeRegistration.labels) or --node-labels\ngpu.vendor: amd\n```\n\nor, if you want to keep a topology-flavoured namespace:\n\n```yaml\ntopology.example.com/gpus: amd\n```\n\nThen the workload selector becomes:\n\n```yaml\nnodeSelector:\n  gpu.vendor: amd          # or topology.example.com/gpus: amd\n```\n\nBoth are accepted by the API server when set by the kubelet, will appear in `kubectl get node --show-labels`, and will satisfy the pod's `nodeSelector`.\n\n### Rule of thumb\n\n| Prefix | Who may set it |\n|---|---|\n| `kubernetes.io/\u2026` (and every subdomain, e.g. `topology.kubernetes.io/`, `beta.kubernetes.io/`) | Kubernetes system components only |\n| `kubernetes.io/` bare (no slash) | Reserved |\n| Anything else (`gpu.vendor`, `topology.example.com/\u2026`, `myorg.io/\u2026`, no prefix at all) | Kubelet, operators, `kubectl label`, etc. |\n\nIf you truly need a `topology.kubernetes.io/zone`-style label, it must be set by the **cloud-provider controller** (or a custom controller with the appropriate RBAC), not by the kubelet's node-registration path."
+        }
+      ]
+    },
+    {
+      "id": "flux-crd-ordering",
+      "category": "k8s-depth",
+      "score": 1.0,
+      "latency": 126.52719553909265,
+      "tokens_per_second": 25.425363980394675,
+      "runs": [
+        {
+          "score": 1.0,
+          "checks": [
+            {
+              "kind": "regex_any",
+              "label": "names dependsOn",
+              "passed": true,
+              "detail": "matched 'dependson'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "names the health-gating field",
+              "passed": true,
+              "detail": "matched 'wait.*true'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "explains why dependsOn alone is insufficient",
+              "passed": true,
+              "detail": "matched 'ready.*before'"
+            }
+          ],
+          "warnings": [],
+          "reasoning_chars": 9445,
+          "latency": 126.52719553909265,
+          "tokens_per_second": 25.425363980394675,
+          "completion_tokens": 3217,
+          "prompt_tokens": 159,
+          "content": "## The fix: `dependsOn` **and** `healthChecks`\n\nTwo fields, on two different objects, are required. Neither one alone closes the race.\n\n### 1. `dependsOn` on the `litellm` Kustomization (ordering)\n\n```yaml\napiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\nmetadata:\n  name: litellm\n  namespace: flux-system\nspec:\n  dependsOn:\n    - name: litellm-operator          # \u2190 wait for this Kustomization to be Ready\n  # \u2026 rest unchanged\n```\n\nThis tells the Kustomize controller: *do not reconcile `litellm` until `litellm-operator` reports `Ready`.*\n\n### 2. `healthChecks` on the `litellm-operator` Kustomization (readiness gate)\n\n```yaml\napiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\nmetadata:\n  name: litellm-operator\n  namespace: flux-system\nspec:\n  healthChecks:\n    - apiVersion: apiextensions.k8s.io/v1\n      kind: CustomResourceDefinition\n      name: litellmproxies.litellm.home-operations.com   # \u2190 must be Established\n  # \u2026 rest unchanged (the HelmRelease lives here)\n```\n\nThis makes the `litellm-operator` Kustomization **not** report `Ready` until the CRD's `status.conditions` contain `Established: True`.\n\n---\n\n## Why one field alone is not enough\n\n### `dependsOn` alone is insufficient\n\n`dependsOn` gates on the **Kustomization's Ready condition**, which in turn gates on the **HelmRelease's Ready condition**. The Helm controller marks a release Ready once the Helm release is *deployed*\u2014i.e., the chart's manifests (including the CRD object) have been written to etcd. But \"written to etcd\" \u2260 \"visible in the API server's discovery endpoint.\"\n\nThe Kustomize controller resolves `kind: LiteLLMProxy` through the **aggregated discovery cache** (`/apis`). That cache is refreshed on a short interval (default ~10 s in kube-apiserver). During that window the CRD object exists, the HelmRelease is Ready, the `litellm-operator` Kustomization is Ready, `dependsOn` is satisfied, and `litellm` starts reconciling\u2014only to get:\n\n```\nno matches for kind \"LiteLLMProxy\" in version \"litellm.home-operations.com/v1alpha1\"\n```\n\nFlux retries and eventually succeeds, which is exactly the non-deterministic behaviour you observed.\n\n### `healthChecks` alone is insufficient\n\nWithout `dependsOn`, the two Kustomizations are reconciled **concurrently** by the Kustomize controller. The `healthChecks` on `litellm-operator` correctly delays *its* Ready condition until the CRD is Established, but `litellm` has no reason to wait for that condition\u2014it will happily try to apply the CR in the same sync loop, before the operator Kustomization has even been reconciled.\n\n### Together they close the gap\n\n```\nlitellm-operator Kustomization\n  \u2514\u2500 HelmRelease installs chart \u2192 CRD object created in etcd\n  \u2514\u2500 healthChecks: CRD must be Established: True   \u2190 closes the discovery-cache gap\n  \u2514\u2500 Kustomization reports Ready\n\nlitellm Kustomization\n  \u2514\u2500 dependsOn: litellm-operator Ready              \u2190 closes the ordering gap\n  \u2514\u2500 reconciles \u2192 discovery cache now knows LiteLLMProxy \u2192 CR applies cleanly\n```\n\n`dependsOn` guarantees **which** Kustomization goes first; `healthChecks` guarantees **what \"first\" actually means** (CRD fully registered, not merely written). Remove either one and you reintroduce a race that only Flux's exponential-backoff retry hides."
+        }
+      ]
+    },
+    {
+      "id": "tool-call-triage",
+      "category": "tool-use",
+      "score": 1.0,
+      "latency": 7.155944111989811,
+      "tokens_per_second": 20.961594676050424,
+      "runs": [
+        {
+          "score": 1.0,
+          "checks": [
+            {
+              "kind": "tool_call",
+              "label": "calls kubectl_get on pods in the llm namespace",
+              "passed": true,
+              "detail": "kubectl_get({'resource': 'pods', 'namespace': 'llm'})"
+            }
+          ],
+          "warnings": [],
+          "reasoning_chars": 38,
+          "latency": 7.155944111989811,
+          "tokens_per_second": 20.961594676050424,
+          "completion_tokens": 150,
+          "prompt_tokens": 447,
+          "content": "I'll start by surveying the resources in the `llm` namespace.\n\n"
+        }
+      ]
+    },
+    {
+      "id": "structured-triage",
+      "category": "structured-output",
+      "score": 1.0,
+      "latency": 14.95019672298804,
+      "tokens_per_second": 23.87928444119147,
+      "runs": [
+        {
+          "score": 1.0,
+          "checks": [
+            {
+              "kind": "json_valid",
+              "label": "response parses as JSON",
+              "passed": true,
+              "detail": "parsed"
+            },
+            {
+              "kind": "json_field",
+              "label": "severity is the ticket tier, not a page",
+              "passed": true,
+              "detail": "severity='ticket' (want 'ticket')"
+            },
+            {
+              "kind": "json_field",
+              "label": "urgent is false",
+              "passed": true,
+              "detail": "urgent=False (want False)"
+            },
+            {
+              "kind": "json_field",
+              "label": "component present",
+              "passed": true,
+              "detail": "component='ceph-mds'"
+            }
+          ],
+          "warnings": [],
+          "reasoning_chars": 1379,
+          "latency": 14.95019672298804,
+          "tokens_per_second": 23.87928444119147,
+          "completion_tokens": 357,
+          "prompt_tokens": 135,
+          "content": "{\"severity\":\"ticket\",\"component\":\"ceph-mds\",\"urgent\":false}"
+        }
+      ]
+    },
+    {
+      "id": "long-context-cache-binding",
+      "category": "long-context",
+      "score": 1.0,
+      "latency": 347.6936401888961,
+      "tokens_per_second": 2.0449036675325027,
+      "runs": [
+        {
+          "score": 1.0,
+          "checks": [
+            {
+              "kind": "regex_any",
+              "label": "names the storage class",
+              "passed": true,
+              "detail": "matched 'openebs-hostpath'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "names the intermediate claim",
+              "passed": true,
+              "detail": "matched 'llmkube-framework-cache'"
+            },
+            {
+              "kind": "regex_any",
+              "label": "concludes the volume is node-local",
+              "passed": true,
+              "detail": "matched 'cannot be resched'"
+            }
+          ],
+          "warnings": [],
+          "reasoning_chars": 2278,
+          "latency": 347.6936401888961,
+          "tokens_per_second": 2.0449036675325027,
+          "completion_tokens": 711,
+          "prompt_tokens": 77912,
+          "content": "The storage class is **`openebs-hostpath`** (from the `llmkube-framework-cache` PVC in `litellm/app/pvc.yaml`).\n\nNo \u2014 the pod cannot be rescheduled onto a different node without losing access to the cached weights. `openebs-hostpath` provisions a plain directory on the local filesystem of whichever node the pod first schedules to, and the `ReadWriteOnce` access mode pins the volume to that node; the `nodeSelector: node.kubernetes.io/gpu-vendor: amd` keeps the pod on the Framework, but if that node were lost the data would not follow the pod elsewhere."
+        }
+      ]
+    }
+  ],
+  "weights": "Qwen3.8-Flash-Next UD-Q3_K_XL (vulkan-radv, no spec-decode)"
+}

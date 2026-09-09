@@ -430,5 +430,6 @@
         }
       ]
     }
-  ]
+  ],
+  "weights": "Qwen3.6-35B-A3B UD-Q4_K_XL (rocm-6.4.4)"
 }
