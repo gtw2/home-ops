@@ -41,13 +41,18 @@ spec:
               # every request, so when the operator rotates the token the
               # server picks it up without a restart.
               GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE: /var/run/secrets/grafana/token
+            # TCP, not httpGet. A plain GET /mcp is not a valid MCP request -
+            # streamable-http wants POST with an initialize body, or a GET
+            # carrying Accept: text/event-stream - so an httpGet probe never
+            # gets a 2xx and the liveness probe kills a perfectly healthy
+            # server on a loop. A TCP probe proves the listener is up, which is
+            # all a probe can honestly assert here.
             probes:
               liveness: &probe
                 enabled: true
                 custom: true
                 spec:
-                  httpGet:
-                    path: /mcp
+                  tcpSocket:
                     port: 8000
                   initialDelaySeconds: 10
                   periodSeconds: 30
