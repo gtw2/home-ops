@@ -10,5 +10,15 @@ spec:
   # never has to be copied into this namespace. toolhive just registers it.
   remoteUrl: http://mcp-grafana.observability.svc.cluster.local:8000/mcp
   transport: streamable-http
+  # Required, or the operator refuses the URL outright:
+  #   remote URL host is not allowed: hostname
+  #   "mcp-grafana.observability.svc.cluster.local" matches blocked internal
+  #   hostname "cluster.local"
+  # Remote entries are assumed to be off-cluster and private addresses are
+  # blocked by default. This one genuinely is in-cluster, so declare it.
+  # The reference gets away without this only because its short-form host
+  # (mcp-grafana.observability:8000) does not contain the blocked substring -
+  # evading a substring match rather than declaring intent.
+  allowPrivateEndpoint: true
   groupRef:
     name: mcp-tools
