@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/toolhive.stacklok.dev/mcpserverentry_v1beta1.json
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServerEntry
+metadata:
+  name: grafana
+spec:
+  # An Entry rather than an MCPServer: the workload runs in observability, next
+  # to the Grafana instance whose Viewer token it holds, so that credential
+  # never has to be copied into this namespace. toolhive just registers it.
+  remoteUrl: http://mcp-grafana.observability.svc.cluster.local:8000/mcp
+  transport: streamable-http
+  groupRef:
+    name: mcp-tools

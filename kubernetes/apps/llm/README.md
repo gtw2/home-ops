@@ -86,7 +86,8 @@ manifest into chat. `toolhive/` runs each MCP server as a pod and aggregates the
 behind one endpoint.
 
 ```
-open-webui -> vmcp-mcp-gateway.llm:4483 -> { kubectl-mcp, flux-mcp } -> apiserver
+open-webui -> vmcp-mcp-gateway.llm:4483 -> { kubectl, flux, grafana,
+                                             ha, arr, seerr }
 ```
 
 Both servers are **read-only**, enforced by RBAC rather than by a flag:
@@ -118,7 +119,50 @@ it carries no `llm-workload` toleration, so the Framework stays dedicated to
 vendor; no key is set, and per the CRD an empty key omits the Authorization
 header, which is what a keyless in-cluster endpoint wants.
 
+### The servers
+
+| server | reaches | credential |
+|---|---|---|
+| `kubectl` | the API server, read-only | ServiceAccount RBAC |
+| `flux` | Flux CRs, read-only | the same two ClusterRoles |
+| `grafana` | dashboards, datasources, metric/log queries | Grafana Viewer token |
+| `ha` | Home Assistant API | long-lived access token |
+| `arr` | sonarr, radarr, prowlarr | each app's existing API key |
+| `seerr` | overseerr | its existing API key |
+
+Three things about this set are worth knowing before changing it.
+
+**grafana is an `MCPServerEntry`, not an `MCPServer`.** The workload runs in
+`observability/mcp-grafana`, next to the Grafana instance, because its
+credential is a `GrafanaServiceAccount` token that the grafana-operator mints
+into that namespace. Running the server there means the token never has to be
+copied into `llm`. toolhive only registers the endpoint. The token is `Viewer`,
+so it can read and query but not create or edit, and upstream re-reads it from
+file on every request, so operator rotation needs no restart.
+
+**arr and seerr have no published image.** They run `node:24-alpine` with
+`npx -y <package>@<exact version>`, so npm is fetched and executed at every pod
+start. Versions are pinned exactly, so a hijacked dist-tag cannot slip in, but
+this is still third-party code arriving at boot, and npm being unreachable means
+the pod does not start. Both run with `automountServiceAccountToken: false` and
+hold only their own app's API key - no cluster access - which is what bounds the
+blast radius. Replacing them with images built in this repo is the upgrade path
+if that trade stops being acceptable.
+
+**`seerr` has three different names.** The app directory is `overseerr`, the
+1Password item is `overseerr`, and the Service it creates is `seerr`. All three
+are correct in their own context; the MCP server's URL follows the Service and
+its ExternalSecret follows the item.
+
 ### Before the first reconcile of toolhive
+
+Two 1Password prerequisites.
+
+**`HOMEASSISTANT_TOKEN` on the existing `home-assistant` item** - a Home
+Assistant long-lived access token (Profile -> Security -> Long-lived access
+tokens). The item already carries `HASS_LATITUDE` and friends but nothing that
+authenticates to the API, so `ha-mcp` stays down until this exists. Every other
+credential in the table above was already in 1Password and needs nothing.
 
 **Create the 1Password `toolhive` item first**, with `MCP_GATEWAY_API_KEY` set to
 a random string. This is not just a convenience: if the ExternalSecret cannot

@@ -1,0 +1,91 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app mcp-grafana
+spec:
+  interval: 15m
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controllers:
+      mcp-grafana:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: docker.io/grafana/mcp-grafana
+              tag: 1.3.0@sha256:5114852743e450fe5186b6c1712419843eb4bd295e47e64c452c3aa0fab3c42e
+            # Upstream's own flags, not docker run arguments. The default
+            # address is localhost:8000, which would refuse every connection
+            # from outside the pod, so it has to bind 0.0.0.0 explicitly.
+            # streamable-http is native here - no sse bridge needed.
+            args:
+              - --transport=streamable-http
+              - --address=0.0.0.0:8000
+              - --endpoint-path=/mcp
+            env:
+              GRAFANA_URL: http://grafana-service.observability.svc.cluster.local:3000
+              # Read from file rather than inlined: upstream re-reads this on
+              # every request, so when the operator rotates the token the
+              # server picks it up without a restart.
+              GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE: /var/run/secrets/grafana/token
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /mcp
+                    port: 8000
+                  initialDelaySeconds: 10
+                  periodSeconds: 30
+                  failureThreshold: 6
+              readiness: *probe
+              startup:
+                enabled: false
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                memory: 256Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+    persistence:
+      token:
+        type: secret
+        # Minted by the GrafanaServiceAccount alongside this app.
+        name: mcp-grafana-token
+        advancedMounts:
+          mcp-grafana:
+            app:
+              - path: /var/run/secrets/grafana
+                readOnly: true
+    service:
+      app:
+        controller: mcp-grafana
+        ports:
+          http:
+            port: 8000

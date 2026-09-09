@@ -1,0 +1,66 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/toolhive.stacklok.dev/mcpserver_v1beta1.json
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: arr
+spec:
+  # There is no published image for this MCP server, so the package is fetched
+  # from npm at every pod start. The version is pinned exactly, so a hijacked
+  # dist-tag cannot slip in, but this is still third-party code downloaded and
+  # executed at boot - and npm being unreachable means the pod will not start.
+  # The blast radius is bounded to the *arr API keys below: this pod has no
+  # ServiceAccount token and no cluster access.
+  image: docker.io/library/node:24-alpine@sha256:50c8e8ca1d27439048670df5883f32d57cf81cff6233222c893fd0d9884cbd81
+  transport: stdio
+  proxyMode: streamable-http
+  proxyPort: 8080
+  permissionProfile:
+    type: builtin
+    name: network
+  env:
+    - name: HOME
+      value: /tmp
+    - name: NPM_CONFIG_CACHE
+      value: /tmp/.npm
+    # These Services listen on port 80, not the *arr default ports.
+    - name: SONARR_URL
+      value: http://sonarr.downloads.svc.cluster.local
+    - name: RADARR_URL
+      value: http://radarr.downloads.svc.cluster.local
+    - name: PROWLARR_URL
+      value: http://prowlarr.downloads.svc.cluster.local
+  secrets:
+    - name: toolhive-arr
+      key: SONARR_API_KEY
+      targetEnvName: SONARR_API_KEY
+    - name: toolhive-arr
+      key: RADARR_API_KEY
+      targetEnvName: RADARR_API_KEY
+    - name: toolhive-arr
+      key: PROWLARR_API_KEY
+      targetEnvName: PROWLARR_API_KEY
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  podTemplateSpec:
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: mcp
+          command:
+            - npx
+          args:
+            - -y
+            - mcp-arr-server@1.7.3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+  groupRef:
+    name: mcp-tools

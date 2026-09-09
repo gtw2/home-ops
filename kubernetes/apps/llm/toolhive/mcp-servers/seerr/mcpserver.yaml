@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/toolhive.stacklok.dev/mcpserver_v1beta1.json
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: seerr
+spec:
+  # Same npm-at-boot caveat as the arr server: pinned exactly, fetched at every
+  # pod start, bounded to the one API key below and no cluster access.
+  image: docker.io/library/node:24-alpine@sha256:50c8e8ca1d27439048670df5883f32d57cf81cff6233222c893fd0d9884cbd81
+  transport: stdio
+  proxyMode: streamable-http
+  proxyPort: 8080
+  permissionProfile:
+    type: builtin
+    name: network
+  env:
+    - name: HOME
+      value: /tmp
+    - name: NPM_CONFIG_CACHE
+      value: /tmp/.npm
+    # The app directory is called overseerr; the Service it creates is seerr.
+    - name: OVERSEERR_URL
+      value: http://seerr.media.svc.cluster.local
+  secrets:
+    - name: toolhive-seerr
+      key: OVERSEERR_API_KEY
+      targetEnvName: OVERSEERR_API_KEY
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  podTemplateSpec:
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: mcp
+          command:
+            - npx
+          args:
+            - -y
+            - "@jhomen368/overseerr-mcp@2.3.0"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+  groupRef:
+    name: mcp-tools

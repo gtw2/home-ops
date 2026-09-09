@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/toolhive.stacklok.dev/mcpserver_v1beta1.json
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: ha
+spec:
+  image: ghcr.io/homeassistant-ai/ha-mcp:8.4.3@sha256:d5cea47a0115e5d161c2b319ee637b1b0a5bcfafe1597cb490299bbbc6329456
+  transport: streamable-http
+  proxyMode: streamable-http
+  proxyPort: 8080
+  permissionProfile:
+    type: builtin
+    name: network
+  env:
+    # The in-cluster Service, not the public hostname: this keeps the token off
+    # the internet path entirely. 8123 is the API port; the Service also
+    # publishes 12321, which is not it.
+    - name: HOMEASSISTANT_URL
+      value: http://home-assistant.home-automation.svc.cluster.local:8123
+  secrets:
+    - name: toolhive-home-assistant
+      key: HOMEASSISTANT_TOKEN
+      targetEnvName: HOMEASSISTANT_TOKEN
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: mcp
+          command:
+            - ha-mcp-web
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+  groupRef:
+    name: mcp-tools
