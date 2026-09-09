@@ -51,6 +51,34 @@ spec:
               ENABLE_SEARCH_QUERY: true
               RAG_WEB_SEARCH_ENGINE: searxng
               SEARXNG_QUERY_URL: http://searxng:8080/search?q=<query>
+              # MCP tools from toolhive in the llm namespace. Talking to the
+              # gateway Service directly keeps this in-cluster, so it bypasses
+              # envoy and needs no API key - auth_type none is correct here,
+              # not an oversight. The gateway's own optimizer means this stays
+              # two tools (find_tool/call_tool) no matter how many MCP servers
+              # join the group.
+              #
+              # For MCP connections open-webui uses "url" verbatim and ignores
+              # "path", so the /mcp suffix belongs in the url. "config.enable"
+              # must be true or the server is parsed and then skipped.
+              # This only works because ENABLE_PERSISTENT_CONFIG is false above.
+              TOOL_SERVER_CONNECTIONS: |-
+                [
+                  {
+                    "url": "http://vmcp-mcp-gateway.llm.svc.cluster.local:4483/mcp",
+                    "path": "",
+                    "type": "mcp",
+                    "auth_type": "none",
+                    "key": "",
+                    "headers": null,
+                    "config": {"enable": true},
+                    "info": {
+                      "id": "mcp-gateway",
+                      "name": "Cluster tools",
+                      "description": "Read-only kubectl and flux tools, via toolhive"
+                    }
+                  }
+                ]
               ENABLE_WEBSOCKET_SUPPORT: "true"
               WEBSOCKET_MANAGER: "redis"
               WEBSOCKET_REDIS_URL: "redis://dragonfly.database.svc.cluster.local:6379/5"

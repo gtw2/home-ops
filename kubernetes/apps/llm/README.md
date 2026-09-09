@@ -138,15 +138,22 @@ change, and the API key stays either way.
 
 ### Wiring open-webui to it
 
-Add the tool server in **Settings -> Admin -> Integrations -> External Tool
-Servers**, type *MCP (Streamable HTTP)*, URL
-`http://vmcp-mcp-gateway.llm.svc.cluster.local:4483/mcp`. In-cluster, so it
-bypasses envoy and needs no API key.
+In git, via `TOOL_SERVER_CONNECTIONS` in
+`home-automation/open-webui/app/helmrelease.yaml` - **not** in the admin UI.
 
-Do **not** set `TOOL_SERVER_CONNECTIONS` in the HelmRelease. It is a
-PersistentConfig variable: on an instance whose database already exists, the env
-var is read once at first boot and ignored forever after, so the change appears
-to apply and silently does nothing.
+`TOOL_SERVER_CONNECTIONS` is nominally a PersistentConfig variable, which would
+normally mean env seeds the database once at first boot and is ignored forever
+after. That trap does not apply here because that HelmRelease already sets
+`ENABLE_PERSISTENT_CONFIG: "false"`, which makes env authoritative on every
+start. If that flag is ever flipped back on, this connection stops tracking git
+and has to be maintained in the UI instead.
+
+Two details worth knowing, both taken from the v0.11.3 source rather than
+guessed: for `type: mcp`, open-webui passes `url` to the MCP client verbatim and
+**ignores `path`**, so the `/mcp` suffix belongs in the url; and
+`config.enable` must be `true` or the connection is parsed and then silently
+skipped. The URL points at the gateway Service directly, so it bypasses envoy
+and `auth_type: none` is correct rather than an oversight.
 
 ### Adding another MCP server
 
