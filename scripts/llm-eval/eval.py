@@ -89,7 +89,7 @@ def litellm_connection(base_url: str | None, api_key: str | None):
         text=True,
     )
     try:
-        port = _await_forward(proc, what="svc/litellm")
+        port = _await_forward(proc)
         yield f"http://127.0.0.1:{port}/v1", key
     finally:
         proc.terminate()
@@ -109,8 +109,7 @@ def _master_key() -> str:
     return base64.b64decode(out).decode().strip()
 
 
-def _await_forward(proc: subprocess.Popen, timeout: float = 30.0,
-                   what: str = "svc/litellm") -> int:
+def _await_forward(proc: subprocess.Popen, timeout: float = 30.0) -> int:
     """Read kubectl's 'Forwarding from 127.0.0.1:NNNNN' line to learn the port."""
     deadline = time.monotonic() + timeout
     assert proc.stdout is not None
@@ -121,130 +120,7 @@ def _await_forward(proc: subprocess.Popen, timeout: float = 30.0,
         if match := re.search(r"127\.0\.0\.1:(\d+)", line):
             return int(match.group(1))
     proc.terminate()
-    die(f"kubectl port-forward to {what} did not come up")
-
-
-# --------------------------------------------------------------------------
-# MCP (toolhive gateway)
-# --------------------------------------------------------------------------
-
-
-class MCPSession:
-    """A streamable-HTTP MCP client, just enough of the protocol to run tools.
-
-    The gateway is a toolhive VirtualMCPServer with the optimizer on, so
-    tools/list returns exactly two meta-tools - find_tool and call_tool -
-    regardless of how many backends are in the group. The model reaches a real
-    tool by describing it, then invoking it through call_tool. That indirection
-    is why `invoked` unwraps call_tool's tool_name: without it every task would
-    look like it called the same one tool.
-    """
-
-    def __init__(self, client: httpx.Client, url: str):
-        self.client, self.url = client, url
-        self.session_id: str | None = None
-        self.tools: list[dict] = []
-        self.invoked: list[str] = []
-
-    @staticmethod
-    def _parse(reply: httpx.Response) -> dict:
-        """Responses come back as plain JSON or as a one-event SSE stream."""
-        body = reply.text
-        # A JSON-RPC notification carries no id, so the server answers 202 with
-        # an empty body. That is success, not a parse failure.
-        if not body.strip():
-            return {}
-        if "data: " in body:
-            for line in body.splitlines():
-                if line.startswith("data: "):
-                    body = line[6:]
-                    break
-        try:
-            return json.loads(body)
-        except ValueError as exc:
-            raise RuntimeError(f"unparseable MCP reply: {exc}: {body[:200]}") from exc
-
-    def _post(self, payload: dict) -> dict:
-        headers = {"Content-Type": "application/json",
-                   "Accept": "application/json, text/event-stream"}
-        if self.session_id:
-            headers["Mcp-Session-Id"] = self.session_id
-        reply = self.client.post(self.url, headers=headers, json=payload)
-        if reply.status_code >= 400:
-            raise RuntimeError(f"MCP HTTP {reply.status_code}: {reply.text[:200]}")
-        if sid := reply.headers.get("mcp-session-id"):
-            self.session_id = sid
-        return self._parse(reply)
-
-    def open(self) -> "MCPSession":
-        self._post({"jsonrpc": "2.0", "id": 1, "method": "initialize",
-                    "params": {"protocolVersion": "2025-06-18", "capabilities": {},
-                               "clientInfo": {"name": "llm-eval", "version": "1"}}})
-        self._post({"jsonrpc": "2.0", "method": "notifications/initialized"})
-        listed = self._post({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
-        self.tools = (listed.get("result") or {}).get("tools") or []
-        if not self.tools:
-            die(f"MCP gateway at {self.url} advertised no tools")
-        return self
-
-    def openai_tools(self) -> list[dict]:
-        return [{"type": "function",
-                 "function": {"name": t["name"],
-                              "description": t.get("description", ""),
-                              "parameters": t.get("inputSchema")
-                              or {"type": "object", "properties": {}}}}
-                for t in self.tools]
-
-    def call(self, name: str, arguments: dict) -> str:
-        """Run one tool. Errors are returned as text, not raised.
-
-        A failed tool call is data the model should see and recover from - the
-        same way it would in a real client - not an eval crash.
-        """
-        if name == "call_tool":
-            self.invoked.append(str(arguments.get("tool_name")))
-        else:
-            self.invoked.append(name)
-        try:
-            out = self._post({"jsonrpc": "2.0", "id": 3, "method": "tools/call",
-                              "params": {"name": name, "arguments": arguments}})
-        except (RuntimeError, httpx.RequestError) as exc:
-            return f"tool error: {exc}"
-        if err := out.get("error"):
-            return f"tool error: {err}"
-        result = out.get("result") or {}
-        text = "".join(b.get("text", "") for b in result.get("content") or [])
-        return text or json.dumps(result)[:4000]
-
-
-@contextlib.contextmanager
-def mcp_connection(url: str | None, enabled: bool):
-    """Yield an open MCPSession, or None when --tools was not passed.
-
-    Mirrors litellm_connection: an explicit --mcp-url wins, otherwise forward a
-    random local port to the gateway Service so the common case takes no
-    arguments.
-    """
-    if not enabled:
-        yield None
-        return
-    if url:
-        with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
-            yield MCPSession(client, url).open()
-        return
-    proc = subprocess.Popen(
-        ["kubectl", "--namespace", "llm", "port-forward",
-         "svc/vmcp-mcp-gateway", ":4483"],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-    )
-    try:
-        port = _await_forward(proc, what="svc/vmcp-mcp-gateway")
-        with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
-            yield MCPSession(client, f"http://127.0.0.1:{port}/mcp").open()
-    finally:
-        proc.terminate()
-        with contextlib.suppress(subprocess.TimeoutExpired):
-            proc.wait(timeout=10)
+    die("kubectl port-forward to svc/litellm did not come up")
 
 
 def die(message: str) -> None:
@@ -338,28 +214,9 @@ def dig(obj: Any, path: str) -> Any:
     return obj
 
 
-def run_check(check: dict, content: str, tool_calls: list[dict],
-              tools_invoked: list[str] | None = None) -> tuple[bool, str]:
+def run_check(check: dict, content: str, tool_calls: list[dict]) -> tuple[bool, str]:
     """Return (passed, human-readable detail) for one check."""
     kind = check["kind"]
-    tools_invoked = tools_invoked or []
-
-    if kind == "tool_used":
-        # Distinct from tool_call, which grades the OpenAI-level call. Through
-        # the toolhive gateway that is almost always call_tool, so this grades
-        # the backend tool the model actually reached - the thing that says
-        # whether it went to the cluster or answered from memory.
-        wanted = check["names"]
-        hit = [n for n in wanted if n in tools_invoked]
-        if check.get("any", True):
-            return bool(hit), (f"invoked {hit}" if hit
-                               else f"invoked {tools_invoked or 'nothing'}, wanted any of {wanted}")
-        missing = [n for n in wanted if n not in tools_invoked]
-        return not missing, f"missing {missing}" if missing else f"invoked {wanted}"
-
-    if kind == "used_any_tool":
-        return bool(tools_invoked), (f"invoked {tools_invoked}" if tools_invoked
-                                     else "no backend tool reached")
 
     if kind == "regex_all":
         missing = [p for p in check["patterns"]
@@ -424,31 +281,12 @@ def run_check(check: dict, content: str, tool_calls: list[dict],
 
 
 def ask(client: httpx.Client, base_url: str, key: str, model: str,
-        task: Task, temperature: float, no_cache: bool = True,
-        mcp: "MCPSession | None" = None, max_tool_turns: int = 6) -> dict:
-    """One task. Returns timing, token counts and the graded surfaces.
-
-    With `mcp` set this becomes a tool-calling loop: the gateway's tools are
-    offered alongside any the task declares, and every tool call the model makes
-    is executed and fed back until it answers or hits max_tool_turns. Timing and
-    token counts are summed across turns, so tok/s stays comparable with a
-    no-tools run while latency honestly includes the round trips.
-
-    With `mcp` None the behaviour is byte-identical to before: one request, tool
-    calls recorded but never executed. That is what keeps the committed
-    no-tools baselines reproducible.
-    """
-    messages: list[dict[str, Any]] = []
+        task: Task, temperature: float, no_cache: bool = True) -> dict:
+    """One completion. Returns timing, token counts and the graded surfaces."""
+    messages = []
     if task.system:
         messages.append({"role": "system", "content": task.system})
     messages.append({"role": "user", "content": task.render()})
-
-    tools = list(task.tools or [])
-    if mcp is not None:
-        # The session is reused across tasks so the gateway keeps one warm
-        # optimizer index; the trace is per task, so clear it here.
-        mcp.invoked.clear()
-        tools += mcp.openai_tools()
 
     payload: dict[str, Any] = {
         "model": model,
@@ -456,8 +294,8 @@ def ask(client: httpx.Client, base_url: str, key: str, model: str,
         "temperature": temperature,
         "max_tokens": task.max_tokens,
     }
-    if tools:
-        payload["tools"] = tools
+    if task.tools:
+        payload["tools"] = task.tools
         payload["tool_choice"] = "auto"
     if task.response_format:
         payload["response_format"] = task.response_format
@@ -468,89 +306,33 @@ def ask(client: httpx.Client, base_url: str, key: str, model: str,
         # nothing. Correctness and speed both have to be measured cold.
         payload["cache"] = {"no-cache": True}
 
-    turns = 0
-    elapsed = 0.0
-    prompt_tokens = completion_tokens = 0
-    all_calls: list[dict] = []
-    hit_tool_cap = False
-    content = reasoning = ""
-    finish_reason = None
+    started = time.monotonic()
+    try:
+        reply = client.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {key}"},
+            json=payload,
+        )
+    except httpx.RequestError as exc:
+        return {"error": f"{type(exc).__name__}: {exc}",
+                "latency": time.monotonic() - started}
+    elapsed = time.monotonic() - started
 
-    while True:
-        payload["messages"] = messages
-        started = time.monotonic()
-        try:
-            reply = client.post(
-                f"{base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {key}"},
-                json=payload,
-            )
-        except httpx.RequestError as exc:
-            return {"error": f"{type(exc).__name__}: {exc}",
-                    "latency": elapsed + (time.monotonic() - started)}
-        elapsed += time.monotonic() - started
-        turns += 1
+    if reply.status_code != 200:
+        return {"error": f"HTTP {reply.status_code}: {reply.text[:300]}",
+                "latency": elapsed}
 
-        if reply.status_code != 200:
-            return {"error": f"HTTP {reply.status_code}: {reply.text[:300]}",
-                    "latency": elapsed}
+    body = reply.json()
+    choice = (body.get("choices") or [{}])[0]
+    message = choice.get("message") or {}
+    usage = body.get("usage") or {}
+    completion_tokens = usage.get("completion_tokens") or 0
 
-        answer = reply.json()
-        choice = (answer.get("choices") or [{}])[0]
-        message = choice.get("message") or {}
-        usage = answer.get("usage") or {}
-        prompt_tokens += usage.get("prompt_tokens") or 0
-        completion_tokens += usage.get("completion_tokens") or 0
-        finish_reason = choice.get("finish_reason")
-
-        content = message.get("content") or ""
-        reasoning = message.get("reasoning_content") or ""
-        if inline := THINK_TAGS.findall(content):
-            reasoning += "".join(str(m) for m in inline)
-            content = THINK_TAGS.sub("", content).strip()
-
-        calls = message.get("tool_calls") or []
-        all_calls.extend(calls)
-
-        # Without a live MCP session a tool call is recorded and left alone, so
-        # the tool_call check kind still grades intent. Executing needs somewhere
-        # to execute.
-        if not calls or mcp is None:
-            break
-
-        if turns > max_tool_turns:
-            # Out of tool budget while the model is still calling tools. Take
-            # the last turn with tools switched off so it has to commit to an
-            # answer - a real client does the same rather than returning the
-            # user an empty message. Without this the run scores 0 on every
-            # content check for a reason that has nothing to do with what the
-            # model knows.
-            hit_tool_cap = True
-            messages.append({"role": "assistant",
-                             "content": message.get("content") or "",
-                             "tool_calls": calls})
-            for call in calls:
-                fn = call.get("function") or {}
-                messages.append({"role": "tool",
-                                 "tool_call_id": call.get("id", ""),
-                                 "content": "tool budget exhausted; answer now "
-                                            "from what you already have"})
-            payload["tool_choice"] = "none"
-            max_tool_turns = turns  # let exactly one more turn run, then stop
-            continue
-
-        messages.append({"role": "assistant",
-                         "content": message.get("content") or "",
-                         "tool_calls": calls})
-        for call in calls:
-            fn = call.get("function") or {}
-            try:
-                arguments = json.loads(fn.get("arguments") or "{}")
-            except ValueError:
-                arguments = {}
-            messages.append({"role": "tool",
-                             "tool_call_id": call.get("id", ""),
-                             "content": mcp.call(fn.get("name", ""), arguments)})
+    content = message.get("content") or ""
+    reasoning = message.get("reasoning_content") or ""
+    if inline := THINK_TAGS.findall(content):
+        reasoning += "".join(str(m) for m in inline)
+        content = THINK_TAGS.sub("", content).strip()
 
     # Some backends put chain-of-thought in a sibling field. Grade only what a
     # caller would actually receive as the answer, but record the split so a
@@ -558,13 +340,10 @@ def ask(client: httpx.Client, base_url: str, key: str, model: str,
     return {
         "content": content,
         "reasoning": reasoning,
-        "tool_calls": all_calls,
-        "tools_invoked": list(mcp.invoked) if mcp is not None else [],
-        "turns": turns,
-        "hit_tool_cap": hit_tool_cap,
-        "finish_reason": finish_reason,
+        "tool_calls": message.get("tool_calls") or [],
+        "finish_reason": choice.get("finish_reason"),
         "latency": elapsed,
-        "prompt_tokens": prompt_tokens,
+        "prompt_tokens": usage.get("prompt_tokens") or 0,
         "completion_tokens": completion_tokens,
         "tokens_per_second": completion_tokens / elapsed if elapsed > 0 else 0.0,
     }
@@ -575,10 +354,9 @@ def grade(task: Task, response: dict) -> dict:
         return {"score": 0.0, "checks": [], "error": response["error"]}
 
     content, tool_calls = response["content"], response["tool_calls"]
-    invoked = response.get("tools_invoked") or []
     results = []
     for check in task.checks:
-        passed, detail = run_check(check, content, tool_calls, invoked)
+        passed, detail = run_check(check, content, tool_calls)
         results.append({"kind": check["kind"],
                         "label": check.get("label", check["kind"]),
                         "passed": passed, "detail": detail})
@@ -586,14 +364,7 @@ def grade(task: Task, response: dict) -> dict:
     score = sum(r["passed"] for r in results) / len(results) if results else 0.0
     warnings = []
     truncated = response.get("finish_reason") == "length"
-    if response.get("hit_tool_cap"):
-        # Worth flagging even when it recovered on the forced turn: a model that
-        # needs every tool turn is thrashing, and that shows up as latency long
-        # before it shows up as a wrong answer.
-        warnings.append(f"used its whole tool budget "
-                        f"({len(response.get('tools_invoked') or [])} calls) "
-                        f"and had to be forced to answer")
-    if not content:
+    if not content and not tool_calls:
         # Distinguish "thought until it ran out of budget" from "said nothing":
         # the first is a real and comparable weakness, the second is a bug here.
         warnings.append(
@@ -606,7 +377,7 @@ def grade(task: Task, response: dict) -> dict:
 
 
 def evaluate(client, base_url, key, model, tasks, repeat, temperature,
-             verbose, no_cache=True, mcp=None, max_tool_turns=6) -> dict:
+             verbose, no_cache=True) -> dict:
     print(f"\n\033[1m{model}\033[0m")
     print("-" * 78)
     records = []
@@ -615,7 +386,7 @@ def evaluate(client, base_url, key, model, tasks, repeat, temperature,
         runs = []
         for attempt in range(repeat):
             response = ask(client, base_url, key, model, task, temperature,
-                           no_cache, mcp=mcp, max_tool_turns=max_tool_turns)
+                           no_cache)
             result = grade(task, response)
             runs.append({**result,
                          "reasoning_chars": len(response.get("reasoning", "")),
@@ -623,8 +394,6 @@ def evaluate(client, base_url, key, model, tasks, repeat, temperature,
                          "tokens_per_second": response.get("tokens_per_second", 0.0),
                          "completion_tokens": response.get("completion_tokens", 0),
                          "prompt_tokens": response.get("prompt_tokens", 0),
-                         "tools_invoked": response.get("tools_invoked", []),
-                         "turns": response.get("turns", 1),
                          "content": response.get("content", "")})
             mark = "." if result["score"] == 1.0 else ("!" if result["score"] else "x")
             print(f"  {task.id:26s} [{attempt + 1}/{repeat}] {mark}", end="\r")
@@ -633,11 +402,8 @@ def evaluate(client, base_url, key, model, tasks, repeat, temperature,
         latency = statistics.mean(r["latency"] for r in runs)
         tps = statistics.mean(r["tokens_per_second"] for r in runs)
         colour = "\033[32m" if score == 1.0 else ("\033[33m" if score else "\033[31m")
-        used = runs[0].get("tools_invoked") or []
-        turns = runs[0].get("turns", 1)
-        trace = f"  \033[36m{turns}t {','.join(used[:3])}\033[0m" if used else ""
         print(f"  {task.id:26s} {colour}{score:5.0%}\033[0m  "
-              f"{latency:6.1f}s  {tps:5.1f} tok/s  {task.category}{trace}")
+              f"{latency:6.1f}s  {tps:5.1f} tok/s  {task.category}")
 
         failures = [c for c in runs[0]["checks"] if not c["passed"]]
         if failures and (verbose or score < 1.0):
@@ -652,14 +418,12 @@ def evaluate(client, base_url, key, model, tasks, repeat, temperature,
             print(f"      \033[90m{runs[0]['content'][:400]}\033[0m")
 
         records.append({"id": task.id, "category": task.category, "score": score,
-                        "latency": latency, "tokens_per_second": tps,
-                        "tools_invoked": used, "turns": turns, "runs": runs})
+                        "latency": latency, "tokens_per_second": tps, "runs": runs})
 
-    return summarise(model, records, repeat, temperature, mcp is not None)
+    return summarise(model, records, repeat, temperature)
 
 
-def summarise(model: str, records: list[dict], repeat: int, temperature: float,
-              tools: bool = False) -> dict:
+def summarise(model: str, records: list[dict], repeat: int, temperature: float) -> dict:
     overall = statistics.mean(r["score"] for r in records) if records else 0.0
     by_category: dict[str, list[float]] = {}
     for record in records:
@@ -671,11 +435,6 @@ def summarise(model: str, records: list[dict], repeat: int, temperature: float,
     print(f"  \033[1m{'overall':26s} {overall:5.0%}\033[0m   "
           f"median {statistics.median([r['latency'] for r in records]):.1f}s, "
           f"{statistics.mean([r['tokens_per_second'] for r in records]):.1f} tok/s avg")
-    if tools:
-        reached = [r for r in records if r.get("tools_invoked")]
-        calls = sum(len(r.get("tools_invoked") or []) for r in records)
-        print(f"  {'tools':26s} {len(reached)}/{len(records)} tasks used a tool, "
-              f"{calls} backend calls")
 
     return {
         "model": model,
@@ -686,9 +445,6 @@ def summarise(model: str, records: list[dict], repeat: int, temperature: float,
             [r["tokens_per_second"] for r in records]),
         "repeat": repeat,
         "temperature": temperature,
-        # Stamped so a tools run is never compared against a no-tools baseline
-        # by accident - they are different experiments on the same tasks.
-        "tools": tools,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "tasks": records,
     }
@@ -770,14 +526,6 @@ def main() -> None:
     parser.add_argument("--max-tokens", type=int,
                         help="override every task's token budget; raise it if "
                              "runs warn about reasoning exhausting the budget")
-    parser.add_argument("--tools", action="store_true",
-                        help="offer the toolhive MCP gateway's tools and execute "
-                             "the calls the model makes. Off by default so the "
-                             "committed no-tools baselines stay reproducible.")
-    parser.add_argument("--mcp-url", help="MCP endpoint (default: port-forward "
-                                          "to llm/vmcp-mcp-gateway)")
-    parser.add_argument("--max-tool-turns", type=int, default=6,
-                        help="cap on tool round trips per task (default: 6)")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT,
                         help="directory for JSON reports")
@@ -808,17 +556,12 @@ def main() -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d-%H%M%S")
 
-    with mcp_connection(args.mcp_url, args.tools) as mcp, \
-            litellm_connection(args.base_url, args.api_key) as (base_url, key):
-        if mcp is not None:
-            names = ", ".join(t["name"] for t in mcp.tools)
-            print(f"tools: {len(mcp.tools)} from the gateway ({names})")
+    with litellm_connection(args.base_url, args.api_key) as (base_url, key):
         with httpx.Client(timeout=args.timeout) as client:
             reports = [
                 evaluate(client, base_url, key, model, tasks, args.repeat,
                          args.temperature, args.verbose,
-                         no_cache=not args.allow_cache, mcp=mcp,
-                         max_tool_turns=args.max_tool_turns)
+                         no_cache=not args.allow_cache)
                 for model in args.model
             ]
 
