@@ -152,6 +152,16 @@ spec:
     - mmap
     - --lazy-mode
     - "on"
+    # Repacking is ON by default and rewrites weights into CPU-optimised
+    # layouts. With 84GiB of weights that is not a warm-up cost, it is a hang:
+    # the pod sat Running for minutes with read_bytes flat at 62.4GiB, one core
+    # pegged at 100%, no log output and no progress. Everything is offloaded to
+    # the iGPU, so there is nothing to gain from a CPU layout in the first
+    # place. --no-host bypasses the host staging buffer, which on unified
+    # memory is a copy between two views of the same physical RAM. The
+    # reference config carries both for the same reason.
+    - --no-repack
+    - --no-host
     - --spec-draft-type-k
     - q8_0
     - --spec-draft-type-v
