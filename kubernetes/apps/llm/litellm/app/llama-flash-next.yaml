@@ -101,6 +101,12 @@ spec:
   # First-class field rather than the raw --spec-* flags the previous model
   # used: the operator resolves the draft file's staged path itself, which is a
   # content-hash directory the manifest cannot know before the first reconcile.
+  # The MTP "shared" variant shares its embedding table with the parent model,
+  # so it cannot be loaded standalone - verified directly: pointing llama-server
+  # at this file alone fails with `check_tensor_dims: tensor 'token_embd.weight'
+  # not found`. The auto-fit pass tries exactly that to size the draft, logs
+  # that error plus "failed to measure the memory of the extra model, fitting
+  # without it", and CONTINUES. It is noise, not the failure - do not chase it.
   speculativeDecoding:
     type: draft-mtp
     draftModel: MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
@@ -125,6 +131,17 @@ spec:
     - --image-min-tokens
     - "1024"
     - --cont-batching
+    # Both required to keep host RSS survivable. This image's HEAD commit is
+    # llama.cpp#28326, "disable lazy tensor loading by default on iGPUs", and
+    # that new default is what OOMKilled this pod at 16Gi and again at 24Gi:
+    # eager tensor reads stage ~84GiB of weights through system RAM on a node
+    # that only has 31GiB. mmap makes the weights file-backed and evictable
+    # rather than anonymous, and tensor-read-lazy restores the pre-#28326
+    # behaviour. The reference config sets the same pair.
+    - --load-mode
+    - mmap
+    - --tensor-read-lazy
+    - "on"
     - --spec-draft-type-k
     - q8_0
     - --spec-draft-type-v
