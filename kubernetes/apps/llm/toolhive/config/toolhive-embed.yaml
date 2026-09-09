@@ -35,8 +35,15 @@ spec:
   replicas: 1
   priority: normal
   mode: embedding
-  contextSize: 32768
-  parallelSlots: 32
+  # Sized against the KV cache, not copied from the chat model's settings.
+  # llmkube passes contextSize straight through as --ctx-size, and with
+  # --kv-unified that is the whole shared cache. At 32768 this model wants
+  # 28 layers * 8 kv-heads * 128 head-dim * 32768 * 2 * 2 bytes ~= 3.8GiB of
+  # KV on its own, which OOMKilled the pod the moment the gateway sent its
+  # first batch of tool descriptions. 8192 costs ~940MiB and is still far more
+  # than any tool description needs - inputs here are a few hundred tokens.
+  contextSize: 8192
+  parallelSlots: 8
   flashAttention: true
   batchSize: 1024
   uBatchSize: 1024
