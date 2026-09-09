@@ -35,35 +35,44 @@ spec:
   replicas: 1
   priority: normal
   mode: embedding
-  # Sized against the KV cache, not copied from the chat model's settings.
-  # llmkube passes contextSize straight through as --ctx-size, and with
-  # --kv-unified that is the whole shared cache. At 32768 this model wants
-  # 28 layers * 8 kv-heads * 128 head-dim * 32768 * 2 * 2 bytes ~= 3.8GiB of
-  # KV on its own, which OOMKilled the pod the moment the gateway sent its
-  # first batch of tool descriptions. 8192 costs ~940MiB and is still far more
-  # than any tool description needs - inputs here are a few hundred tokens.
-  contextSize: 8192
-  parallelSlots: 8
+  # Sized for throughput, and the memory below is what that costs.
+  #
+  # llmkube passes contextSize through as --ctx-size, and with --kv-unified
+  # that is the whole shared cache: 28 layers * 8 kv-heads * 128 head-dim *
+  # 32768 * 2 * 2 bytes ~= 3.6GiB of KV. That OOMKilled this pod at a 4Gi
+  # limit, and the fix taken then - dropping to 8192 ctx and 8 slots - solved
+  # the crash by cutting embedding concurrency 4x. That was invisible at two
+  # MCP backends and fatal at six: the optimizer embeds every tool description
+  # in the group to build its index, and a starved embedder could not finish
+  # ~420 tools inside the gateway's 180s embeddingServiceTimeout, so EVERY
+  # session failed with "build session optimizer ... context deadline
+  # exceeded" and was torn down.
+  #
+  # The right answer to a 3.6GiB KV cache is 6Gi of memory, not a smaller
+  # cache. These are the numbers the upstream reference runs 11 backends on.
+  contextSize: 32768
+  parallelSlots: 32
   flashAttention: true
   batchSize: 1024
   uBatchSize: 1024
   rolloutPolicy:
     waitForIdle: true
     idleTimeoutSeconds: 300
-  # llmkube maps resources.memory to BOTH request and limit, so this is 4Gi
-  # actually reserved on a talos node, not a ceiling.
+  # llmkube maps resources.memory to BOTH request and limit, so this is 6Gi
+  # actually reserved on a talos node, not a ceiling. It is sized by the KV
+  # cache above - do not lower it without lowering contextSize to match.
   resources:
     cpu: "2"
-    memory: 4Gi
+    memory: 6Gi
   extraArgs:
     - --alias
     - toolhive-embed
     - --cont-batching
     - --kv-unified
     - --threads
-    - "4"
+    - "6"
     - --threads-batch
-    - "8"
+    - "12"
     - --mmap
   endpoint:
     port: 8080
