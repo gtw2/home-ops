@@ -24,7 +24,7 @@ resources:
   #
   #   ./llama-flash-next.yaml  Qwen3.8-Flash-Next  UD-Q3_K_XL  ~83.8GiB weights
   #   ./llama-strix.yaml       Qwen3.6-35B-A3B     UD-Q4_K_XL  ~22.9GiB weights
-  # - ./llama-flash-next.yaml   # blocked: needs llama.cpp > build 10665
-  - ./llama-strix.yaml
+  - ./llama-flash-next.yaml
+  # - ./llama-strix.yaml
   # LiteLLMModel: how the proxy addresses that pod
   - ./models
