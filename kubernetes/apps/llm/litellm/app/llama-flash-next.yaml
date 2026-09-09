@@ -78,10 +78,17 @@ spec:
   command:
     - llama-server
   rolloutPolicy:
-    # Off while bringing a new model up: the idle check asks the CURRENT pod's
-    # /slots whether it is busy and treats any failure as busy, so a pod that is
-    # down blocks its own replacement.
-    waitForIdle: false
+    # On now that the model is up and serving. It was off during bring-up
+    # because the idle check asks the CURRENT pod's /slots whether it is busy
+    # and treats any failure as busy, so a crashlooping pod blocks the very
+    # rollout that would fix it - and this model crashlooped through five
+    # distinct failures getting here.
+    #
+    # idleTimeoutSeconds stays at 300, not the reference's 86400: the timeout
+    # bounds how long a rollout waits for the current pod to go idle, so a
+    # large value reintroduces exactly that deadlock for up to a day. Five
+    # minutes still lets in-flight requests drain.
+    waitForIdle: true
     idleTimeoutSeconds: 300
   replicas: 1
   priority: high
@@ -104,20 +111,23 @@ spec:
   # First-class field rather than the raw --spec-* flags the previous model
   # used: the operator resolves the draft file's staged path itself, which is a
   # content-hash directory the manifest cannot know before the first reconcile.
-  # Speculative decoding is OFF for now, deliberately.
+  # Context-only speculative decoding: no draft model, which is the point.
   #
-  # Neither MTP file ships as a usable standalone draft. The "shared" variant
-  # fails on token_embd.weight; the non-shared one gets further and fails on
-  # output_hc_norm.weight - a tensor the MAIN model does have. That is the
-  # tell: MTP here is a prediction head meant to load attached to its parent,
-  # not an independent model, so --spec-type draft-mtp with a separate -md is
-  # the wrong mechanism. In both cases the main model loaded fine (~34s) and
-  # llama-server then exited 1 on the draft.
+  # MTP does not work here. The CRD's "mtp" is only an alias for "draft-mtp",
+  # the same separate-draft mechanism that fails with either published MTP
+  # file: the shared one has no token_embd.weight, and the non-shared one dies
+  # on output_hc_norm.weight, a tensor the PARENT model has. MTP is a head
+  # meant to load fused to its parent, and upstream llama.cpp has no path for
+  # that today. The reference config gets away with it on a private fork.
   #
-  # The CRD also offers type "mtp" distinct from "draft-mtp", which is the
-  # likely path (head fused into the parent rather than a separate file).
-  # Worth revisiting as an optimisation once this is measured and serving -
-  # both MTP files stay staged on the node for that.
+  # ngram-cache speculates from n-grams already seen in the context instead of
+  # from a model, so it needs no second set of weights and no VRAM. It should
+  # suit this workload: the questions put to this model quote manifests and
+  # logs back, and the long-context task is 66k tokens of YAML the answer
+  # restates. Cheap to reverse if acceptance turns out to be poor - measure
+  # with scripts/llm-eval before and after rather than assuming.
+  speculativeDecoding:
+    type: ngram-cache
   resources:
     cpu: "500m"
     # Both request AND limit - llmkube maps this single value to each, and the
