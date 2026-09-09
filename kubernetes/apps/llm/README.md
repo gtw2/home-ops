@@ -104,9 +104,14 @@ operator adds a CRD group, unless that operator ships an
 `aggregate-to-view` ClusterRole, in which case the aggregation picks it up for
 free.
 
-Tool selection is semantic: `VirtualMCPServer.config.optimizer` embeds the
-request and returns only the closest `maxToolsToReturn` (8) tool definitions,
-instead of spending context on every tool from every backend. The embeddings
+Tool selection is semantic, and it works by indirection rather than by
+filtering `tools/list`. With the optimizer on, the gateway advertises exactly
+**two** tools - `find_tool` and `call_tool` - regardless of how many backends
+join. The model describes what it wants (`tool_description` plus
+`tool_keywords`), gets back the closest `maxToolsToReturn` (8) matches by hybrid
+semantic/keyword search, then invokes one through `call_tool`. So the context
+cost of adding a backend is zero; the cost is one extra round trip per task.
+Turning the optimizer off would expose every backend tool directly instead. The embeddings
 come from `toolhive-embed`, a CPU llama.cpp InferenceService on the talos nodes —
 it carries no `llm-workload` toleration, so the Framework stays dedicated to
 `llama-strix`. `embeddingProvider: openai` names a **wire protocol**, not a
