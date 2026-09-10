@@ -5,9 +5,18 @@ kind: HTTPRoute
 metadata:
   name: mcp-gateway
   annotations:
-    # Unauthenticated probes are the expected state here: securitypolicy.yaml
-    # rejects anything without a valid x-api-key, so 401 is "healthy".
+    # url is explicit because the gatus sidecar only derives one for routes on
+    # envoy-external; an envoy-internal route gets the placeholder 1.1.1.1.
+    # That is invisible for the other internal routes here because they use the
+    # default [CONNECTED] == true condition, which passes against anything - but
+    # a STATUS assertion against Cloudflare can never match, so this endpoint
+    # reported down while the gateway was perfectly healthy.
+    #
+    # Unauthenticated probes are the expected state: securitypolicy.yaml rejects
+    # anything without a valid x-api-key, so 401 means the whole path is working
+    # - envoy, the route, and the policy.
     gatus.home-operations.com/endpoint: |-
+      url: https://mcp.${SECRET_DOMAIN}/mcp
       conditions: ["[STATUS] == 401"]
 spec:
   hostnames:
