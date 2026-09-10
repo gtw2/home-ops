@@ -5,18 +5,20 @@ kind: HTTPRoute
 metadata:
   name: mcp-gateway
   annotations:
-    # url is explicit because the gatus sidecar only derives one for routes on
-    # envoy-external; an envoy-internal route gets the placeholder 1.1.1.1.
-    # That is invisible for the other internal routes here because they use the
-    # default [CONNECTED] == true condition, which passes against anything - but
-    # a STATUS assertion against Cloudflare can never match, so this endpoint
-    # reported down while the gateway was perfectly healthy.
+    # guarded:false overrides the envoy-internal Gateway, which sets
+    # guarded:true for every route beneath it. Guarded replaces the HTTP probe
+    # with a DNS query against 1.1.1.1, so the other internal routes are really
+    # only checking that their hostname resolves - fine with the default
+    # [CONNECTED] == true, but a [STATUS] assertion can never match it, and
+    # gatus fails it as "udp///mcp.gwst.dev: unknown port".
     #
-    # Unauthenticated probes are the expected state: securitypolicy.yaml rejects
-    # anything without a valid x-api-key, so 401 means the whole path is working
-    # - envoy, the route, and the policy.
+    # Overriding is justified here rather than stylistic: gatus can reach this
+    # host in-cluster (verified: 401 with a valid cert), and DNS resolving says
+    # nothing about whether the gateway, the route and the API-key policy work.
+    # An unauthenticated 401 says all three do.
     gatus.home-operations.com/endpoint: |-
-      url: https://mcp.${SECRET_DOMAIN}/mcp
+      guarded: false
+      path: /mcp
       conditions: ["[STATUS] == 401"]
 spec:
   hostnames:
