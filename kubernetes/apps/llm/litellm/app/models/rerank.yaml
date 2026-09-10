@@ -1,0 +1,18 @@
+---
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMModel
+metadata:
+  name: rerank
+spec:
+  # memini calls litellm's /v1/rerank rather than the llama.cpp endpoint
+  # directly, so litellm normalises the rerank API shape for it.
+  modelName: rerank
+  proxyRef: litellm
+  params:
+    model: infinity/memini-rerank
+    apiBase: http://memini-rerank.llm.svc.cluster.local:8080
+    # llama.cpp serves without auth in-cluster; litellm still insists on a
+    # non-empty key, same as llama-strix-chat.
+    apiKey: sk-llmkube-noauth
+  info:
+    mode: rerank

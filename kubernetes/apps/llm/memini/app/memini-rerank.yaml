@@ -1,0 +1,77 @@
+---
+apiVersion: inference.llmkube.dev/v1alpha1
+kind: Model
+metadata:
+  name: memini-rerank
+spec:
+  source: hf://gpustack/jina-reranker-v2-base-multilingual-GGUF
+  files:
+    - jina-reranker-v2-base-multilingual-Q8_0.gguf
+  format: gguf
+  quantization: Q8_0
+  hardware:
+    accelerator: cpu
+---
+apiVersion: inference.llmkube.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: memini-rerank
+  labels:
+    krr/ignore: "true"
+spec:
+  modelRef: memini-rerank
+  runtime: llamacpp
+  image: ghcr.io/ggml-org/llama.cpp:server@sha256:17155a3ce4cc906728ec99a2814bf0b4eaffaf3b4872bad8c3affed310cdbc35
+  mode: rerank
+  replicas: 3
+  priority: normal
+  rolloutPolicy:
+    waitForIdle: true
+    idleTimeoutSeconds: 300
+  # Spread across the talos nodes rather than bin-packing onto one - three
+  # replicas on three different nodes, with the fourth left free.
+  podLabels:
+    cpu-inference: "true"
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          cpu-inference: "true"
+  # jina-reranker-v2 trains at 1026 positions, so llama.cpp clamps n_ctx_slot
+  # there whatever --ctx-size says - the reference's 8096 buys nothing. 2048
+  # leaves headroom above the clamp and costs 72MiB of KV. memini truncates
+  # documents to 1024 chars (~256 tokens) before reranking anyway.
+  contextSize: 2048
+  parallelSlots: 4
+  # An input must fit one physical batch; 2048 clears the 1026 clamp.
+  batchSize: 2048
+  uBatchSize: 2048
+  env:
+    - name: GOMP_CPU_AFFINITY
+      value: "0-11"
+    - name: KMP_AFFINITY
+      value: "granularity=fine,proc_list=[0-11],explicit"
+  # 4Gi, not the reference's 8Gi. KV is 72MiB and weights ~300MiB; the rest is
+  # compute buffers, which scale with slots x ubatch - and this runs 4 slots at
+  # a 2048 ubatch against the embedder's 16 at 8192. Sized to be verified under
+  # load rather than from the idle figure, which understated the embedder's
+  # requirement by more than half and caused three OOMKills.
+  resources:
+    cpu: "2"
+    memory: 4Gi
+  extraArgs:
+    - --alias
+    - memini-rerank
+    - --cont-batching
+    - --kv-unified
+    - --threads
+    - "6"
+    - --threads-batch
+    - "12"
+    - --load-mode
+    - mmap
+  endpoint:
+    port: 8080
+    type: ClusterIP

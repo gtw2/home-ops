@@ -35,3 +35,22 @@ spec:
         remoteRef:
           remoteKey: litellm
           property: LITELLM_OPEN_WEBUI_API_KEY
+---
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMVirtualKey
+metadata:
+  name: memini
+spec:
+  proxyRef: litellm
+  keyAlias: Memini
+  secretName: litellm-key-memini
+  secretKey: api-key
+  # Scoped, unlike open-webui's unrestricted key: memini is an automated
+  # consumer with exactly two needs - reranking and distillation. Embeddings are
+  # not listed because it reaches toolhive-embed directly, without the proxy.
+  models:
+    - llama-strix-chat
+    - rerank
+  # No PushSecret for this one, unlike open-webui: memini runs in this namespace
+  # and reads the minted Secret directly with a secretKeyRef, so the key never
+  # needs to travel through 1Password.

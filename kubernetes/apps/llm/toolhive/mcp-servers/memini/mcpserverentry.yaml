@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/toolhive.stacklok.dev/mcpserverentry_v1beta1.json
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServerEntry
+metadata:
+  name: memini
+spec:
+  # An Entry, not an MCPServer: memini is a full app with its own PVC, backups
+  # and UI, deployed by its own Kustomization. toolhive only registers it.
+  #
+  # Short form on purpose - do NOT expand to the .svc.cluster.local FQDN.
+  # MCPServerEntry blocks private remote hosts by substring match, so the
+  # fully-qualified name is rejected outright. Same as the grafana entry.
+  remoteUrl: http://memini.llm:8080/mcp
+  transport: streamable-http
+  # memini gates its API with MEMINI_API_KEY, so the gateway must present the
+  # per-client key on every request, health checks included.
+  headerForward:
+    addHeadersFromSecret:
+      - headerName: Authorization
+        valueSecretRef:
+          name: memini-mcp-auth
+          key: Authorization
+  groupRef:
+    name: mcp-tools

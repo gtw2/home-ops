@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app memini
+  namespace: &namespace llm
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  components:
+    # Creates the PVC named ${APP} on ceph-block with a Restore dataSourceRef,
+    # which persistence.data.existingClaim points at. Same pattern as
+    # games/icarus and downloads/sabnzbd.
+    - ../../../components/kopiur/backup
+  dependsOn:
+    # Model + InferenceService CRDs for the reranker.
+    - name: llmkube
+      namespace: *namespace
+    # The virtual key is minted through the proxy, and both rerank and
+    # distillation route through it.
+    - name: litellm
+      namespace: *namespace
+    # Shares that Kustomization's toolhive-embed for embeddings.
+    - name: toolhive-config
+      namespace: *namespace
+    - name: external-secrets-stores
+      namespace: external-secrets
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+  interval: 1h
+  path: ./kubernetes/apps/llm/memini/app
+  postBuild:
+    substitute:
+      APP: *app
+      KOPIUR_CAPACITY: 10Gi
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  wait: false
