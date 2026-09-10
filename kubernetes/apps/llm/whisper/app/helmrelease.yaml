@@ -25,12 +25,11 @@ spec:
           reloader.stakater.com/auto: "true"
         initContainers:
           fetch-model:
-            # Only the model is fetched. The reference also downloads the
-            # whisper-server binary as a tarball from a third-party GitHub
-            # release at every start; this image already carries it.
+            # Only the model is fetched; the image already carries
+            # whisper-server on PATH.
             image:
               repository: ghcr.io/ggml-org/whisper.cpp
-              tag: main-intel-fe69461618ffc50ba8afa65c25cc6c6e34d4537f@sha256:ba767a185b86a4963f093f8db981d64053809599598c79279240df50914a78c0
+              tag: main-fe69461618ffc50ba8afa65c25cc6c6e34d4537f@sha256:f0ac7bb8d5c1f3460e2fe0d21c9f69cff2b592791e200846c7e86ad0712aab46
             command:
               - bash
               - -c
@@ -50,16 +49,20 @@ spec:
                 ls -l "$model"
         containers:
           app:
+            # The plain CPU build, NOT main-intel. main-intel registers its
+            # SYCL backend at startup and aborts with "can not find preferred
+            # GPU platform" when no device is present - --no-gpu does not help,
+            # because registration happens before the flag is read.
             image:
               repository: ghcr.io/ggml-org/whisper.cpp
-              tag: main-intel-fe69461618ffc50ba8afa65c25cc6c6e34d4537f@sha256:ba767a185b86a4963f093f8db981d64053809599598c79279240df50914a78c0
+              tag: main-fe69461618ffc50ba8afa65c25cc6c6e34d4537f@sha256:f0ac7bb8d5c1f3460e2fe0d21c9f69cff2b592791e200846c7e86ad0712aab46
             # ENTRYPOINT is ["bash","-c"], and PATH already carries
             # /app/build/bin from the image.
             args:
               - |
                 exec whisper-server \
                   --model /cache/ggml-large-v3-turbo-q8_0.bin \
-                  --host 0.0.0.0 --port 8080 --threads 8 --no-gpu \
+                  --host 0.0.0.0 --port 8080 --threads 8 \
                   --inference-path /v1/audio/transcriptions
             probes:
               liveness: &probe
