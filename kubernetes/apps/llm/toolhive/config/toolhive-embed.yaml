@@ -48,18 +48,20 @@ spec:
   replicas: 1
   priority: normal
   mode: embedding
-  # llama.cpp divides --ctx-size by --parallel to get the PER-SLOT context, and
-  # per-slot is what an input is measured against. This is the trap the first
-  # revision of this file fell into: 32768 with 32 slots looks generous and is
-  # actually 1024 per slot, so every tool description over 1024 tokens - about
-  # a third of the corpus - was rejected outright. Combined with uBatchSize
-  # 1024 below, that is what made this model look hopeless.
+  # Under --kv-unified these two are independent: the server reports
+  # n_ctx_slot = min(n_ctx, n_ctx_train), NOT n_ctx / n_parallel. Confirmed in
+  # the server log at both 4 and 32 slots, each reporting n_ctx_slot = 32768.
+  # So slots cost nothing in KV, and every slot can take the corpus's longest
+  # document (5332 tokens measured).
   #
-  # 4 slots * 8192 = 32768 clears the 5332-token worst case. Qwen is 28 layers,
-  # 8 kv-heads, head-dim 128, so KV is 3.5GiB - the same formula predicts
-  # 0.28GiB for a bge config that ran in 2Gi, so it is trusted.
+  # That makes slots pure concurrency. At 4 the model managed ~1.0 docs/s while
+  # using under 3 of the node's 20 cores - starved, not compute-bound.
+  #
+  # KV is set by contextSize alone: Qwen is 28 layers, 8 kv-heads, head-dim
+  # 128, so 32768 costs 3.5GiB. The same formula predicts 0.28GiB for a bge
+  # config observed running in 2Gi, so it is trusted rather than guessed.
   contextSize: 32768
-  parallelSlots: 4
+  parallelSlots: 32
   flashAttention: true
   # An embedding request must fit in ONE physical batch - llama.cpp will not
   # split it - so uBatchSize has to clear the longest document in the corpus
