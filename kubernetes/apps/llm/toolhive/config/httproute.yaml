@@ -5,21 +5,25 @@ kind: HTTPRoute
 metadata:
   name: mcp-gateway
   annotations:
-    # guarded:false overrides the envoy-internal Gateway, which sets
-    # guarded:true for every route beneath it. Guarded replaces the HTTP probe
-    # with a DNS query against 1.1.1.1, so the other internal routes are really
-    # only checking that their hostname resolves - fine with the default
-    # [CONNECTED] == true, but a [STATUS] assertion can never match it, and
-    # gatus fails it as "udp///mcp.gwst.dev: unknown port".
+    # No custom conditions, matching every other route under envoy-internal.
     #
-    # Overriding is justified here rather than stylistic: gatus can reach this
-    # host in-cluster (verified: 401 with a valid cert), and DNS resolving says
-    # nothing about whether the gateway, the route and the API-key policy work.
-    # An unauthenticated 401 says all three do.
+    # That Gateway sets guarded:true, which the sidecar implements by replacing
+    # the HTTP probe with a DNS query against 1.1.1.1 - so an internal route's
+    # gatus check only ever proves its hostname resolves. A [STATUS] assertion
+    # cannot match that, and reported this endpoint down while the gateway was
+    # healthy.
+    #
+    # The child cannot opt out: the sidecar switches to a DNS probe when the
+    # guarded key is PRESENT, so guarded:false guards it just as guarded:true
+    # does. Setting an explicit url is worse still - the endpoint stays guarded
+    # and gatus builds a DNS target out of an HTTPS URL:
+    #   dial udp: lookup udp///mcp.gwst.dev/mcp: unknown port
+    #
+    # So this check means "DNS resolves", nothing more. Real health for this
+    # service is the VirtualMCPServer and MCPServer CR status, which report
+    # backend-by-backend and are what actually caught every failure here.
     gatus.home-operations.com/endpoint: |-
-      guarded: false
-      path: /mcp
-      conditions: ["[STATUS] == 401"]
+      group: internal
 spec:
   hostnames:
     - mcp.${SECRET_DOMAIN}
