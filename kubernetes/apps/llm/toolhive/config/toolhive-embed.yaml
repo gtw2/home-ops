@@ -4,19 +4,28 @@ kind: Model
 metadata:
   name: toolhive-embed
 spec:
-  # bge-small-en-v1.5, 33M parameters, not Qwen3-Embedding-0.6B's 600M.
-  # Measured on this hardware, the 0.6B model embedded unique documents at
-  # 0.22 docs/s - ~65 tok/s aggregate while burning 7.7 cores - so the MCP
-  # group's ~420 tool descriptions needed roughly 32 minutes against the
-  # gateway's 180s embeddingServiceTimeout. Every session failed. Trimming the
-  # corpus could not close a 10x gap; a model 18x smaller can.
+  # nomic-embed-text-v1.5: 137M parameters and an 8192-token context. Both
+  # numbers matter, and picking on either alone gets this wrong.
   #
-  # f16 and not a quant: the whole file is ~67MiB, so there is nothing to save.
+  # Qwen3-Embedding-0.6B (600M, 32768 ctx) was correct but far too slow -
+  # measured at 0.22 docs/s on this hardware, so ~420 tool descriptions needed
+  # roughly 32 minutes against a 180s timeout and every session failed.
+  #
+  # bge-small-en-v1.5 (33M, 512 ctx) was fast but wrong: the real corpus has a
+  # long tail. Measured across all 423 tools - median 136 tokens, p95 1477,
+  # max 5332 - fifty of them exceed 512. llama.cpp REJECTS an over-length
+  # input rather than truncating it:
+  #   input (702 tokens) is larger than the max context size (512 tokens)
+  # and the gateway embeds the whole group in one request, so a single long
+  # description fails the entire batch.
+  #
+  # 8192 covers the 5332-token worst case with room to spare, at 4.4x fewer
+  # parameters than Qwen. f16 because the file is only ~262MiB.
   # Filename verified against the repo on 2026-09-09; a wrong name fails at
   # download time, not apply time.
-  source: hf://CompendiumLabs/bge-small-en-v1.5-gguf
+  source: hf://nomic-ai/nomic-embed-text-v1.5-GGUF
   files:
-    - bge-small-en-v1.5-f16.gguf
+    - nomic-embed-text-v1.5.f16.gguf
   format: gguf
   quantization: F16
   hardware:
@@ -42,16 +51,17 @@ spec:
   replicas: 1
   priority: normal
   mode: embedding
-  # bge-small-en-v1.5 truncates at 512 tokens, so a slot never needs more than
-  # that. 32 slots * 512 = 16384 for the --kv-unified shared cache. Tool
-  # descriptions run a few hundred tokens; anything longer is truncated, which
-  # costs a little match quality and nothing else.
+  # llama.cpp divides --ctx-size by --parallel to get the per-slot context, so
+  # per-slot must clear the corpus's longest document (5332 tokens measured):
+  # 8 slots * 8192 = 65536.
   #
-  # KV here is 12 layers * 12 heads * 32 head-dim * 16384 * 2 * 2 bytes
-  # ~= 288MiB, against ~3.6GiB for the 0.6B model at 32768. That is why the
-  # memory limit below drops from 6Gi to 2Gi.
-  contextSize: 16384
-  parallelSlots: 32
+  # Sized by arithmetic, not by taste. nomic is 12 layers, 12 heads, head-dim
+  # 64, so KV is 2*12*12*64*65536*2 bytes = 2.25GiB - versus 4.5GiB at 16
+  # slots, which is what the memory limit below could not have absorbed. The
+  # same formula predicts 0.28GiB for the bge config that ran happily in 2Gi,
+  # which is why it is trusted here.
+  contextSize: 65536
+  parallelSlots: 8
   flashAttention: true
   batchSize: 1024
   uBatchSize: 1024
@@ -70,17 +80,20 @@ spec:
     idleTimeoutSeconds: 300
   # llmkube maps resources.memory to BOTH request and limit, so this is
   # actually reserved on a talos node, not a ceiling. Sized by the KV cache
-  # above (~288MiB) plus ~67MiB of weights plus compute buffers.
+  # above (2.25GiB) plus ~262MiB of weights plus compute buffers, with real
+  # headroom - an earlier revision of this file OOMKilled by trusting a
+  # tighter estimate.
   resources:
     cpu: "2"
-    memory: 2Gi
+    memory: 5Gi
   extraArgs:
-    # BGE models are trained with CLS pooling; llmkube emits "--pooling last"
-    # ahead of extraArgs, and llama.cpp takes the last occurrence, so this
-    # overrides it. Verify in the server log that it reports cls - using last
-    # here would quietly degrade every embedding rather than fail.
+    # nomic-embed is trained with mean pooling; llmkube emits "--pooling last"
+    # ahead of extraArgs and llama.cpp takes the last occurrence, so this
+    # overrides it. Worth verifying behaviourally rather than trusting the
+    # flag - wrong pooling degrades every embedding silently instead of
+    # failing.
     - --pooling
-    - cls
+    - mean
     - --alias
     - toolhive-embed
     - --cont-batching
