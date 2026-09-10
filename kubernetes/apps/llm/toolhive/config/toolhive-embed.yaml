@@ -4,14 +4,21 @@ kind: Model
 metadata:
   name: toolhive-embed
 spec:
-  # Filename verified against the repo on 2026-09-09. The repo publishes exactly
-  # two GGUFs (Q8_0 and f16); a wrong name here fails at download time, not at
-  # apply time, so re-check if this sits unapplied for a while.
-  source: hf://Qwen/Qwen3-Embedding-0.6B-GGUF
+  # bge-small-en-v1.5, 33M parameters, not Qwen3-Embedding-0.6B's 600M.
+  # Measured on this hardware, the 0.6B model embedded unique documents at
+  # 0.22 docs/s - ~65 tok/s aggregate while burning 7.7 cores - so the MCP
+  # group's ~420 tool descriptions needed roughly 32 minutes against the
+  # gateway's 180s embeddingServiceTimeout. Every session failed. Trimming the
+  # corpus could not close a 10x gap; a model 18x smaller can.
+  #
+  # f16 and not a quant: the whole file is ~67MiB, so there is nothing to save.
+  # Filename verified against the repo on 2026-09-09; a wrong name fails at
+  # download time, not apply time.
+  source: hf://CompendiumLabs/bge-small-en-v1.5-gguf
   files:
-    - Qwen3-Embedding-0.6B-Q8_0.gguf
+    - bge-small-en-v1.5-f16.gguf
   format: gguf
-  quantization: Q8_0
+  quantization: F16
   hardware:
     accelerator: cpu
 ---
@@ -35,36 +42,45 @@ spec:
   replicas: 1
   priority: normal
   mode: embedding
-  # Sized for throughput, and the memory below is what that costs.
+  # bge-small-en-v1.5 truncates at 512 tokens, so a slot never needs more than
+  # that. 32 slots * 512 = 16384 for the --kv-unified shared cache. Tool
+  # descriptions run a few hundred tokens; anything longer is truncated, which
+  # costs a little match quality and nothing else.
   #
-  # llmkube passes contextSize through as --ctx-size, and with --kv-unified
-  # that is the whole shared cache: 28 layers * 8 kv-heads * 128 head-dim *
-  # 32768 * 2 * 2 bytes ~= 3.6GiB of KV. That OOMKilled this pod at a 4Gi
-  # limit, and the fix taken then - dropping to 8192 ctx and 8 slots - solved
-  # the crash by cutting embedding concurrency 4x. That was invisible at two
-  # MCP backends and fatal at six: the optimizer embeds every tool description
-  # in the group to build its index, and a starved embedder could not finish
-  # ~420 tools inside the gateway's 180s embeddingServiceTimeout, so EVERY
-  # session failed with "build session optimizer ... context deadline
-  # exceeded" and was torn down.
-  #
-  # The right answer to a 3.6GiB KV cache is 6Gi of memory, not a smaller
-  # cache. These are the numbers the upstream reference runs 11 backends on.
-  contextSize: 32768
+  # KV here is 12 layers * 12 heads * 32 head-dim * 16384 * 2 * 2 bytes
+  # ~= 288MiB, against ~3.6GiB for the 0.6B model at 32768. That is why the
+  # memory limit below drops from 6Gi to 2Gi.
+  contextSize: 16384
   parallelSlots: 32
   flashAttention: true
   batchSize: 1024
   uBatchSize: 1024
+  # Pin the OpenMP pool. Without this, threads migrate across the node's 20
+  # cores and lose cache locality on every hop - measurably so: the previous
+  # model managed 18.9 tok/s per slot while consuming 7.7 cores. llama.cpp
+  # reads both of these; they are OpenMP/MKL variables and would do nothing
+  # for a non-OpenMP runtime.
+  env:
+    - name: GOMP_CPU_AFFINITY
+      value: "0-11"
+    - name: KMP_AFFINITY
+      value: "granularity=fine,proc_list=[0-11],explicit"
   rolloutPolicy:
     waitForIdle: true
     idleTimeoutSeconds: 300
-  # llmkube maps resources.memory to BOTH request and limit, so this is 6Gi
-  # actually reserved on a talos node, not a ceiling. It is sized by the KV
-  # cache above - do not lower it without lowering contextSize to match.
+  # llmkube maps resources.memory to BOTH request and limit, so this is
+  # actually reserved on a talos node, not a ceiling. Sized by the KV cache
+  # above (~288MiB) plus ~67MiB of weights plus compute buffers.
   resources:
     cpu: "2"
-    memory: 6Gi
+    memory: 2Gi
   extraArgs:
+    # BGE models are trained with CLS pooling; llmkube emits "--pooling last"
+    # ahead of extraArgs, and llama.cpp takes the last occurrence, so this
+    # overrides it. Verify in the server log that it reports cls - using last
+    # here would quietly degrade every embedding rather than fail.
+    - --pooling
+    - cls
     - --alias
     - toolhive-embed
     - --cont-batching
