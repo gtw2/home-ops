@@ -59,11 +59,8 @@ spec:
               - |
                 exec whisper-server \
                   --model /cache/ggml-large-v3-turbo-q8_0.bin \
-                  --host 0.0.0.0 --port 8080 --threads 4 \
+                  --host 0.0.0.0 --port 8080 --threads 8 --no-gpu \
                   --inference-path /v1/audio/transcriptions
-            env:
-              # SYCL needs to see the render node the DRA claim injected.
-              ZES_ENABLE_SYSMAN: "1"
             probes:
               liveness: &probe
                 enabled: true
@@ -84,17 +81,8 @@ spec:
                   periodSeconds: 10
                   failureThreshold: 60
             resources:
-              # BOTH halves are required for DRA. defaultPodOptions below
-              # declares the pod-level resourceClaims; without this container
-              # -level reference the claim is still allocated and reserved -
-              # which looks like success in `kubectl get resourceclaim` - but no
-              # device node is injected and SYCL dies with
-              #   can not find preferred GPU platform
-              # media/plex carries the same pair; that is what it was copied from.
-              claims:
-                - name: gpu
               requests:
-                cpu: 500m
+                cpu: "2"
                 memory: 2Gi
               limits:
                 memory: 6Gi
@@ -103,11 +91,6 @@ spec:
               capabilities:
                 drop: ["ALL"]
     defaultPodOptions:
-      # The DRA claim, not privileged: true. media/plex proves this path works
-      # on this cluster while running as a non-root user.
-      resourceClaims:
-        - name: gpu
-          resourceClaimTemplateName: whisper-gpu
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

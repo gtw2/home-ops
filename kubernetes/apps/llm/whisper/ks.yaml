@@ -11,10 +11,6 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   dependsOn:
-    # The ResourceClaimTemplate is useless until the Intel DRA driver is
-    # publishing ResourceSlices for the talos nodes.
-    - name: intel-gpu-resource-driver
-      namespace: kube-system
     - name: rook-ceph-cluster
       namespace: rook-ceph
   interval: 1h
