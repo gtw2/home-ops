@@ -63,8 +63,14 @@ spec:
   contextSize: 65536
   parallelSlots: 8
   flashAttention: true
-  batchSize: 1024
-  uBatchSize: 1024
+  # An embedding request must fit in ONE physical batch - llama.cpp will not
+  # split it - so uBatchSize has to clear the longest document in the corpus
+  # (5332 tokens measured). At the previous 1024 anything longer failed with
+  #   input (1502 tokens) is too large to process. increase the physical batch
+  # regardless of which model was loaded, so this was broken under Qwen too and
+  # was never the throughput problem it looked like.
+  batchSize: 8192
+  uBatchSize: 8192
   # Pin the OpenMP pool. Without this, threads migrate across the node's 20
   # cores and lose cache locality on every hop - measurably so: the previous
   # model managed 18.9 tok/s per slot while consuming 7.7 cores. llama.cpp
