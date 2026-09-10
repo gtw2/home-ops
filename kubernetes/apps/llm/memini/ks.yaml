@@ -14,7 +14,7 @@ spec:
     # Creates the PVC named ${APP} on ceph-block with a Restore dataSourceRef,
     # which persistence.data.existingClaim points at. Same pattern as
     # games/icarus and downloads/sabnzbd.
-    - ../../../components/kopiur/backup
+    - ../../../../components/kopiur/backup
   dependsOn:
     # Model + InferenceService CRDs for the reranker.
     - name: llmkube
