@@ -86,6 +86,18 @@ spec:
                     }
                   }
                 ]
+              # Speech-to-text against whisper in this namespace. Open WebUI
+              # POSTs to {base}/audio/transcriptions, which is why the server
+              # runs with --inference-path /v1/audio/transcriptions rather than
+              # whisper.cpp's default /inference.
+              #
+              # These are PersistentConfig variables and only work from here
+              # because ENABLE_PERSISTENT_CONFIG is false above.
+              AUDIO_STT_ENGINE: openai
+              AUDIO_STT_OPENAI_API_BASE_URL: http://whisper.llm.svc.cluster.local:8080/v1
+              # whisper.cpp serves without auth; the field must be non-empty.
+              AUDIO_STT_OPENAI_API_KEY: sk-whisper-noauth
+              AUDIO_STT_MODEL: whisper-1
               ENABLE_WEBSOCKET_SUPPORT: "true"
               WEBSOCKET_MANAGER: "redis"
               WEBSOCKET_REDIS_URL: "redis://dragonfly.database.svc.cluster.local:6379/5"

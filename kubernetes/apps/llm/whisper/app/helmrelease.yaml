@@ -1,0 +1,120 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app whisper
+spec:
+  interval: 15m
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controllers:
+      whisper:
+        replicas: 1
+        annotations:
+          reloader.stakater.com/auto: "true"
+        initContainers:
+          fetch-model:
+            # Only the model is fetched. The reference also downloads the
+            # whisper-server binary as a tarball from a third-party GitHub
+            # release at every start; this image already carries it.
+            image:
+              repository: ghcr.io/ggml-org/whisper.cpp
+              tag: main-intel-fe69461618ffc50ba8afa65c25cc6c6e34d4537f@sha256:ba767a185b86a4963f093f8db981d64053809599598c79279240df50914a78c0
+            command:
+              - bash
+              - -c
+              - |
+                set -euo pipefail
+                cd /cache
+                model=ggml-large-v3-turbo-q8_0.bin
+                # Size-checked, not existence-checked, and downloaded to a
+                # .part file first. Existence alone is what let a truncated
+                # GGUF crashloop memini-rerank on its first deploy.
+                want=874188075
+                if [ ! -f "$model" ] || [ "$(stat -c%s "$model")" != "$want" ]; then
+                  curl -fsSL --retry 3 -o "$model.part" \
+                    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$model"
+                  mv "$model.part" "$model"
+                fi
+                ls -l "$model"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/ggml-org/whisper.cpp
+              tag: main-intel-fe69461618ffc50ba8afa65c25cc6c6e34d4537f@sha256:ba767a185b86a4963f093f8db981d64053809599598c79279240df50914a78c0
+            # ENTRYPOINT is ["bash","-c"], and PATH already carries
+            # /app/build/bin from the image.
+            args:
+              - |
+                exec whisper-server \
+                  --model /cache/ggml-large-v3-turbo-q8_0.bin \
+                  --host 0.0.0.0 --port 8080 --threads 4 \
+                  --inference-path /v1/audio/transcriptions
+            env:
+              # SYCL needs to see the render node the DRA claim injected.
+              ZES_ENABLE_SYSMAN: "1"
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8080
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  failureThreshold: 6
+              readiness: *probe
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8080
+                  periodSeconds: 10
+                  failureThreshold: 60
+            resources:
+              requests:
+                cpu: 500m
+                memory: 2Gi
+              limits:
+                memory: 6Gi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+    defaultPodOptions:
+      # The DRA claim, not privileged: true. media/plex proves this path works
+      # on this cluster while running as a non-root user.
+      resourceClaims:
+        - name: gpu
+          resourceClaimTemplateName: whisper-gpu
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    service:
+      app:
+        controller: whisper
+        ports:
+          http:
+            port: 8080
+    persistence:
+      cache:
+        existingClaim: whisper-cache
+        globalMounts:
+          - path: /cache

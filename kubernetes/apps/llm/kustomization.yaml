@@ -13,3 +13,4 @@ resources:
   - ./litellm-operator/ks.yaml
   - ./llmkube/ks.yaml
   - ./toolhive/ks.yaml
+  - ./whisper/ks.yaml

@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: whisper-cache
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: ceph-block
+  resources:
+    requests:
+      # The model is 834MiB. ceph-block rather than a local path because the
+      # pod follows whichever node has a free iGPU, and a local volume would
+      # pin it to one. No kopiur backup: it re-downloads in a minute.
+      storage: 4Gi
