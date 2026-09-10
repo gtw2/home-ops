@@ -54,14 +54,20 @@ spec:
   # So slots cost nothing in KV, and every slot can take the corpus's longest
   # document (5332 tokens measured).
   #
-  # That makes slots pure concurrency. At 4 the model managed ~1.0 docs/s while
-  # using under 3 of the node's 20 cores - starved, not compute-bound.
+  # That makes slots pure concurrency, but NOT free: each slot carries its own
+  # compute buffers, and those are what the memory limit has to hold. Measured
+  # points on this hardware:
+  #   4 slots,  8Gi  - stable, ~1.0 docs/s (too slow, under 3 cores used)
+  #   32 slots, 8Gi  - OOMKilled
+  #   32 slots, 12Gi - OOMKilled
+  # so a slot costs upwards of 150MiB here. 16 is the middle ground: roughly
+  # 2.5x the concurrency of 4, at half the memory demand of 32.
   #
   # KV is set by contextSize alone: Qwen is 28 layers, 8 kv-heads, head-dim
   # 128, so 32768 costs 3.5GiB. The same formula predicts 0.28GiB for a bge
   # config observed running in 2Gi, so it is trusted rather than guessed.
   contextSize: 32768
-  parallelSlots: 32
+  parallelSlots: 16
   flashAttention: true
   # An embedding request must fit in ONE physical batch - llama.cpp will not
   # split it - so uBatchSize has to clear the longest document in the corpus
