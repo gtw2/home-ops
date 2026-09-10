@@ -4,7 +4,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app open-webui
-  namespace: &namespace home-automation
+  namespace: &namespace llm
 spec:
   targetNamespace: *namespace
   commonMetadata:
@@ -12,8 +12,15 @@ spec:
       app.kubernetes.io/name: *app
   components:
     - ../../../../components/kopiur/backup
+  dependsOn:
+    # Reads litellm-key-open-webui directly now, so the virtual key has to be
+    # minted before the pod can start.
+    - name: litellm
+      namespace: *namespace
+    - name: external-secrets-stores
+      namespace: external-secrets
   interval: 1h
-  path: ./kubernetes/apps/home-automation/open-webui/app
+  path: ./kubernetes/apps/llm/open-webui/app
   postBuild:
     substitute:
       APP: *app

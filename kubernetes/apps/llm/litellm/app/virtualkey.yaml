@@ -12,29 +12,9 @@ spec:
   # No models list: open-webui is the general chat UI and should pick up new
   # models as they are added, without re-minting the key each time. Scope a
   # key to specific models when it belongs to one automated consumer.
----
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/external-secrets.io/pushsecret_v1alpha1.json
-apiVersion: external-secrets.io/v1alpha1
-kind: PushSecret
-metadata:
-  name: open-webui
-spec:
-  # Secrets are namespaced and open-webui lives in home-automation, so the
-  # minted key goes back to 1Password and is pulled from there by whichever
-  # namespace needs it. Requires the onepassword-connect store's token to have
-  # write access to the litellm item.
-  secretStoreRefs:
-    - name: onepassword-connect
-      kind: ClusterSecretStore
-  selector:
-    secret:
-      name: litellm-key-open-webui
-  data:
-    - match:
-        secretKey: api-key
-        remoteRef:
-          remoteKey: litellm
-          property: LITELLM_OPEN_WEBUI_API_KEY
+  #
+  # No PushSecret: open-webui moved into this namespace, so it reads this
+  # Secret directly and the key no longer needs to travel through 1Password.
 ---
 apiVersion: litellm.home-operations.com/v1alpha1
 kind: LiteLLMVirtualKey

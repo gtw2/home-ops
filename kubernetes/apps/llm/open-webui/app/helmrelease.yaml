@@ -42,6 +42,13 @@ spec:
               # proxy rejects an unkeyed request even in-cluster.
               ENABLE_OPENAI_API: true
               OPENAI_API_BASE_URL: http://litellm.llm.svc.cluster.local:4000/v1
+              # Straight from the Secret the litellm operator mints in this
+              # namespace. Same-namespace now, so no 1Password hop.
+              OPENAI_API_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: litellm-key-open-webui
+                    key: api-key
               # The ollama endpoint was the out-of-cluster instance on
               # framework.internal:11434, retired when that host joined the
               # cluster.
