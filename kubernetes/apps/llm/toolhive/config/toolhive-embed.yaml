@@ -86,12 +86,14 @@ spec:
     idleTimeoutSeconds: 300
   # llmkube maps resources.memory to BOTH request and limit, so this is
   # actually reserved on a talos node, not a ceiling. Sized by the KV cache
-  # above (3.5GiB) plus ~640MiB of weights plus the compute buffers an 8192
-  # ubatch needs, with real headroom - an earlier revision of this file
-  # OOMKilled by trusting a tighter estimate.
+  # above (3.5GiB) plus ~640MiB of weights - which is only the ~4.2GiB this pod
+  # shows at idle. The rest is compute buffers, and those scale with slots x
+  # ubatch: at 32 slots and an 8192 ubatch, 8Gi OOMKilled under concurrent
+  # load. This file has now OOMKilled twice by sizing from the idle figure, so
+  # the headroom here is deliberate rather than tight.
   resources:
     cpu: "2"
-    memory: 8Gi
+    memory: 12Gi
   extraArgs:
     # Qwen3-Embedding is trained with last-token pooling, which is what llmkube
     # emits by default for this mode - stated explicitly so a future model swap
