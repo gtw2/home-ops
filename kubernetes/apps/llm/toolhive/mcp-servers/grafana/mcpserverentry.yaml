@@ -17,5 +17,14 @@ spec:
   #   hostname "cluster.local"
   remoteUrl: http://mcp-grafana.observability:8000/mcp
   transport: streamable-http
+  # mcp-grafana requires a bearer token from callers, so the gateway has to
+  # present one on every request - including its own health checks, which is
+  # why this is on the entry rather than anywhere in the request path.
+  headerForward:
+    addHeadersFromSecret:
+      - headerName: Authorization
+        valueSecretRef:
+          name: mcp-grafana-auth
+          key: Authorization
   groupRef:
     name: mcp-tools

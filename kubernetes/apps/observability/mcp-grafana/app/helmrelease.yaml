@@ -43,6 +43,13 @@ spec:
               # actually sends, which is the short-form Service name its
               # MCPServerEntry points at - not the FQDN. Deliberately not "*".
               - --allowed-hosts=mcp-grafana.observability:8000,mcp-grafana.observability.svc.cluster.local:8000
+            # Caller authentication. Without it upstream logs, at error level,
+            # that anyone able to reach this address can invoke its tools and
+            # use its Grafana credentials - and says a future release will make
+            # that a startup error rather than a warning.
+            envFrom:
+              - secretRef:
+                  name: mcp-grafana-auth
             env:
               GRAFANA_URL: http://grafana-service.observability.svc.cluster.local:3000
               # Read from file rather than inlined: upstream re-reads this on
