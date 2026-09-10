@@ -4,30 +4,27 @@ kind: Model
 metadata:
   name: toolhive-embed
 spec:
-  # nomic-embed-text-v1.5: 137M parameters and an 8192-token context. Both
-  # numbers matter, and picking on either alone gets this wrong.
+  # Qwen3-Embedding-0.6B. Its 32768-token training context is the only one of
+  # the candidates that covers the whole corpus: measured across all 423 tool
+  # descriptions, median is 136 tokens, p95 is 1477 and max is 5332.
   #
-  # Qwen3-Embedding-0.6B (600M, 32768 ctx) was correct but far too slow -
-  # measured at 0.22 docs/s on this hardware, so ~420 tool descriptions needed
-  # roughly 32 minutes against a 180s timeout and every session failed.
+  # Two smaller models were tried and rejected on context, not speed:
+  #   bge-small-en-v1.5 (33M, 512 ctx)      - 50 of 423 tools too long
+  #   nomic-embed-text-v1.5 (137M)          - GGUF declares n_ctx_train 2048,
+  #     which llama.cpp clamps n_ctx_slot to regardless of --ctx-size, so 12
+  #     tools were still rejected
+  # llama.cpp REJECTS an over-length input rather than truncating it, and the
+  # gateway embeds the whole group in one request, so any rejection fails the
+  # entire batch.
   #
-  # bge-small-en-v1.5 (33M, 512 ctx) was fast but wrong: the real corpus has a
-  # long tail. Measured across all 423 tools - median 136 tokens, p95 1477,
-  # max 5332 - fifty of them exceed 512. llama.cpp REJECTS an over-length
-  # input rather than truncating it:
-  #   input (702 tokens) is larger than the max context size (512 tokens)
-  # and the gateway embeds the whole group in one request, so a single long
-  # description fails the entire batch.
-  #
-  # 8192 covers the 5332-token worst case with room to spare, at 4.4x fewer
-  # parameters than Qwen. f16 because the file is only ~262MiB.
-  # Filename verified against the repo on 2026-09-09; a wrong name fails at
-  # download time, not apply time.
-  source: hf://nomic-ai/nomic-embed-text-v1.5-GGUF
+  # This model was previously blamed for being slow (0.22 docs/s). That number
+  # came from a broken configuration - see the batch and slot sizing below -
+  # and should not be cited without re-measuring.
+  source: hf://Qwen/Qwen3-Embedding-0.6B-GGUF
   files:
-    - nomic-embed-text-v1.5.f16.gguf
+    - Qwen3-Embedding-0.6B-Q8_0.gguf
   format: gguf
-  quantization: F16
+  quantization: Q8_0
   hardware:
     accelerator: cpu
 ---
@@ -51,17 +48,18 @@ spec:
   replicas: 1
   priority: normal
   mode: embedding
-  # llama.cpp divides --ctx-size by --parallel to get the per-slot context, so
-  # per-slot must clear the corpus's longest document (5332 tokens measured):
-  # 8 slots * 8192 = 65536.
+  # llama.cpp divides --ctx-size by --parallel to get the PER-SLOT context, and
+  # per-slot is what an input is measured against. This is the trap the first
+  # revision of this file fell into: 32768 with 32 slots looks generous and is
+  # actually 1024 per slot, so every tool description over 1024 tokens - about
+  # a third of the corpus - was rejected outright. Combined with uBatchSize
+  # 1024 below, that is what made this model look hopeless.
   #
-  # Sized by arithmetic, not by taste. nomic is 12 layers, 12 heads, head-dim
-  # 64, so KV is 2*12*12*64*65536*2 bytes = 2.25GiB - versus 4.5GiB at 16
-  # slots, which is what the memory limit below could not have absorbed. The
-  # same formula predicts 0.28GiB for the bge config that ran happily in 2Gi,
-  # which is why it is trusted here.
-  contextSize: 65536
-  parallelSlots: 8
+  # 4 slots * 8192 = 32768 clears the 5332-token worst case. Qwen is 28 layers,
+  # 8 kv-heads, head-dim 128, so KV is 3.5GiB - the same formula predicts
+  # 0.28GiB for a bge config that ran in 2Gi, so it is trusted.
+  contextSize: 32768
+  parallelSlots: 4
   flashAttention: true
   # An embedding request must fit in ONE physical batch - llama.cpp will not
   # split it - so uBatchSize has to clear the longest document in the corpus
@@ -86,20 +84,19 @@ spec:
     idleTimeoutSeconds: 300
   # llmkube maps resources.memory to BOTH request and limit, so this is
   # actually reserved on a talos node, not a ceiling. Sized by the KV cache
-  # above (2.25GiB) plus ~262MiB of weights plus compute buffers, with real
-  # headroom - an earlier revision of this file OOMKilled by trusting a
-  # tighter estimate.
+  # above (3.5GiB) plus ~640MiB of weights plus the compute buffers an 8192
+  # ubatch needs, with real headroom - an earlier revision of this file
+  # OOMKilled by trusting a tighter estimate.
   resources:
     cpu: "2"
-    memory: 5Gi
+    memory: 8Gi
   extraArgs:
-    # nomic-embed is trained with mean pooling; llmkube emits "--pooling last"
-    # ahead of extraArgs and llama.cpp takes the last occurrence, so this
-    # overrides it. Worth verifying behaviourally rather than trusting the
-    # flag - wrong pooling degrades every embedding silently instead of
-    # failing.
+    # Qwen3-Embedding is trained with last-token pooling, which is what llmkube
+    # emits by default for this mode - stated explicitly so a future model swap
+    # has to think about it. Verify behaviourally, not from the flag: wrong
+    # pooling degrades every embedding silently instead of failing.
     - --pooling
-    - mean
+    - last
     - --alias
     - toolhive-embed
     - --cont-batching
