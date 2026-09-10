@@ -54,14 +54,17 @@ spec:
   # So slots cost nothing in KV, and every slot can take the corpus's longest
   # document (5332 tokens measured).
   #
-  # That makes slots pure concurrency, but NOT free: each slot carries its own
-  # compute buffers, and those are what the memory limit has to hold. Measured
-  # points on this hardware:
-  #   4 slots,  8Gi  - stable, ~1.0 docs/s (too slow, under 3 cores used)
-  #   32 slots, 8Gi  - OOMKilled
-  #   32 slots, 12Gi - OOMKilled
-  # so a slot costs upwards of 150MiB here. 16 is the middle ground: roughly
-  # 2.5x the concurrency of 4, at half the memory demand of 32.
+  # Slots are free in KV but NOT in compute buffers, and those are what the
+  # memory limit has to hold. Sampled under load rather than at idle, which is
+  # what three OOMKills in this file were caused by reading:
+  #   idle 4250MiB (3.5GiB KV + 640MiB weights)
+  #   peak 12068MiB at 16 slots  ->  ~490MiB per slot
+  # which predicts the earlier results exactly: 4 slots ~6.2GiB (fit 8Gi),
+  # 32 slots ~20GiB (never had a chance at 8Gi or 12Gi).
+  #
+  # 16 slots is the throughput/memory balance - measured 3.49 docs/s at 32 and
+  # 1.03 at 4, against a 2.35 docs/s bar - and 16Gi holds its measured peak
+  # with real headroom.
   #
   # KV is set by contextSize alone: Qwen is 28 layers, 8 kv-heads, head-dim
   # 128, so 32768 costs 3.5GiB. The same formula predicts 0.28GiB for a bge
@@ -92,14 +95,12 @@ spec:
     idleTimeoutSeconds: 300
   # llmkube maps resources.memory to BOTH request and limit, so this is
   # actually reserved on a talos node, not a ceiling. Sized by the KV cache
-  # above (3.5GiB) plus ~640MiB of weights - which is only the ~4.2GiB this pod
-  # shows at idle. The rest is compute buffers, and those scale with slots x
-  # ubatch: at 32 slots and an 8192 ubatch, 8Gi OOMKilled under concurrent
-  # load. This file has now OOMKilled twice by sizing from the idle figure, so
-  # the headroom here is deliberate rather than tight.
+  # above plus weights plus ~490MiB of compute buffer per slot, measured at
+  # peak under load. See the slot comment - do not size this from the idle
+  # figure, which is less than half the real requirement.
   resources:
     cpu: "2"
-    memory: 12Gi
+    memory: 16Gi
   extraArgs:
     # Qwen3-Embedding is trained with last-token pooling, which is what llmkube
     # emits by default for this mode - stated explicitly so a future model swap
