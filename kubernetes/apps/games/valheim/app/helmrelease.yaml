@@ -21,6 +21,13 @@ spec:
   uninstall:
     keepHistory: false
   values:
+    defaultPodOptions:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
     controllers:
       valheim:
         annotations:
@@ -31,35 +38,54 @@ spec:
             image:
               repository: docker.io/mbround18/valheim
               # renovate: datasource=docker depName=docker.io/mbround18/valheim
-              tag: 3.5.0
+              tag: 3.8.0
             env:
               PUBLIC: 1
               TZ: "${TIMEZONE}"
+              # BepInExPack_Valheim went 1.0-ready as 5.4.2350 on release day.
+              # TYPE=BepInEx installs that pack itself, so it must never be
+              # listed in MODS.
               TYPE: "BepInEx"
-              WORLD: "ConfettiCannon"
+              # Fresh world for the 1.0 release; ConfettiCannon stays on disk
+              # untouched. 1.0 content only generates at world creation.
+              WORLD: "DeepNorth"
+              # Native world modifiers, in place of DeathTweaks / Custom_Raids /
+              # NoAFKRaids. Baked into the world on creation; an admin can
+              # change them live with `setworldmodifier` from the F5 console.
+              MODIFIERS: "deathpenalty=casual,raids=less"
+              # Every entry below has a 1.0-era build, checked 2026-09-11.
+              # `hex:` marks the ones whose Thunderstore copy is still pre-1.0;
+              # Azumatt and Smoothbrain publish to Hexium first. Jotunn is a
+              # dependency of Eternal_Fire, YamlDotNet of AzuCraftyBoxes.
+              #
+              # Mod strings only, nothing else: Odin splits MODS on whitespace
+              # and has no notion of comments, so a trailing `# note` inside the
+              # block becomes several more mods for it to fail to find - and a
+              # failure aborts the whole run unless MODS_CONTINUE_ON_FAILURE.
               MODS: |
-                Advize-PlantEasily-2.0.3
-                Advize-PlantEverything-1.20.0
-                ASharpPen-Custom_Raids-1.8.1
-                Azumatt-AzuAutoStore-3.0.14
-                Azumatt-AzuContainerSizes-1.1.4
-                Azumatt-AzuCraftyBoxes-1.8.14
-                Azumatt-AzuExtendedPlayerInventory-2.4.1
-                Azumatt-Build_Camera_Custom_Hammers_Edition-1.2.10
-                Azumatt-Official_BepInEx_ConfigurationManager-18.4.1
-                Azumatt-SleepSkip-1.3.0
-                blacks7ar-OreMines-1.2.0
-                Digitalroot-Better_Wisps-1.0.42
-                Digitalroot-Eternal_Fire-1.0.17
-                Dumba-NoAFKRaids-2.0.0
-                MSchmoecker-MultiUserChest-0.6.1
-                Numenos-InfinityTools-1.0.0
-                Pineapple-DeathTweaks-1.4.1
-                Smoothbrain-PackHorse-1.0.4
-                Smoothbrain-Sailing-1.1.8
-                TastyChickenLegs-TreesReborn-1.1.1
-                ValheimModding-Jotunn-2.29.0
+                Advize-PlantEasily-2.2.0
+                Advize-PlantEverything-1.21.1
+                Digitalroot-Eternal_Fire-1.0.19
+                hex:Azumatt-AzuAutoStore-3.1.4
+                hex:Azumatt-AzuContainerSizes-1.1.5
+                hex:Azumatt-AzuCraftyBoxes-1.8.19
+                hex:Azumatt-Build_Camera_Custom_Hammers_Edition-1.3.1
+                hex:Smoothbrain-Sailing-1.1.9
+                ValheimModding-Jotunn-2.30.0
                 ValheimModding-YamlDotNet-16.3.1
+              # Parked. Has a 1.0 build, but vanilla now covers it:
+              #   ASharpPen-Custom_Raids-1.8.2                 MODIFIERS raids=
+              #   hex:Azumatt-AzuExtendedPlayerInventory-2.4.14  Deeper/Wider Pockets
+              #   Digitalroot-Better_Wisps-1.0.44
+              # Parked. No 1.0 build yet, expect breakage:
+              #   Azumatt-SleepSkip-1.3.0                      2026-02
+              #   blacks7ar-OreMines-1.2.0                     2025-09
+              #   Dumba-NoAFKRaids-2.0.0                       2026-01, raids= partly covers
+              #   MSchmoecker-MultiUserChest-0.6.1             2025-02
+              #   Numenos-InfinityTools-1.0.0                  2023-10, nobuildcost covers build cost only
+              #   Pineapple-DeathTweaks-1.4.1                  2026-01, MODIFIERS deathpenalty= covers
+              #   Smoothbrain-PackHorse-1.0.4                  2026-02
+              #   TastyChickenLegs-TreesReborn-1.1.2           2026-07
               AUTO_UPDATE: 1
               AUTO_UPDATE_SCHEDULE: "0 8 * * *" # every day at 8am
               AUTO_UPDATE_PAUSE_WITH_PLAYERS: 1
@@ -92,9 +118,9 @@ spec:
           warden.dev/query-port: "2457"        # steam2 / A2S
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
-          # The game port on the LoadBalancer. Swap for a public hostname if
-          # this ever gets a DNS record, as palworld has.
-          warden.dev/address: "10.10.40.140:2456"
+          # The game port, as players type it into Join IP. 2456 is the game
+          # port; 2457 above is the A2S query port and is not joinable.
+          warden.dev/address: "valheim.${SECRET_GAMING_DOMAIN}:2456"
         ports:
           http:
             port: *port
