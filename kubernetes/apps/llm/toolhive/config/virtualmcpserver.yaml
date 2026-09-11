@@ -31,7 +31,17 @@ spec:
       embeddingProvider: openai
       embeddingModel: toolhive-embed
       embeddingService: http://toolhive-embed.llm.svc.cluster.local:8080/v1
-      embeddingServiceTimeout: 180s
+      # 600s, not the reference's 180s. The corpus here outgrew that budget:
+      # 423 tools across six backends measured at 138s, and adding memini as a
+      # seventh took it to 504, which lands around 165s and tipped over - every
+      # session then died with "build session optimizer ... context deadline
+      # exceeded" after initialize hung for the full 181s.
+      #
+      # This is a per-request ceiling on one embedding call, not a latency
+      # budget: the index is built once and cached, so sessions after the first
+      # return in about a second regardless. Sized for room to add backends
+      # rather than to just clear today's corpus.
+      embeddingServiceTimeout: 600s
       # The knob that matters at 22 tok/s: how many tool definitions get spent
       # from the context budget on every turn. 8 is the CRD default.
       maxToolsToReturn: 8
