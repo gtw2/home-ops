@@ -118,9 +118,9 @@ spec:
           warden.dev/query-port: "2457"        # steam2 / A2S
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
-          # The game port on the LoadBalancer. Swap for a public hostname if
-          # this ever gets a DNS record, as palworld has.
-          warden.dev/address: "10.10.40.140:2456"
+          # The game port, as players type it into Join IP. 2456 is the game
+          # port; 2457 above is the A2S query port and is not joinable.
+          warden.dev/address: "valheim.${SECRET_GAMING_DOMAIN}:2456"
         ports:
           http:
             port: *port
