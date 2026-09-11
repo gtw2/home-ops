@@ -42,8 +42,10 @@ spec:
             env:
               PUBLIC: 1
               TZ: "${TIMEZONE}"
-              # Flip back to BepInEx when the first mod is re-enabled below.
-              TYPE: "Vanilla"
+              # BepInExPack_Valheim went 1.0-ready as 5.4.2350 on release day.
+              # TYPE=BepInEx installs that pack itself, so it must never be
+              # listed in MODS.
+              TYPE: "BepInEx"
               # Fresh world for the 1.0 release; ConfettiCannon stays on disk
               # untouched. 1.0 content only generates at world creation.
               WORLD: "DeepNorth"
@@ -51,35 +53,38 @@ spec:
               # NoAFKRaids. Baked into the world on creation; an admin can
               # change them live with `setworldmodifier` from the F5 console.
               MODIFIERS: "deathpenalty=casual,raids=less"
-              # All mods parked for the 1.0 restart. Re-add one at a time,
-              # newest compatible version, only once vanilla proves it lacking.
-              # Versions below are the pre-1.0 pins and will need bumping.
+              # Mods stay parked; re-add one at a time and only once vanilla
+              # proves it lacking. Versions below are the current builds as of
+              # 2026-09-11, so an entry can just be uncommented. `hex:` entries
+              # are ones whose Thunderstore copy is still a pre-1.0 build -
+              # Azumatt and Smoothbrain publish to Hexium first.
               # MODS: |
-              #   # --- covered natively, do not bring back ---
-              #   Pineapple-DeathTweaks-1.4.1            # MODIFIERS deathpenalty=
-              #   ASharpPen-Custom_Raids-1.8.1           # MODIFIERS raids=
-              #   Dumba-NoAFKRaids-2.0.0                 # MODIFIERS raids=, partial
-              #   Azumatt-AzuExtendedPlayerInventory-2.4.1 # 1.0 Deeper/Wider Pockets from Haldor
-              #   # --- no native equivalent, judge in play ---
-              #   Advize-PlantEasily-2.0.3
-              #   Advize-PlantEverything-1.20.0
-              #   Azumatt-AzuAutoStore-3.0.14
-              #   Azumatt-AzuContainerSizes-1.1.4
-              #   Azumatt-AzuCraftyBoxes-1.8.14
-              #   Azumatt-Build_Camera_Custom_Hammers_Edition-1.2.10
-              #   Azumatt-SleepSkip-1.3.0
-              #   blacks7ar-OreMines-1.2.0
-              #   Digitalroot-Better_Wisps-1.0.42
-              #   Digitalroot-Eternal_Fire-1.0.17
-              #   MSchmoecker-MultiUserChest-0.6.1
-              #   Numenos-InfinityTools-1.0.0            # SET_KEY nobuildcost covers build cost only
-              #   Smoothbrain-PackHorse-1.0.4
-              #   Smoothbrain-Sailing-1.1.8
-              #   TastyChickenLegs-TreesReborn-1.1.1
-              #   # --- libraries, only as dependencies of the above ---
-              #   Azumatt-Official_BepInEx_ConfigurationManager-18.4.1
-              #   ValheimModding-Jotunn-2.29.0
-              #   ValheimModding-YamlDotNet-16.3.1
+              #   # --- rebuilt for 1.0, safe to try ---
+              #   Advize-PlantEasily-2.2.0
+              #   Advize-PlantEverything-1.21.1
+              #   Digitalroot-Better_Wisps-1.0.44
+              #   Digitalroot-Eternal_Fire-1.0.19
+              #   hex:Azumatt-AzuAutoStore-3.1.4
+              #   hex:Azumatt-AzuContainerSizes-1.1.5
+              #   hex:Azumatt-AzuCraftyBoxes-1.8.19
+              #   hex:Azumatt-Build_Camera_Custom_Hammers_Edition-1.3.1
+              #   hex:Smoothbrain-Sailing-1.1.9
+              #   ValheimModding-Jotunn-2.30.0            # dep of Better_Wisps, Eternal_Fire
+              #   ValheimModding-YamlDotNet-16.3.1        # dep of AzuCraftyBoxes
+              #   # --- rebuilt for 1.0, but vanilla now covers it ---
+              #   ASharpPen-Custom_Raids-1.8.2            # MODIFIERS raids=
+              #   hex:Azumatt-AzuExtendedPlayerInventory-2.4.14 # 1.0 Deeper/Wider Pockets from Haldor
+              #   # --- no 1.0 build yet, expect breakage ---
+              #   Azumatt-SleepSkip-1.3.0                 # 2026-02
+              #   blacks7ar-OreMines-1.2.0                # 2025-09
+              #   Dumba-NoAFKRaids-2.0.0                  # 2026-01, MODIFIERS raids= partly covers
+              #   MSchmoecker-MultiUserChest-0.6.1        # 2025-02
+              #   Numenos-InfinityTools-1.0.0             # 2023-10, SET_KEY nobuildcost covers build cost only
+              #   Pineapple-DeathTweaks-1.4.1             # 2026-01, MODIFIERS deathpenalty= covers
+              #   Smoothbrain-PackHorse-1.0.4             # 2026-02
+              #   TastyChickenLegs-TreesReborn-1.1.2      # 2026-07
+              #   # Azumatt-Official_BepInEx_ConfigurationManager is client-side,
+              #   # it does nothing on a dedicated server. Dropped.
               AUTO_UPDATE: 1
               AUTO_UPDATE_SCHEDULE: "0 8 * * *" # every day at 8am
               AUTO_UPDATE_PAUSE_WITH_PLAYERS: 1
