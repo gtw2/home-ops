@@ -50,7 +50,7 @@ spec:
               MODIFIERS: "deathpenalty=casual,raids=less"
               MODS: |
                 Advize-PlantEasily-2.2.0
-                Advize-PlantEverything-1.21.1
+                Advize-PlantEverything-1.21.2
                 Digitalroot-Eternal_Fire-1.0.19
                 hex:Azumatt-AzuAutoStore-3.1.4
                 hex:Azumatt-AzuContainerSizes-1.1.5
