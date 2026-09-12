@@ -10,7 +10,7 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: v0.7.24
+    tag: v0.7.27
   # Upstream's own registry rather than ghcr - the same supply-chain shape as
   # the npx-sourced arr and seerr MCP servers. Pinned to an exact tag.
   url: oci://registry.erwanleboucher.dev/eleboucher/charts/memini
