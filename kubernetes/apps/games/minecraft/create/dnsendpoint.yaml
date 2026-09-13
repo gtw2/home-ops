@@ -12,9 +12,11 @@ spec:
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: 'false'
-    - dnsName: "_minecraft._tcp.create.${SECRET_GAMING_DOMAIN}"
-      recordType: SRV
-      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}."]
+    # No _minecraft._tcp SRV record here, deliberately. Minecraft's SRV lookup
+    # exists so a server can sit on a non-standard port; this one is on 25565,
+    # the default, so every client connects from the CNAME alone. The SRV
+    # entries that used to be here never existed as records and were never
+    # missed - see the git history if that needs re-litigating.
     # See vanilla/dnsendpoint.yaml for why the creative subdomain has its own record.
     - dnsName: "create-creative.${SECRET_GAMING_DOMAIN}"
       recordType: CNAME
@@ -22,6 +24,3 @@ spec:
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: 'false'
-    - dnsName: "_minecraft._tcp.create-creative.${SECRET_GAMING_DOMAIN}"
-      recordType: SRV
-      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}."]
