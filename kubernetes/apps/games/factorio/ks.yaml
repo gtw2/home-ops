@@ -28,3 +28,11 @@ spec:
     substitute:
       APP: *app
       KOPIUR_CAPACITY: 10Gi
+      # The factorio image owns its data as 845 and the server writes a 0640
+      # .lock while it is up, so a 1000 mover gets permission denied on it and
+      # the whole snapshot fails. Only visible when the server is running - the
+      # lock does not exist while it is stopped, which is why this surfaced the
+      # first time factorio came back up rather than when backups were set up.
+      KOPIUR_PUID: "845"
+      KOPIUR_PGID: "845"
+
