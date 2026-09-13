@@ -17,12 +17,13 @@ spec:
   # hostnames yet" and stays Pending forever otherwise. Nothing serves this over
   # HTTPS; it exists to give the invite a hostname to be scoped to.
   #
-  # Listed explicitly rather than wildcarded: a wildcard would let the agent
-  # claim any name under the gaming domain at the edge. Adding a game server is
-  # already a two-file change (a ports: line in the towonel compose and a ufw
-  # rule in the playbook) - this is the third.
+  # Wildcarded deliberately. Hostname scoping exists so multiple tenants can
+  # share one hub without forging each other's routes; this hub has exactly one
+  # tenant, who also owns the domain, so per-name scoping buys nothing and costs
+  # an edit per game server. Keeping it to the gaming domain rather than every
+  # domain still bounds what a leaked invite could claim.
   extraHostnames:
-    - "valheim.${SECRET_GAMING_DOMAIN}"
+    - "*.${SECRET_GAMING_DOMAIN}"
   # Retain, not Delete: deleting this object should not tear the invite out
   # from under a running agent while we are still evaluating.
   deletionPolicy: Retain
