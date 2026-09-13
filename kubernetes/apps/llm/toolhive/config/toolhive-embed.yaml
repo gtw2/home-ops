@@ -116,7 +116,14 @@ spec:
     - "6"
     - --threads-batch
     - "12"
-    - --mmap
+    # Upstream replaced the boolean --mmap/--no-mmap pair with -lm/--load-mode
+    # MODE, so the bare --mmap this used to pass is now a hard startup error
+    # ("invalid argument: --mmap") and crashlooped the pod on the image bump to
+    # cbcdcb5. The new default is auto, which already mmaps unless a device
+    # cannot; the mode is named anyway to keep the intent explicit rather than
+    # inherited.
+    - --load-mode
+    - mmap
   endpoint:
     port: 8080
     type: ClusterIP
