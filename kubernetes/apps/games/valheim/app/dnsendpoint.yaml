@@ -8,7 +8,14 @@ spec:
   endpoints:
     - dnsName: "valheim.${SECRET_GAMING_DOMAIN}"
       recordType: CNAME
-      targets: ["ipv4.${SECRET_GAMING_DOMAIN}"]
+      # The towonel edge, not the WAN IP. This is the line that actually moves
+      # remote players onto the tunnel - and the one to revert if it goes wrong;
+      # ipv4.${SECRET_GAMING_DOMAIN} is still maintained by cloudflare-ddns, so
+      # putting it back is a one-line change that takes effect in a minute.
+      #
+      # LAN clients never see this record: unifi-dns answers them from the
+      # Service annotation in ./helmrelease.yaml instead.
+      targets: ["towonel.${SECRET_DOMAIN}"]
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: "false"
