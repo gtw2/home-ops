@@ -17,4 +17,9 @@ spec:
           value: 'false'
     - dnsName: "_minecraft._tcp.mc.${SECRET_GAMING_DOMAIN}"
       recordType: SRV
-      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}"]
+      # The trailing dot is load-bearing. external-dns validates SRV targets
+      # with NewSRVRecord(), which rejects any whose host does not end in a dot
+      # - "priority weight port host." - and then SKIPS the endpoint with a
+      # warning rather than failing. Without it these records silently did
+      # nothing for months while looking correct in git.
+      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}."]

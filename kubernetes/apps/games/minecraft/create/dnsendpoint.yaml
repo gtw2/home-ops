@@ -14,7 +14,7 @@ spec:
           value: 'false'
     - dnsName: "_minecraft._tcp.create.${SECRET_GAMING_DOMAIN}"
       recordType: SRV
-      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}"]
+      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}."]
     # See vanilla/dnsendpoint.yaml for why the creative subdomain has its own record.
     - dnsName: "create-creative.${SECRET_GAMING_DOMAIN}"
       recordType: CNAME
@@ -24,4 +24,4 @@ spec:
           value: 'false'
     - dnsName: "_minecraft._tcp.create-creative.${SECRET_GAMING_DOMAIN}"
       recordType: SRV
-      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}"]
+      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}."]
