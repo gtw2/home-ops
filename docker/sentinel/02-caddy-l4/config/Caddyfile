@@ -1,3 +1,7 @@
+# NOTE: {$VAR} is Caddyfile syntax - the $ goes INSIDE the braces, and Caddy
+# substitutes it before parsing begins. It is not a typo for shell's ${VAR},
+# which Caddy would read as a literal. ({env.VAR} is a different, runtime form.)
+# The Gatus config next door genuinely does use ${VAR}; both are correct.
 {
     email {$ACME_EMAIL}
     # Caddy's own HTTP/HTTPS servers move off 80/443 so the layer4 app can own

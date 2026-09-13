@@ -35,6 +35,13 @@ services:
       - webhook_secret
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      # Every stack under docker/sentinel/ declares env_file: /opt/sentinel/env.
+      # Compose resolves env_file in the CLIENT - which is this container, not
+      # the daemon - so the host path has to be visible in here at the same
+      # absolute path or all three stacks fail with "env file not found".
+      # Bind mounts inside those stacks are different: the daemon resolves
+      # those against the host, so they need no equivalent.
+      - /opt/sentinel/env:/opt/sentinel/env:ro
       - data:/data
 
 volumes:
