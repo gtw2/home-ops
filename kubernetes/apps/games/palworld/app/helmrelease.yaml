@@ -151,6 +151,16 @@ spec:
           # internal query address (the REST port on a ClusterIP name), which
           # is accurate and useless to someone trying to connect.
           warden.dev/address: "palworld.${SECRET_GAMING_DOMAIN}:8211"
+          # Tunnelled. restapi (8212) is deliberately NOT listed: it is an admin
+          # API reachable without Steam auth, and putting it on a public edge
+          # would expose server administration to the internet. Only ports named
+          # here are published - annotating the Service does not tunnel all of it.
+          towonel.io/tunnel: enable
+          towonel.io/tunnel-ref: network/home-ops
+          towonel.io/gameport.udp: "true"
+          towonel.io/gameport.public-port: "8211"
+          towonel.io/queryport.udp: "true"
+          towonel.io/queryport.public-port: "27016"
         ports:
           gameport:
             enabled: true

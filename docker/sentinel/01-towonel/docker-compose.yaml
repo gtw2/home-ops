@@ -40,6 +40,9 @@ services:
       # list against the towonel.io annotations in kubernetes/ and runs in CI.
       - "2456:2456/udp"   # valheim game
       - "2457:2457/udp"   # valheim A2S query
+      - "8211:8211/udp"   # palworld game
+      - "27016:27016/udp" # palworld steam query
+      - "25565:25565/tcp" # minecraft router (fans out to every backend by SNI)
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8443/v1/health"]
       interval: 30s
