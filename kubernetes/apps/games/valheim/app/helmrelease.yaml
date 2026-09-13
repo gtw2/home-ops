@@ -99,18 +99,17 @@ spec:
           # towonel.io/<portName>.udp and .public-port straight off this Service,
           # so there is no separate TowonelAgent object to keep in sync.
           #
-          # Uncommenting is the go-live switch: towonel.io/tunnel is the opt-in
-          # and every other key here is inert without it. Pair it with repointing
-          # ./dnsendpoint.yaml from ipv4.${SECRET_GAMING_DOMAIN} to the edge
-          # hostname, or players keep resolving straight to the WAN IP and
-          # nothing actually moves.
-          #
-          # towonel.io/tunnel: enable
-          # towonel.io/tunnel-ref: network/home-ops
-          # towonel.io/steam1.udp: "true"
-          # towonel.io/steam1.public-port: "2456"
-          # towonel.io/steam2.udp: "true"
-          # towonel.io/steam2.public-port: "2457"
+          # Live, but NOT yet in the player path: ./dnsendpoint.yaml still points
+          # valheim.${SECRET_GAMING_DOMAIN} at ipv4.${SECRET_GAMING_DOMAIN}, i.e.
+          # straight at the WAN IP. Both routes are therefore reachable at once,
+          # which is what lets the tunnel be measured against the direct path
+          # before anyone is moved onto it.
+          towonel.io/tunnel: enable
+          towonel.io/tunnel-ref: network/home-ops
+          towonel.io/steam1.udp: "true"
+          towonel.io/steam1.public-port: "2456"
+          towonel.io/steam2.udp: "true"
+          towonel.io/steam2.public-port: "2457"
         ports:
           http:
             port: *port
