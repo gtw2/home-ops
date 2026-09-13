@@ -12,6 +12,17 @@ spec:
   # the hub container. The enum is EU|CA with no US option, so a US-hosted VPS
   # still gets CA - set both sides to CA and leave them alone.
   region: CA
+  # The invite cannot be created without at least one authorized HTTPS hostname,
+  # even though everything here is UDP - the operator reports "no authorized
+  # hostnames yet" and stays Pending forever otherwise. Nothing serves this over
+  # HTTPS; it exists to give the invite a hostname to be scoped to.
+  #
+  # Listed explicitly rather than wildcarded: a wildcard would let the agent
+  # claim any name under the gaming domain at the edge. Adding a game server is
+  # already a two-file change (a ports: line in the towonel compose and a ufw
+  # rule in the playbook) - this is the third.
+  extraHostnames:
+    - "valheim.${SECRET_GAMING_DOMAIN}"
   # Retain, not Delete: deleting this object should not tear the invite out
   # from under a running agent while we are still evaluating.
   deletionPolicy: Retain
