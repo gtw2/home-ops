@@ -47,6 +47,22 @@ spec:
         - urlSecret:
             name: &secret alertmanager-secret
             key: ALERTMANAGER_HEARTBEAT_URL
+        # Second, independent watcher: the Gatus on the towonel VPS, which is
+        # outside this cluster and so can still report when the cluster cannot.
+        # Added alongside the existing heartbeat rather than replacing it.
+        #
+        # This route matches the Watchdog alert, which fires permanently by
+        # design - so every delivery is a success ping and it is the SILENCE
+        # that carries the signal. Hence success=true hardcoded.
+        #
+        # Gatus wants the token in the Authorization header, not the query
+        # string; heartbeat_home-ops is <group>_<name> from the external-endpoint
+        # in ansible/sentinel/templates/gatus-secrets.yaml.j2.
+        - url: https://sentinel-status.${SECRET_DOMAIN}/api/v1/endpoints/heartbeat_home-ops/external?success=true
+          httpConfig:
+            bearerTokenSecret:
+              name: *secret
+              key: GATUS_HEARTBEAT_TOKEN
     - name: pushover
       pushoverConfigs:
         - html: true
