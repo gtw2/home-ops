@@ -150,6 +150,16 @@ spec:
         annotations:
           io.cilium/lb-ipam-ips: 10.10.40.150
           io.cilium/lb-ipam-sharing-key: minecraft-frontend
+          # No external-dns hostname here: mc.${SECRET_GAMING_DOMAIN} is already
+          # answered for the LAN by the mc-router service, which shares this LB
+          # IP. Bedrock and voice clients use that same name with their own
+          # ports, so a second annotation for it would be a duplicate.
+          towonel.io/tunnel: enable
+          towonel.io/tunnel-ref: network/home-ops
+          towonel.io/voice-proxy.udp: "true"
+          towonel.io/voice-proxy.public-port: "25577"
+          towonel.io/bedrock-proxy.udp: "true"
+          towonel.io/bedrock-proxy.public-port: "19132"
         ports:
           voice-proxy:
             port: 25577

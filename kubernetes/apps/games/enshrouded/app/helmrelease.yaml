@@ -58,7 +58,17 @@ spec:
           warden.dev/channels: "steam-servers"
           # The game port on the LoadBalancer. Swap for a public hostname if
           # this ever gets a DNS record, as palworld has.
-          warden.dev/address: "10.10.40.144:15636"
+          warden.dev/address: "enshrouded.${SECRET_GAMING_DOMAIN}:15636"
+          # Split horizon: unifi-dns answers the LAN with the LoadBalancer
+          # address; cloudflare-dns has no service source, so the public
+          # record keeps pointing at the towonel edge.
+          external-dns.alpha.kubernetes.io/hostname: enshrouded.${SECRET_GAMING_DOMAIN}
+          towonel.io/tunnel: enable
+          towonel.io/tunnel-ref: network/home-ops
+          towonel.io/gameport.udp: "true"
+          towonel.io/gameport.public-port: "15636"
+          towonel.io/queryport.udp: "true"
+          towonel.io/queryport.public-port: "15637"
         ports:
           gameport:
             enabled: true

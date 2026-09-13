@@ -55,6 +55,19 @@ spec:
         type: LoadBalancer
         annotations:
           io.cilium/lb-ipam-ips: 10.10.40.149
+          # Split horizon: unifi-dns answers the LAN with the LoadBalancer
+          # address; cloudflare-dns has no service source, so the public
+          # record keeps pointing at the towonel edge.
+          external-dns.alpha.kubernetes.io/hostname: windrose.${SECRET_GAMING_DOMAIN}
+          # Same port on both protocols is intentional - the service exposes
+          # gameport/udp and gameport-tcp/tcp on 7779, and the edge binds them
+          # as separate listeners.
+          towonel.io/tunnel: enable
+          towonel.io/tunnel-ref: network/home-ops
+          towonel.io/gameport.udp: "true"
+          towonel.io/gameport.public-port: "7779"
+          towonel.io/gameport-tcp.tcp: "true"
+          towonel.io/gameport-tcp.public-port: "7779"
         ports:
           gameport:
             enabled: true

@@ -61,7 +61,17 @@ spec:
           warden.dev/channels: "steam-servers"
           # The game port on the LoadBalancer. Swap for a public hostname if
           # this ever gets a DNS record, as palworld has.
-          warden.dev/address: "10.10.40.143:17777"
+          warden.dev/address: "icarus.${SECRET_GAMING_DOMAIN}:17777"
+          # Split horizon: unifi-dns answers the LAN with the LoadBalancer
+          # address; cloudflare-dns has no service source, so the public
+          # record keeps pointing at the towonel edge.
+          external-dns.alpha.kubernetes.io/hostname: icarus.${SECRET_GAMING_DOMAIN}
+          towonel.io/tunnel: enable
+          towonel.io/tunnel-ref: network/home-ops
+          towonel.io/steam1.udp: "true"
+          towonel.io/steam1.public-port: "17777"
+          towonel.io/steam2.udp: "true"
+          towonel.io/steam2.public-port: "27015"
         ports:
           steam1:
             port: *port

@@ -43,6 +43,16 @@ services:
       - "8211:8211/udp"   # palworld game
       - "27016:27016/udp" # palworld steam query
       - "25565:25565/tcp" # minecraft router (fans out to every backend by SNI)
+      - "19132:19132/udp" # minecraft bedrock proxy (velocity, not mc-router)
+      - "25577:25577/udp" # minecraft voice proxy
+      - "15636:15636/udp" # enshrouded game
+      - "15637:15637/udp" # enshrouded A2S query
+      - "34197:34197/udp" # factorio game
+      - "27015:27015/tcp" # factorio query - TCP, distinct from icarus's UDP 27015
+      - "17777:17777/udp" # icarus game
+      - "27015:27015/udp" # icarus steam query - UDP, distinct from factorio's TCP
+      - "7779:7779/udp"   # windrose game
+      - "7779:7779/tcp"   # windrose game, same port on both protocols
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8443/v1/health"]
       interval: 30s
