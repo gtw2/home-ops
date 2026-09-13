@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.ok8.sh/externaldns.k8s.io/dnsendpoint_v1alpha1.json
+# The edge hostname every tunnelled service CNAMEs to. One A record, pointed at
+# the VPS, so moving to a new VPS is a one-line change here rather than an edit
+# per game server.
+#
+# Named after the service, not a role: this one box is BOTH the hub (control
+# plane, :8443) and the edge (TLS :443 plus every pinned game port). Towonel
+# supports splitting those onto separate machines later, at which point a
+# record called hub.* pointing at an edge would be a lie.
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: towonel-edge
+spec:
+  endpoints:
+    - dnsName: "towonel.${SECRET_DOMAIN}"
+      recordType: A
+      # OVH VPS, ARIN block VPS-US-EAST-VA-2 (Vint Hill, Virginia). This is the
+      # one place the address is written down - every tunnelled hostname CNAMEs
+      # to towonel.${SECRET_DOMAIN} rather than to the literal, so replacing the VPS
+      # is a one-line change here.
+      targets: ["40.160.90.34"]
+      providerSpecific:
+        # Must stay unproxied: ACME, the raw TLS passthrough on :443, the hub
+        # control plane on :8443 and the iroh QUIC on UDP :51820 all break
+        # behind Cloudflare's orange cloud.
+        #
+        # Alpha prefix, not the GA one, because cloudflare-dns is pinned to
+        # --annotation-prefix=external-dns.alpha.kubernetes.io/. Change both
+        # together or this override is silently ignored and the record comes up
+        # proxied.
+        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+          value: "false"
+    # The buddy Gatus on the same VPS. Separate hostname so caddy-l4 can tell
+    # it apart from tunnelled traffic by SNI, and deliberately NOT served from
+    # the cluster - a status page that dies with the cluster reports nothing.
+    - dnsName: "sentinel-status.${SECRET_DOMAIN}"
+      recordType: A
+      targets: ["40.160.90.34"]
+      providerSpecific:
+        - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+          value: "false"

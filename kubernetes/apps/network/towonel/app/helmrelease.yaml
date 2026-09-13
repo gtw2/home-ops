@@ -1,0 +1,59 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: towonel-operator
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: towonel-operator
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    towonel:
+      # Our own hub, not the managed https://hub.towonel.dev default. This is
+      # the whole reason for self-hosting: TowonelTunnel.spec.region only offers
+      # EU and CA, and neither is an acceptable detour for Valheim UDP out of a
+      # US home cluster. Pointing at our own hub takes the region list out of
+      # the picture - see the note on spec.region in ../config/tunnel.yaml.
+      # No port: caddy-l4 on the VPS terminates TLS for this hostname and
+      # reverse proxies to the hub's control plane on 8443, so 8443 is never
+      # exposed publicly and ufw never opens it. See
+      # docker/sentinel/02-caddy-l4/config/Caddyfile.
+      apiURL: https://towonel.${SECRET_DOMAIN}
+    credentials:
+      existingSecret: towonel-secret
+      tokenKey: token
+    # The chart owns the CRDs (keep: true leaves them behind on uninstall, so a
+    # HelmRelease rollback cannot take the TowonelTunnel/TowonelAgent objects
+    # with it). Split them into their own Kustomization the way toolhive does
+    # only if that ever becomes a problem.
+    crds:
+      install: true
+      keep: true
+    observability:
+      metrics:
+        serviceMonitor:
+          enabled: true
+        # Agent pods are created by the operator, not by this chart, so this
+        # scrapes nothing until a TowonelAgent is actually routing.
+        agentPodMonitor:
+          enabled: true
+    # Chart defaults are 100m/128Mi requests and 500m/512Mi limits. Left alone
+    # deliberately - there is no measured figure for this workload yet, and
+    # guessing a tighter number is how the embedder ended up OOMKilled three
+    # times. Revisit once it has run under real traffic.
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        memory: 512Mi

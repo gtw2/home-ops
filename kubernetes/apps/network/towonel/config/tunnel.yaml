@@ -1,0 +1,23 @@
+---
+apiVersion: towonel.io/v1alpha1
+kind: TowonelTunnel
+metadata:
+  name: home-ops
+spec:
+  apiKeySecretRef:
+    name: towonel-secret
+    key: token
+  # NOT inert, and not geography: region is a matching label between this
+  # tunnel and the edge that serves it. It must equal TOWONEL_EDGE_REGION on
+  # the hub container. The enum is EU|CA with no US option, so a US-hosted VPS
+  # still gets CA - set both sides to CA and leave them alone.
+  region: CA
+  # Retain, not Delete: deleting this object should not tear the invite out
+  # from under a running agent while we are still evaluating.
+  deletionPolicy: Retain
+  # No dns: block. v1.7.1 exposes spec.dns.mode: DNSEndpoint, but the operator's
+  # own README says "The operator does not manage DNS yet" and its annotation
+  # reference marks towonel.io/dns-record as "Reserved / inert - intended to opt
+  # a hostname out of the (unimplemented) DNS handoff". DNS stays ours, written
+  # as DNSEndpoints below and beside each game server, which also sidesteps the
+  # question of which annotation prefix the operator would have emitted.

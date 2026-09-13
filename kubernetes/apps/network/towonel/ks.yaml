@@ -1,0 +1,91 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app towonel-dns
+  namespace: &namespace network
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  # Deliberately depends on NOTHING. The VPS needs towonel.${SECRET_DOMAIN} to
+  # resolve before Caddy can complete ACME, and the operator cannot start until
+  # the hub has handed us an API key - so if these records sat behind the
+  # operator the three would deadlock. A DNSEndpoint is just a record; it has no
+  # reason to wait for the workload.
+  interval: 1h
+  path: ./kubernetes/apps/network/towonel/dns
+  postBuild:
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+  prune: true
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  timeout: 5m
+  wait: false
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app towonel
+  namespace: &namespace network
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    - name: external-secrets-stores
+      namespace: external-secrets
+  interval: 1h
+  path: ./kubernetes/apps/network/towonel/app
+  postBuild:
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+  prune: true
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  timeout: 5m
+  # The chart installs the TowonelTunnel/TowonelAgent CRDs itself
+  # (crds.install), so nothing in ./config can apply until this has landed.
+  wait: true
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app towonel-config
+  namespace: &namespace network
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    - name: towonel
+      namespace: *namespace
+  interval: 1h
+  path: ./kubernetes/apps/network/towonel/config
+  postBuild:
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+  prune: true
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  timeout: 5m
+  wait: false
