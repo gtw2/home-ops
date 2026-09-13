@@ -153,6 +153,14 @@ spec:
           # to vanilla/creative/limbo by SNI hostname, so one tunnelled TCP port
           # covers every backend behind it. First TCP service on the tunnel -
           # everything before this was UDP.
+          # Split horizon, and every hostname is listed rather than just mc.*.
+          # The others CNAME to mc.* in public DNS, so a LAN override on mc.*
+          # alone would not catch them - the upstream resolver would follow the
+          # chain and hand back the edge address. Naming each one gives the LAN
+          # a direct A record; mc-router still fans them out by SNI.
+          # No spaces after the commas: external-dns splits this on "," and it
+          # is not worth depending on whether it trims each element.
+          external-dns.alpha.kubernetes.io/hostname: "mc.${SECRET_GAMING_DOMAIN},vanilla.${SECRET_GAMING_DOMAIN},vanilla-creative.${SECRET_GAMING_DOMAIN},create.${SECRET_GAMING_DOMAIN},create-creative.${SECRET_GAMING_DOMAIN}"
           towonel.io/tunnel: enable
           towonel.io/tunnel-ref: network/home-ops
           towonel.io/minecraft.tcp: "true"

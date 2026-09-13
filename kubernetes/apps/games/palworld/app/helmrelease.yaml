@@ -155,6 +155,11 @@ spec:
           # API reachable without Steam auth, and putting it on a public edge
           # would expose server administration to the internet. Only ports named
           # here are published - annotating the Service does not tunnel all of it.
+          # Split horizon: read only by unifi-dns, which answers the LAN with
+          # this LoadBalancer address while the public record points at the
+          # edge. cloudflare-dns has no service source, so this never reaches
+          # public DNS.
+          external-dns.alpha.kubernetes.io/hostname: palworld.${SECRET_GAMING_DOMAIN}
           towonel.io/tunnel: enable
           towonel.io/tunnel-ref: network/home-ops
           towonel.io/gameport.udp: "true"

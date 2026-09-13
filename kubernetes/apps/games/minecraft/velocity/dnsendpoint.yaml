@@ -8,10 +8,13 @@ spec:
   endpoints:
     - dnsName: "mc.${SECRET_GAMING_DOMAIN}"
       recordType: CNAME
-      targets: ["ipv4.${SECRET_GAMING_DOMAIN}"]
+      # Every other minecraft hostname CNAMEs to mc.*, so repointing this one
+      # record moves vanilla, vanilla-creative, create and create-creative too -
+      # mc-router fans them back out by SNI behind the single tunnelled port.
+      targets: ["towonel.${SECRET_DOMAIN}"]
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: 'false'
     - dnsName: "_minecraft._tcp.mc.${SECRET_GAMING_DOMAIN}"
       recordType: SRV
-      targets: ["0 5 25565 ipv4.${SECRET_GAMING_DOMAIN}"]
+      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}"]

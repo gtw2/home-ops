@@ -14,7 +14,7 @@ spec:
           value: 'false'
     - dnsName: "_minecraft._tcp.vanilla.${SECRET_GAMING_DOMAIN}"
       recordType: SRV
-      targets: ["0 5 25565 ipv4.${SECRET_GAMING_DOMAIN}"]
+      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}"]
     # Creative subdomain — players use this to wake the creative backend.
     # /server VanillaCreative from inside Velocity won't trigger mc-router's
     # scale-up (Velocity dials backend directly), so a public hostname is the
@@ -27,4 +27,4 @@ spec:
           value: 'false'
     - dnsName: "_minecraft._tcp.vanilla-creative.${SECRET_GAMING_DOMAIN}"
       recordType: SRV
-      targets: ["0 5 25565 ipv4.${SECRET_GAMING_DOMAIN}"]
+      targets: ["0 5 25565 towonel.${SECRET_DOMAIN}"]

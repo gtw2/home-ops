@@ -8,7 +8,9 @@ spec:
   endpoints:
     - dnsName: "palworld.${SECRET_GAMING_DOMAIN}"
       recordType: CNAME
-      targets: ["ipv4.${SECRET_GAMING_DOMAIN}"]
+      # The towonel edge. Revert to ipv4.${SECRET_GAMING_DOMAIN} to put players
+      # straight back on the WAN IP - cloudflare-ddns still maintains it.
+      targets: ["towonel.${SECRET_DOMAIN}"]
       providerSpecific:
         - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
           value: "false"
