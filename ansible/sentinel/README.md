@@ -12,14 +12,14 @@ secret files.
 
 ```bash
 ansible-galaxy collection install -r ansible/sentinel/requirements.yaml
-SOPS_AGE_KEY_FILE=age.key ansible-playbook \
-  -i ansible/sentinel/inventory.yaml ansible/sentinel/playbook.yaml
+ansible-playbook -i ansible/sentinel/inventory.yaml ansible/sentinel/playbook.yaml
 ```
 
-`SOPS_AGE_KEY_FILE` is required: the playbook decrypts `SECRET_DOMAIN` out of
+`ansible` comes from mise. The playbook decrypts `SECRET_DOMAIN` out of
 `kubernetes/components/common/sops/cluster-secrets.sops.yaml` on the control
-machine so the domain is never committed under `docker/`. The 1Password lookups
-additionally need the `op` CLI signed in.
+machine, so the domain is never committed under `docker/`; mise already exports
+`SOPS_AGE_KEY_FILE`, so that works inside this repo with no extra environment.
+The 1Password lookups need the `op` CLI signed in.
 
 ## What is rendered, not committed
 
