@@ -150,27 +150,40 @@
         port: "22"
         proto: tcp
 
-    # Every pinned towonel public-port needs a hole here AND a ports: line in
-    # docker/sentinel/01-towonel/docker-compose.yaml. Adding a tunnelled game
-    # server is a two-file change; forgetting one half fails silently.
+    # Container ports are deliberately NOT listed here, and the rules that used
+    # to be are removed below.
     #
-    # 8443 is deliberately absent: Caddy terminates TLS on 443 and reverse
-    # proxies the hub API, so the control plane is never exposed directly.
-    - name: Allow public edge ports
+    # Docker publishes a port by DNAT in nat/PREROUTING and an ACCEPT in the
+    # FORWARD chain inserted ahead of ufw's, so published ports never traverse
+    # the INPUT chain ufw governs. A "ufw allow 2456" rule alongside a published
+    # 2456 does nothing at all - the port is reachable either way. Keeping such
+    # rules is worse than useless: they read like the thing holding the door
+    # shut, so someone eventually deletes a compose ports: line and expects ufw
+    # to still be covering it.
+    #
+    # The real control for container traffic is the ports: list in
+    # docker/sentinel/01-towonel/docker-compose.yaml, which is in git, reviewed,
+    # and cross-checked against the towonel.io annotations by
+    # scripts/check-towonel-ports.py in CI.
+    #
+    # ufw still matters for anything NOT published by Docker - sshd above being
+    # the case that exists today.
+    - name: Remove ufw rules that only look like they do something
       community.general.ufw:
         rule: allow
         port: "{{ item.port }}"
         proto: "{{ item.proto }}"
+        delete: true
       loop:
-        - port: "80"        # ACME http-01 + redirect
+        - port: "80"
           proto: tcp
-        - port: "443"       # Caddy: hub API, gatus UI, and SNI passthrough to the edge
+        - port: "443"
           proto: tcp
-        - port: "51820"     # iroh QUIC
+        - port: "51820"
           proto: udp
-        - port: "2456"      # valheim game
+        - port: "2456"
           proto: udp
-        - port: "2457"      # valheim A2S query
+        - port: "2457"
           proto: udp
 
     - name: Enable UFW

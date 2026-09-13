@@ -78,12 +78,28 @@ invites itself.
 
 ## Adding a tunnelled game server
 
-Two files, both here, and forgetting either fails silently:
+Two steps:
 
-1. a `ports:` line in `docker/sentinel/01-towonel/docker-compose.yaml`
-2. a matching rule in the `Allow public edge ports` loop in `playbook.yaml`
+1. `towonel.io/*` annotations on the Service in `kubernetes/` - the opt-in, the
+   protocol, and the public port
+2. a matching `ports:` line in `docker/sentinel/01-towonel/docker-compose.yaml`
 
-Then the `towonel.io/<portName>.*` annotations on the Service in `kubernetes/`.
+There is deliberately **no ufw rule to add**. Docker publishes a port with a
+DNAT in `nat/PREROUTING` and an ACCEPT in `FORWARD` ahead of ufw's chains, so a
+published port never reaches the INPUT chain ufw governs - a `ufw allow` beside
+it does nothing. The `ports:` list is the real control, and ufw here covers only
+what Docker does not publish (sshd).
+
+Step 2 fails silently if forgotten - the server is simply unreachable through the
+edge - so `scripts/check-towonel-ports.py` cross-checks the two and runs in CI on
+any change under `kubernetes/` or `docker/sentinel/`. Run it locally any time:
+
+```bash
+python3 scripts/check-towonel-ports.py
+```
+
+The tunnel's `extraHostnames` is wildcarded to the gaming domain, so there is no
+third place to update.
 
 ## Back up
 

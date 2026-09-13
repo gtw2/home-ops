@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Towonel Ports
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - kubernetes/**
+      - docker/sentinel/**
+      - scripts/check-towonel-ports.py
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Towonel Ports - Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
+
+      # A tunnelled port that is annotated but not published fails silently at
+      # runtime - the game server is simply unreachable through the edge, with
+      # nothing in any log pointing at the cause. ufw cannot catch it either,
+      # since Docker's published ports bypass ufw entirely.
+      - name: Check declared ports are published
+        run: python3 scripts/check-towonel-ports.py

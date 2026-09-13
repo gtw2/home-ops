@@ -31,8 +31,13 @@ services:
       - "8443"
     ports:
       - "51820:51820/udp"
-      # One line per pinned towonel public-port, and a matching ufw rule in
-      # ansible/sentinel/playbook.yaml. Both halves or it fails silently.
+      # One line per pinned towonel public-port. THIS is the control that
+      # decides what the edge can receive - there is no ufw rule to add
+      # alongside it, because Docker's published ports bypass ufw entirely.
+      #
+      # Omitting a line here fails silently: the server is just unreachable
+      # through the tunnel. scripts/check-towonel-ports.py cross-checks this
+      # list against the towonel.io annotations in kubernetes/ and runs in CI.
       - "2456:2456/udp"   # valheim game
       - "2457:2457/udp"   # valheim A2S query
     healthcheck:
