@@ -5,6 +5,13 @@ version: '3'
 set: [pipefail]
 shopt: [globstar]
 
+# OP_CONNECT_HOST / OP_CONNECT_TOKEN for the sentinel playbook's 1Password
+# lookups. Loaded here because task forbids dotenv in included Taskfiles, and
+# because mise's environment is not reliably present under task - which is why
+# KUBECONFIG and SOPS_AGE_KEY_FILE are restated in env: below. A missing file is
+# ignored, so a fresh clone is unaffected.
+dotenv: ['.secrets.env']
+
 vars:
   BOOTSTRAP_DIR: '{{.ROOT_DIR}}/bootstrap'
   KUBERNETES_DIR: '{{.ROOT_DIR}}/kubernetes'
@@ -23,6 +30,7 @@ includes:
   kubernetes: .taskfiles/kubernetes
   llm: .taskfiles/llm
   minecraft: .taskfiles/minecraft
+  sentinel: .taskfiles/sentinel
   talos: .taskfiles/talos
   volsync: .taskfiles/volsync
 

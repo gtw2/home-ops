@@ -1,0 +1,59 @@
+---
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: '3'
+
+vars:
+  ANSIBLE_DIR: '{{.ROOT_DIR}}/ansible/sentinel'
+  SECRETS_ENV: '{{.ROOT_DIR}}/.secrets.env'
+
+tasks:
+
+  connect:
+    desc: Port-forward 1Password Connect so the ansible lookups can reach it (run in its own terminal)
+    cmd: kubectl --namespace external-secrets port-forward svc/onepassword-connect 8080:80
+    preconditions:
+      - test -f {{.KUBECONFIG}}
+      - which kubectl
+
+  secrets:
+    desc: Regenerate .secrets.env with the 1Password Connect host and token
+    cmds:
+      - install -m 600 /dev/null {{.SECRETS_ENV}}
+      - echo '# Gitignored, regenerate with "task sentinel:secrets".' >> {{.SECRETS_ENV}}
+      - echo '# OP_CONNECT_HOST assumes "task sentinel:connect" is forwarding elsewhere.' >> {{.SECRETS_ENV}}
+      - echo 'OP_CONNECT_HOST=http://localhost:8080' >> {{.SECRETS_ENV}}
+      - >-
+        kubectl --namespace external-secrets get secret onepassword-connect-secret
+        -o jsonpath='{.data.token}' | base64 -d
+        | sed 's/^/OP_CONNECT_TOKEN=/' >> {{.SECRETS_ENV}}
+      - echo '' >> {{.SECRETS_ENV}}
+      - 'echo "wrote {{.SECRETS_ENV}} - run: mise trust && exec $SHELL"'
+    preconditions:
+      - test -f {{.KUBECONFIG}}
+      - which kubectl base64
+
+  deps:
+    desc: Install the ansible collections the playbook needs
+    cmd: ansible-galaxy collection install -r {{.ANSIBLE_DIR}}/requirements.yaml
+    preconditions:
+      - which ansible-galaxy
+
+  check:
+    desc: Dry-run the sentinel playbook, changing nothing [needs sentinel:connect running]
+    cmd: ansible-playbook -i {{.ANSIBLE_DIR}}/inventory.yaml {{.ANSIBLE_DIR}}/playbook.yaml --check --diff
+    preconditions:
+      - sh: test -n "$OP_CONNECT_TOKEN"
+        msg: OP_CONNECT_TOKEN is unset - run "task sentinel:secrets", then reload your shell
+      - sh: curl -fsS -o /dev/null http://localhost:8080/heartbeat
+        msg: 1Password Connect unreachable - run "task sentinel:connect" in another terminal
+      - which ansible-playbook
+
+  apply:
+    desc: Run the sentinel playbook for real [needs sentinel:connect running]
+    cmd: ansible-playbook -i {{.ANSIBLE_DIR}}/inventory.yaml {{.ANSIBLE_DIR}}/playbook.yaml
+    preconditions:
+      - sh: test -n "$OP_CONNECT_TOKEN"
+        msg: OP_CONNECT_TOKEN is unset - run "task sentinel:secrets", then reload your shell
+      - sh: curl -fsS -o /dev/null http://localhost:8080/heartbeat
+        msg: 1Password Connect unreachable - run "task sentinel:connect" in another terminal
+      - which ansible-playbook

@@ -85,7 +85,7 @@
         mode: "0400"
       vars:
         secret_domain: "{{ cluster_secrets.stringData.SECRET_DOMAIN }}"
-        acme_email: "{{ lookup('community.general.onepassword', 'towonel', field='ACME_EMAIL', vault='kubernetes') }}"
+        acme_email: "{{ lookup('community.general.onepassword', 'towonel', field='ACME_EMAIL', vault='homeops') }}"
       no_log: true
       register: sentinel_env
 
@@ -105,9 +105,9 @@
         group: root
         mode: "0400"
       vars:
-        gatus_pushover_token: "{{ lookup('community.general.onepassword', 'pushover', field='ALERTMANAGER_PUSHOVER_TOKEN', vault='kubernetes') }}"
-        gatus_pushover_user_key: "{{ lookup('community.general.onepassword', 'pushover', field='PUSHOVER_USER_KEY', vault='kubernetes') }}"
-        gatus_heartbeat_token: "{{ lookup('community.general.onepassword', 'alertmanager', field='GATUS_HEARTBEAT_TOKEN', vault='kubernetes') }}"
+        gatus_pushover_token: "{{ lookup('community.general.onepassword', 'pushover', field='ALERTMANAGER_PUSHOVER_TOKEN', vault='homeops') }}"
+        gatus_pushover_user_key: "{{ lookup('community.general.onepassword', 'pushover', field='PUSHOVER_USER_KEY', vault='homeops') }}"
+        gatus_heartbeat_token: "{{ lookup('community.general.onepassword', 'alertmanager', field='GATUS_HEARTBEAT_TOKEN', vault='homeops') }}"
       no_log: true
       register: gatus_conf
 

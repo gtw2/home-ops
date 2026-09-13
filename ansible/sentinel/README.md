@@ -10,16 +10,49 @@ secret files.
 
 ## Run it
 
+Two terminals. The first holds a port-forward open for the whole run:
+
 ```bash
-ansible-galaxy collection install -r ansible/sentinel/requirements.yaml
-ansible-playbook -i ansible/sentinel/inventory.yaml ansible/sentinel/playbook.yaml
+task sentinel:connect      # terminal 1, leave it running
 ```
 
-`ansible` comes from mise. The playbook decrypts `SECRET_DOMAIN` out of
-`kubernetes/components/common/sops/cluster-secrets.sops.yaml` on the control
-machine, so the domain is never committed under `docker/`; mise already exports
-`SOPS_AGE_KEY_FILE`, so that works inside this repo with no extra environment.
-The 1Password lookups need the `op` CLI signed in.
+```bash
+task sentinel:deps         # terminal 2, once
+task sentinel:check        # dry run, changes nothing
+task sentinel:apply
+```
+
+`sentinel:check` and `sentinel:apply` both refuse to start if the forward is
+down or `OP_CONNECT_TOKEN` is unset, so a forgotten terminal fails immediately
+rather than halfway through provisioning.
+
+## Why the port-forward
+
+The playbook's 1Password lookups do NOT use the `op` CLI - there is no account
+configured on this machine and none is needed. `community.general.onepassword`
+reads `OP_CONNECT_HOST` and `OP_CONNECT_TOKEN` straight from the environment and
+talks to the same 1Password Connect server external-secrets already uses.
+
+That server is `ClusterIP`-only, so it is unreachable from a workstation without
+help. `task sentinel:connect` forwards it to `localhost:8080`, which is what
+`OP_CONNECT_HOST` in `.secrets.env` points at. Exposing Connect permanently via
+an HTTPRoute would remove the forward, at the cost of putting the secrets API on
+the LAN - not worth it for something run this rarely.
+
+`.secrets.env` is gitignored and loaded by mise (`_.file`). Regenerate it any
+time with:
+
+```bash
+task sentinel:secrets && exec $SHELL
+```
+
+The shell reload matters: mise reads that file when the environment is built, so
+a freshly written token is not visible to an already-open shell.
+
+Items are in the **`homeops`** vault. `SECRET_DOMAIN` does not come from
+1Password at all - it is decrypted from
+`kubernetes/components/common/sops/cluster-secrets.sops.yaml`, and mise already
+exports `SOPS_AGE_KEY_FILE`, so that needs no extra setup.
 
 ## What is rendered, not committed
 

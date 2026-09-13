@@ -3,6 +3,11 @@ _.python.venv = { path = "{{config_root}}/.venv", create = true }
 KUBECONFIG = "{{config_root}}/kubeconfig"
 MINIJINJA_CONFIG_FILE = "{{config_root}}/.minijinja.toml"
 SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
+# Gitignored. Holds OP_CONNECT_HOST / OP_CONNECT_TOKEN, which the ansible
+# 1Password lookups read straight from the environment - see
+# ansible/sentinel/README.md. Absent on a fresh clone, which is harmless
+# until you run the sentinel playbook.
+_.file = ["{{config_root}}/.secrets.env"]
 TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
 
 [tools]
