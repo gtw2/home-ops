@@ -68,15 +68,15 @@ spec:
           external-dns.alpha.kubernetes.io/hostname: icarus.${SECRET_GAMING_DOMAIN}
           towonel.io/tunnel: enable
           towonel.io/tunnel-ref: network/home-ops
-          towonel.io/steam1.udp: "true"
-          towonel.io/steam1.public-port: "17777"
-          towonel.io/steam2.udp: "true"
-          towonel.io/steam2.public-port: "27015"
+          towonel.io/icarus-game.udp: "true"
+          towonel.io/icarus-game.public-port: "17777"
+          towonel.io/icarus-query.udp: "true"
+          towonel.io/icarus-query.public-port: "27015"
         ports:
-          steam1:
+          icarus-game:
             port: *port
             protocol: UDP
-          steam2:
+          icarus-query:
             port: *queryport
             protocol: UDP
     persistence:

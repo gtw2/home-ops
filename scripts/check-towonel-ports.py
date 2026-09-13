@@ -26,7 +26,7 @@ TRUTHY = {"true", "yes", "enable", "enabled"}
 
 
 def declared():
-    """(port, proto, source) for every tunnelled port annotation in kubernetes/."""
+    """(port, proto, source, name) for every tunnelled port annotation in kubernetes/."""
     out = []
     for path in sorted(K8S.rglob("*.yaml")):
         text = path.read_text(errors="replace")
@@ -43,9 +43,9 @@ def declared():
         for name, port in ports.items():
             proto = protos.get(name)
             if proto is None:
-                out.append((port, None, f"{path.relative_to(ROOT)} ({name})"))
+                out.append((port, None, f"{path.relative_to(ROOT)} ({name})", name))
             else:
-                out.append((port, proto, f"{path.relative_to(ROOT)} ({name})"))
+                out.append((port, proto, f"{path.relative_to(ROOT)} ({name})", name))
     return out
 
 
@@ -63,7 +63,27 @@ def published():
 
 def main():
     have, problems = published(), []
-    for port, proto, src in declared():
+    decl = declared()
+
+    # The operator keys the agent's spec.udp/spec.tcp entries by this name, and
+    # those are server-side-apply maps (list-type=map, list-map-keys=[name]).
+    # Two Services sharing a port name therefore fight over one map entry and
+    # the later one is rejected with a HostnameConflict event, never reaching
+    # the agent. Nothing at runtime says "duplicate name" - the server just
+    # never appears - so the uniqueness has to be enforced here.
+    by_name = {}
+    for _, _, src, name in decl:
+        by_name.setdefault(name, []).append(src.split(" (")[0])
+    for name, srcs in sorted(by_name.items()):
+        uniq = sorted(set(srcs))
+        if len(uniq) > 1:
+            problems.append(
+                f"  port name {name!r} is used by {len(uniq)} services: "
+                + ", ".join(uniq)
+                + " - they collide in the agent and all but one are dropped"
+            )
+
+    for port, proto, src, _ in decl:
         if proto is None:
             problems.append(f"  {src}: public-port {port} has no .udp/.tcp annotation")
         elif (port, proto) not in have:
@@ -75,7 +95,7 @@ def main():
         print("towonel port check FAILED:\n" + "\n".join(problems))
         print(f"\npublished on the hub: {sorted(have)}")
         return 1
-    print(f"towonel port check OK: {len(declared())} declared port(s), all published")
+    print(f"towonel port check OK: {len(decl)} declared port(s), all published, names unique")
     return 0
 
 

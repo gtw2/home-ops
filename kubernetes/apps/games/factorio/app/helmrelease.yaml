@@ -58,16 +58,16 @@ spec:
           # genuinely usable here rather than decorative.
           towonel.io/tunnel: enable
           towonel.io/tunnel-ref: network/home-ops
-          towonel.io/gameport.udp: "true"
-          towonel.io/gameport.public-port: "34197"
-          towonel.io/queryport.tcp: "true"
-          towonel.io/queryport.public-port: "27015"
+          towonel.io/factorio-game.udp: "true"
+          towonel.io/factorio-game.public-port: "34197"
+          towonel.io/factorio-query.tcp: "true"
+          towonel.io/factorio-query.public-port: "27015"
         ports:
-          gameport:
+          factorio-game:
             enabled: true
             port: 34197
             protocol: UDP
-          queryport:
+          factorio-query:
             enabled: true
             port: 27015
             protocol: TCP

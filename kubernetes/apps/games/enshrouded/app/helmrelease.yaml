@@ -65,16 +65,16 @@ spec:
           external-dns.alpha.kubernetes.io/hostname: enshrouded.${SECRET_GAMING_DOMAIN}
           towonel.io/tunnel: enable
           towonel.io/tunnel-ref: network/home-ops
-          towonel.io/gameport.udp: "true"
-          towonel.io/gameport.public-port: "15636"
-          towonel.io/queryport.udp: "true"
-          towonel.io/queryport.public-port: "15637"
+          towonel.io/ensh-game.udp: "true"
+          towonel.io/ensh-game.public-port: "15636"
+          towonel.io/ensh-query.udp: "true"
+          towonel.io/ensh-query.public-port: "15637"
         ports:
-          gameport:
+          ensh-game:
             enabled: true
             port: *game_port
             protocol: UDP
-          queryport:
+          ensh-query:
             enabled: true
             port: *query_port
             protocol: UDP

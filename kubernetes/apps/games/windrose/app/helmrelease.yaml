@@ -64,16 +64,16 @@ spec:
           # as separate listeners.
           towonel.io/tunnel: enable
           towonel.io/tunnel-ref: network/home-ops
-          towonel.io/gameport.udp: "true"
-          towonel.io/gameport.public-port: "7779"
-          towonel.io/gameport-tcp.tcp: "true"
-          towonel.io/gameport-tcp.public-port: "7779"
+          towonel.io/windrose-game.udp: "true"
+          towonel.io/windrose-game.public-port: "7779"
+          towonel.io/windrose-tcp.tcp: "true"
+          towonel.io/windrose-tcp.public-port: "7779"
         ports:
-          gameport:
+          windrose-game:
             enabled: true
             port: *gameport
             protocol: UDP
-          gameport-tcp:
+          windrose-tcp:
             enabled: true
             port: *gameport
             protocol: TCP
