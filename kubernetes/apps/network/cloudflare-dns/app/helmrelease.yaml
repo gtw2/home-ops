@@ -31,6 +31,15 @@ spec:
       # ~18 annotations to the new prefix is the eventual fix, not this one.
       - --annotation-prefix=external-dns.alpha.kubernetes.io/
       - --cloudflare-dns-records-per-page=1000
+      # SRV is not managed by default - the default set is A, AAAA, CNAME - so
+      # the minecraft _minecraft._tcp records were ignored regardless of how
+      # they were written. The flag REPLACES the default list rather than adding
+      # to it, so the three defaults have to be restated here.
+      #
+      # This is the second half of the SRV fix; the first was the trailing dot
+      # on the target, without which external-dns rejects the endpoint outright.
+      # Either alone leaves the records silently absent.
+      - --managed-record-types=A,AAAA,CNAME,SRV
       - --cloudflare-proxied
       - --crd-source-apiversion=externaldns.k8s.io/v1alpha1
       - --crd-source-kind=DNSEndpoint
