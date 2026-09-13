@@ -19,6 +19,17 @@ spec:
             name: &secret cloudflare-dns-secret
             key: api-token
     extraArgs:
+      # external-dns v0.22.0 changed the DEFAULT --annotation-prefix from
+      # external-dns.alpha.kubernetes.io/ to external-dns.kubernetes.io/, which
+      # silently orphaned every annotation in this repo. The visible failure was
+      # the envoy-external Gateway's target=external.${SECRET_DOMAIN} going
+      # unread, so external-dns fell back to the Gateway's LoadBalancer address
+      # and tried to write proxied A records at 10.10.40.8. Cloudflare rejects a
+      # proxied record on RFC1918 (code 9003), and policy=sync had already
+      # deleted the CNAMEs, so every external name stopped resolving.
+      # Pinning the old prefix restores the pre-bump behaviour; migrating the
+      # ~18 annotations to the new prefix is the eventual fix, not this one.
+      - --annotation-prefix=external-dns.alpha.kubernetes.io/
       - --cloudflare-dns-records-per-page=1000
       - --cloudflare-proxied
       - --crd-source-apiversion=externaldns.k8s.io/v1alpha1

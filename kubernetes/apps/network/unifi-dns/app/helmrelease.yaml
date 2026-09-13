@@ -51,6 +51,13 @@ spec:
             port: http-webhook
           initialDelaySeconds: 10
           timeoutSeconds: 5
+    # Same external-dns v0.22.0 annotation-prefix change as cloudflare-dns; see
+    # the comment there. This instance is not visibly erroring - the unifi
+    # provider accepts the private A records it fell back to - but it silently
+    # stopped honouring envoy-internal's target=internal.${SECRET_DOMAIN}, so
+    # pin the prefix here too rather than let the two drift apart.
+    extraArgs:
+      - --annotation-prefix=external-dns.alpha.kubernetes.io/
     triggerLoopOnEvent: true
     policy: sync
     sources:
