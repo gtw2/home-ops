@@ -17,7 +17,7 @@ metadata:
     # guarded key is PRESENT, so guarded:false guards it just as guarded:true
     # does. Setting an explicit url is worse still - the endpoint stays guarded
     # and gatus builds a DNS target out of an HTTPS URL:
-    #   dial udp: lookup udp///mcp.gwst.dev/mcp: unknown port
+    #   dial udp: lookup udp///mcp.${SECRET_DOMAIN}/mcp: unknown port
     #
     # So this check means "DNS resolves", nothing more. Real health for this
     # service is the VirtualMCPServer and MCPServer CR status, which report
