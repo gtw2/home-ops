@@ -1,0 +1,222 @@
+---
+- name: Bootstrap Towonel VPS
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    vps_hostname: sentinel
+    towonel_data_dir: /opt/towonel/data
+    doco_cd_config_dir: /opt/doco-cd
+
+  tasks:
+    - name: Check host connectivity
+      ansible.builtin.ping:
+
+    # Decrypted on the control machine, never on the VPS. Needs
+    # SOPS_AGE_KEY_FILE=age.key in the environment - see README.
+    - name: Load cluster secrets from sops
+      community.sops.load_vars:
+        file: ../../kubernetes/components/common/sops/cluster-secrets.sops.yaml
+        name: cluster_secrets
+      delegate_to: localhost
+      become: false
+      run_once: true
+      no_log: true
+
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ vps_hostname }}"
+
+    - name: Install base packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - jq
+          - openssl
+          - ufw
+        state: present
+        update_cache: true
+
+    - name: Install Docker
+      ansible.builtin.shell: curl -fsSL https://get.docker.com | sh
+      args:
+        executable: /bin/bash
+        creates: /usr/bin/docker
+
+    - name: Create directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - path: /opt/towonel
+          owner: root
+          group: root
+          mode: "0755"
+        # The towonel container runs as 10001:10001 and writes node.key,
+        # operator.key, invite_hash.key and hub.db here. Wrong ownership is a
+        # silent first-boot failure.
+        - path: "{{ towonel_data_dir }}"
+          owner: "10001"
+          group: "10001"
+          mode: "0750"
+        - path: /opt/gatus
+          owner: root
+          group: root
+          mode: "0755"
+        - path: /opt/sentinel
+          owner: root
+          group: root
+          mode: "0700"
+        - path: "{{ doco_cd_config_dir }}"
+          owner: root
+          group: root
+          mode: "0700"
+
+    - name: Template sentinel env file
+      ansible.builtin.template:
+        src: templates/sentinel-env.j2
+        dest: /opt/sentinel/env
+        owner: root
+        group: root
+        mode: "0400"
+      vars:
+        secret_domain: "{{ cluster_secrets.stringData.SECRET_DOMAIN }}"
+        acme_email: "{{ lookup('community.general.onepassword', 'towonel', field='ACME_EMAIL', vault='kubernetes') }}"
+      no_log: true
+      register: sentinel_env
+
+    - name: Restart stacks after env change
+      ansible.builtin.command:
+        cmd: "docker restart {{ item }}"
+      loop: [towonel-hub, caddy-l4, gatus]
+      when: sentinel_env.changed
+      changed_when: sentinel_env.changed
+      failed_when: false
+
+    - name: Template gatus secrets config
+      ansible.builtin.template:
+        src: templates/gatus-secrets.yaml.j2
+        dest: /opt/gatus/secrets.yaml
+        owner: root
+        group: root
+        mode: "0400"
+      vars:
+        gatus_pushover_token: "{{ lookup('community.general.onepassword', 'pushover', field='ALERTMANAGER_PUSHOVER_TOKEN', vault='kubernetes') }}"
+        gatus_pushover_user_key: "{{ lookup('community.general.onepassword', 'pushover', field='PUSHOVER_USER_KEY', vault='kubernetes') }}"
+        gatus_heartbeat_token: "{{ lookup('community.general.onepassword', 'alertmanager', field='GATUS_HEARTBEAT_TOKEN', vault='kubernetes') }}"
+      no_log: true
+      register: gatus_conf
+
+    - name: Restart gatus after config change
+      ansible.builtin.command:
+        cmd: docker restart gatus
+      when: gatus_conf.changed
+      changed_when: gatus_conf.changed
+      failed_when: false
+
+    - name: Create Docker edge network
+      community.docker.docker_network:
+        name: edge
+        driver: bridge
+        state: present
+
+    - name: Copy doco-cd Compose file
+      ansible.builtin.copy:
+        src: ../../docker/sentinel/.doco-cd/docker-compose.app.yaml
+        dest: "{{ doco_cd_config_dir }}/docker-compose.yaml"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Create doco-cd secret files
+      ansible.builtin.shell: |
+        set -euo pipefail
+        umask 077
+        openssl rand -base64 48 > "{{ item }}"
+      args:
+        executable: /bin/bash
+        creates: "{{ item }}"
+      loop:
+        - "{{ doco_cd_config_dir }}/api_secret"
+        - "{{ doco_cd_config_dir }}/webhook_secret"
+
+    - name: Allow SSH
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    # Every pinned towonel public-port needs a hole here AND a ports: line in
+    # docker/sentinel/01-towonel/docker-compose.yaml. Adding a tunnelled game
+    # server is a two-file change; forgetting one half fails silently.
+    #
+    # 8443 is deliberately absent: Caddy terminates TLS on 443 and reverse
+    # proxies the hub API, so the control plane is never exposed directly.
+    - name: Allow public edge ports
+      community.general.ufw:
+        rule: allow
+        port: "{{ item.port }}"
+        proto: "{{ item.proto }}"
+      loop:
+        - port: "80"        # ACME http-01 + redirect
+          proto: tcp
+        - port: "443"       # Caddy: hub API, gatus UI, and SNI passthrough to the edge
+          proto: tcp
+        - port: "51820"     # iroh QUIC
+          proto: udp
+        - port: "2456"      # valheim game
+          proto: udp
+        - port: "2457"      # valheim A2S query
+          proto: udp
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+        policy: deny
+
+    - name: Run doco-cd Compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ doco_cd_config_dir }}"
+        files:
+          - docker-compose.yaml
+        pull: always
+        state: present
+
+    - name: Wait for doco-cd container to become healthy
+      community.docker.docker_container_info:
+        name: doco-cd
+      register: doco_cd_container
+      until: doco_cd_container.container.State.Health.Status == "healthy"
+      retries: 30
+      delay: 5
+
+    - name: Wait for GitOps-managed containers
+      community.docker.docker_container_info:
+        name: "{{ item }}"
+      register: gitops_container
+      until: gitops_container.exists and (gitops_container.container.State.Status | default("")) == "running"
+      retries: 30
+      delay: 5
+      loop:
+        - towonel-hub
+        - caddy-l4
+        - gatus
+
+    - name: Wait for Towonel container to become healthy
+      community.docker.docker_container_info:
+        name: towonel-hub
+      register: towonel_container
+      until: towonel_container.container.State.Health.Status == "healthy"
+      retries: 30
+      delay: 5
+
+    - name: Show next step
+      ansible.builtin.debug:
+        msg: >-
+          Hub is up. Now read the operator key and store it in 1Password
+          (item "towonel", field TOWONEL_API_KEY):
+          docker exec towonel-hub cat /data/operator.key

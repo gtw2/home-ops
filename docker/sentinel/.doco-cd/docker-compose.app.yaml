@@ -1,0 +1,46 @@
+---
+# Copied to /opt/doco-cd by Ansible, because doco-cd cannot deploy itself.
+# Everything else under docker/sentinel/ is reconciled from git by doco-cd.
+secrets:
+  api_secret:
+    file: /opt/doco-cd/api_secret
+  webhook_secret:
+    file: /opt/doco-cd/webhook_secret
+
+services:
+  app:
+    container_name: doco-cd
+    environment:
+      API_SECRET_FILE: /run/secrets/api_secret
+      DEPLOY_CONFIG_BASE_DIR: ./docker/sentinel/
+      HTTP_PORT: 8880
+      LOG_LEVEL: info
+      POLL_CONFIG: |-
+        - url: https://github.com/gtw2/home-ops.git
+          reference: main
+          interval: 3600
+      TZ: America/New_York
+      WEBHOOK_SECRET_FILE: /run/secrets/webhook_secret
+    healthcheck:
+      test: ["CMD", "/doco-cd", "healthcheck"]
+      start_period: 15s
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    # renovate: datasource=docker depName=ghcr.io/kimdre/doco-cd
+    image: ghcr.io/kimdre/doco-cd:0.117.1
+    restart: unless-stopped
+    secrets:
+      - api_secret
+      - webhook_secret
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - data:/data
+
+volumes:
+  data: {}
+
+networks:
+  default:
+    name: edge
+    external: true

@@ -1,0 +1,69 @@
+---
+# The buddy Gatus. Its entire value is that it is NOT in the cluster: when the
+# cluster is down, or DNS for it has been deleted, this is what still reports.
+# Alerting credentials and the heartbeat endpoint come from secrets.yaml, which
+# Ansible renders from 1Password.
+connectivity:
+  checker:
+    target: 1.1.1.1:53
+    interval: 1m
+
+endpoints:
+  # The in-cluster Gatus. If this fails, the cluster or its ingress is down -
+  # which is exactly the case the in-cluster one cannot report on itself.
+  - name: home-ops status
+    group: cluster
+    url: https://status.${SECRET_DOMAIN}
+    interval: 1m
+    conditions:
+      - "[STATUS] == 200"
+    alerts:
+      - type: pushover
+
+  # End-to-end through Cloudflare and the tunnel, not just "is the pod up".
+  - name: echo
+    group: cluster
+    url: https://echo.${SECRET_DOMAIN}
+    interval: 1m
+    conditions:
+      - "[STATUS] == 200"
+    alerts:
+      - type: pushover
+
+  - name: towonel-hub
+    group: sentinel
+    url: http://towonel-hub:8443/v1/health
+    interval: 1m
+    conditions:
+      - "[STATUS] == 200"
+    alerts:
+      - type: pushover
+
+  - name: cloudflare
+    group: connectivity
+    url: tcp://1.1.1.1:53
+    interval: 1m
+    conditions:
+      - "[CONNECTED] == true"
+
+  - name: quad9
+    group: connectivity
+    url: tcp://9.9.9.9:53
+    interval: 1m
+    conditions:
+      - "[CONNECTED] == true"
+
+metrics: true
+
+storage:
+  type: sqlite
+  caching: true
+  path: /config/gatus.db
+
+ui:
+  title: Sentinel Status
+  header: Sentinel Status
+  link: https://github.com/gtw2/home-ops
+
+web:
+  port: 8080

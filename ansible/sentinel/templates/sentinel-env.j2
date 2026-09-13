@@ -1,0 +1,10 @@
+# Rendered by Ansible to /opt/sentinel/env, mode 0400. NOT committed.
+#
+# Everything domain-bearing lives here rather than in the compose files, because
+# SECRET_DOMAIN is sops-encrypted in this repo and committing it to docker/
+# would undo that. The compose files reference these by name only.
+SECRET_DOMAIN={{ secret_domain }}
+TOWONEL_HUB_PUBLIC_URL=https://towonel.{{ secret_domain }}
+TOWONEL_EDGE_ADVERTISED_ADDRESSES=towonel.{{ secret_domain }}:443
+TOWONEL_EDGE_PUBLIC_IPS={{ towonel_ipv4 }}
+ACME_EMAIL={{ acme_email }}

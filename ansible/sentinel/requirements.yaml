@@ -1,0 +1,7 @@
+---
+collections:
+  - name: community.docker
+  - name: community.general
+  # Reads SECRET_DOMAIN out of kubernetes/components/common/sops/cluster-secrets.sops.yaml
+  # so the domain is never written into this repo in plaintext.
+  - name: community.sops

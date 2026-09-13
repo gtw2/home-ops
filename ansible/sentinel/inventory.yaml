@@ -1,0 +1,10 @@
+---
+all:
+  hosts:
+    sentinel:
+      ansible_host: 40.160.90.34
+      # OVH's Debian/Ubuntu images ship a sudo-capable "ubuntu" user and no root
+      # SSH. Change this if you picked a different image.
+      ansible_user: ubuntu
+      ansible_port: 22
+      towonel_ipv4: 40.160.90.34

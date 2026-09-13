@@ -1,0 +1,55 @@
+---
+name: towonel
+
+services:
+  towonel-hub:
+    container_name: towonel-hub
+    # renovate: datasource=docker depName=codeberg.org/towonel/towonel-node
+    image: codeberg.org/towonel/towonel-node:1.6.1
+    restart: unless-stopped
+    user: "10001:10001"
+    # Domain-bearing values only. SECRET_DOMAIN is sops-encrypted in this repo,
+    # so it is rendered to /opt/sentinel/env by Ansible rather than committed.
+    env_file:
+      - /opt/sentinel/env
+    environment:
+      RUST_LOG: info
+      TOWONEL_HUB_ENABLED: "true"
+      TOWONEL_HUB_ALLOW_PRIVILEGED_PORTS: "true"
+      TOWONEL_EDGE_ENABLED: "true"
+      # 4443, not 443: caddy-l4 owns 443 and forwards here. That is also why
+      # there is no ACME email - Caddy holds the certificate.
+      TOWONEL_EDGE_LISTEN_ADDR: 0.0.0.0:4443
+      TOWONEL_EDGE_PROXY_PROTOCOL: "true"
+      TOWONEL_EDGE_IROH_PORT: "51820"
+      TOWONEL_EDGE_HEALTH_LISTEN_ADDR: 0.0.0.0:9092
+      # Must equal spec.region on the TowonelTunnel in the cluster. It is a
+      # matching label, not geography - the enum has no US option.
+      TOWONEL_EDGE_REGION: CA
+    expose:
+      - "4443"
+      - "8443"
+    ports:
+      - "51820:51820/udp"
+      # One line per pinned towonel public-port, and a matching ufw rule in
+      # ansible/sentinel/playbook.yaml. Both halves or it fails silently.
+      - "2456:2456/udp"   # valheim game
+      - "2457:2457/udp"   # valheim A2S query
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8443/v1/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    volumes:
+      - /opt/towonel/data:/data
+
+networks:
+  default:
+    name: edge
+    external: true

@@ -1,0 +1,74 @@
+{
+    email {$ACME_EMAIL}
+    # Caddy's own HTTP/HTTPS servers move off 80/443 so the layer4 app can own
+    # them; the layer4 routes below hand local hostnames back to these.
+    http_port 8080
+    https_port 8443
+
+    layer4 {
+        :443 {
+            matching_timeout 15s
+            # Hostnames this box serves itself (hub API, status page) get
+            # terminated by Caddy.
+            @local tls sni towonel.{$SECRET_DOMAIN} sentinel-status.{$SECRET_DOMAIN}
+            route @local {
+                proxy {
+                    proxy_protocol v2
+                    upstream 127.0.0.1:8443
+                }
+            }
+            # Everything else is a tunnelled service: pass the TLS through
+            # untouched so the certificate stays in the home cluster and this
+            # VPS never sees plaintext.
+            @tls tls
+            route @tls {
+                proxy {
+                    proxy_protocol v2
+                    upstream towonel-hub:4443
+                }
+            }
+        }
+        :80 {
+            @local_http http host towonel.{$SECRET_DOMAIN} sentinel-status.{$SECRET_DOMAIN}
+            route @local_http {
+                proxy {
+                    proxy_protocol v2
+                    upstream 127.0.0.1:8080
+                }
+            }
+        }
+    }
+
+    servers :8443 {
+        listener_wrappers {
+            proxy_protocol {
+                timeout 2s
+                allow 127.0.0.1/32
+            }
+            tls
+        }
+    }
+    servers :8080 {
+        listener_wrappers {
+            proxy_protocol {
+                timeout 2s
+                allow 127.0.0.1/32
+            }
+        }
+    }
+
+    log default {
+        output stdout
+        format json
+    }
+}
+
+# The hub control plane. Serving it here on 443 is why towonel.apiURL in the
+# cluster has no :8443 - and why ufw never opens 8443 publicly.
+towonel.{$SECRET_DOMAIN} {
+    reverse_proxy towonel-hub:8443
+}
+
+sentinel-status.{$SECRET_DOMAIN} {
+    reverse_proxy gatus:8080
+}
