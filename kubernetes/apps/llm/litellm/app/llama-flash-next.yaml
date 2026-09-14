@@ -76,10 +76,24 @@ spec:
     # single-threaded host-side pass at the same point. First suspect is
     # --no-host: bypassing the host staging buffer costs nothing on Vulkan's
     # unified-memory view but may push HIP into a per-tensor host conversion.
-    # Next variations to try, one at a time, each ~10min of downtime: drop
-    # --no-host; then drop --lazy-mode; then f16 KV (which is what the
-    # reference config had to do, and which costs ~3GiB against a 96GiB
-    # carve-out already budgeted to 91.5).
+    # RESULT 2026-09-14, attempt 2, --no-host dropped: hangs again, same
+    # signature, at 60770619392 bytes (56.6GiB) instead of 62.8GiB - flat for
+    # 180s while utime climbed at ~98.8 ticks/s. So --no-host is NOT the cause,
+    # and the moving stall point argues against one bad tensor and for a
+    # single-threaded pass that begins partway through the load.
+    #
+    # 56.6GiB is close to the ~56GiB resident-VRAM figure above, which is what
+    # it is BECAUSE --lazy-mode keeps the ~51B embedding table off the GPU - so
+    # --lazy-mode is the next suspect: it is the flag that alters the load path,
+    # and this image's HEAD (llama.cpp#28326) disables lazy loading by default
+    # on iGPUs, which this config forces back on. Note that test is murkier than
+    # this one: without lazy loading the full ~84GiB goes resident against a
+    # 96GiB carve-out, so it can fail by OOM for reasons unrelated to the hang.
+    # After that, f16 KV (what the reference config had to do, ~3GiB more
+    # against a budget already at 91.5).
+    #
+    # Neither the q8_0-KV-aborts-in-build_attn_qsa risk nor any throughput
+    # number was ever reached: both are downstream of a load that completes.
     #
     # Reverting is this block plus the image line below.
     accelerator: rocm
