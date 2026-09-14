@@ -74,7 +74,7 @@ spec:
   # vulkan-radv rather than the rocm-10.0 tag: see the accelerator note above -
   # ROCm loads this model but is a known-bad path for it on gfx1151. Same
   # publisher, rebuilt nightly.
-  image: docker.io/kyuz0/amd-strix-halo-toolboxes:vulkan-radv@sha256:0f3ba65aad71fe5c205a1825758091647b72f985e5f0354ebb51fba3ca9730c5
+  image: docker.io/kyuz0/amd-strix-halo-toolboxes:vulkan-radv@sha256:4769e9296817b79fe2ea94b75a67456f52762cf6e0cda6581e963d392c224458
   command:
     - llama-server
   rolloutPolicy:
