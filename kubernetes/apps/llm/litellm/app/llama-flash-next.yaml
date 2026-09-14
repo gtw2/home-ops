@@ -217,11 +217,15 @@ spec:
     # the pod sat Running for minutes with read_bytes flat at 62.4GiB, one core
     # pegged at 100%, no log output and no progress. Everything is offloaded to
     # the iGPU, so there is nothing to gain from a CPU layout in the first
-    # place. --no-host bypasses the host staging buffer, which on unified
-    # memory is a copy between two views of the same physical RAM. The
-    # reference config carries both for the same reason.
+    # place.
+    #
+    # --no-host is DROPPED on the ROCm test (it is still correct on Vulkan, and
+    # comes back with the accelerator if this is reverted). It bypasses the
+    # host staging buffer, which on Vulkan's view of unified memory is a copy
+    # between two views of the same physical RAM and therefore free - but it is
+    # the first suspect for the 62.8GiB load hang, on the theory that HIP
+    # without a staging buffer falls back to a per-tensor host conversion.
     - --no-repack
-    - --no-host
     - --cache-prompt
     - --kv-unified
     - --temp
