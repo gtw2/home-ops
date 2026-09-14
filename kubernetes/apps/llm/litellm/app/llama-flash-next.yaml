@@ -133,7 +133,15 @@ spec:
     # bounds how long a rollout waits for the current pod to go idle, so a
     # large value reintroduces exactly that deadlock for up to a day. Five
     # minutes still lets in-flight requests drain.
-    waitForIdle: true
+    # FALSE for the duration of the ROCm experiment, and this is not optional:
+    # a hung pod is strictly worse than the crashlooping one the note above
+    # anticipates. It never answers /slots, the check fails closed ("Deferring
+    # rollout, backend slots are busy", requeueAfter 5s, forever), and
+    # idleTimeoutSeconds does NOT bound it - observed 14 minutes of 5s requeues
+    # with no rollout. So the rollout that would replace a wedged pod can never
+    # start, and the only ways out are this flag or deleting the Deployment.
+    # Goes back to true with the accelerator when this is reverted.
+    waitForIdle: false
     idleTimeoutSeconds: 300
   replicas: 1
   priority: high
