@@ -62,6 +62,25 @@ spec:
     #        7210 |      396.7 |   23.54
     #       28810 |      371.3 |   21.81
     #
+    # RESULT 2026-09-14: this does NOT load. The pod read 62.8GiB of the ~84GiB
+    # of weights, then stopped reading entirely and spun one core at 100% in
+    # userspace for 11+ minutes - read_bytes flat at 62825750528 across
+    # repeated samples while utime climbed ~98.8 ticks/s, wchan 0, 37 threads,
+    # no log line after "loading model" at 0.03s, no HTTP server (startup probe
+    # 503 then timeouts). It does not crashloop, so the 2h startup budget just
+    # holds it there; it has to be reverted by hand.
+    #
+    # That is the same signature this file already documents for the repack
+    # hang, at nearly the same byte count (62.4GiB there) - but --no-repack is
+    # set here, so on the HIP path something else is doing an equivalent
+    # single-threaded host-side pass at the same point. First suspect is
+    # --no-host: bypassing the host staging buffer costs nothing on Vulkan's
+    # unified-memory view but may push HIP into a per-tensor host conversion.
+    # Next variations to try, one at a time, each ~10min of downtime: drop
+    # --no-host; then drop --lazy-mode; then f16 KV (which is what the
+    # reference config had to do, and which costs ~3GiB against a 96GiB
+    # carve-out already budgeted to 91.5).
+    #
     # Reverting is this block plus the image line below.
     accelerator: rocm
     gpu:
