@@ -32,19 +32,42 @@ spec:
   format: gguf
   quantization: UD-Q3_K_XL
   hardware:
-    # Vulkan, not ROCm, and not for legacy reasons - the HIP path is broken for
-    # this architecture on this GPU. On gfx1151 (Strix Halo) with ROCm,
-    # llama.cpp#27797 (open) reports any prompt of >=2 message segments
-    # degrading to '//////' garbage, and every chat turn has at least two; it
-    # also needs LLAMA_ATTN_ROT_DISABLE=1 just to emit valid output. #27856
-    # separately measured a HIP-path-specific decode collapse, ~20 tok/s down
-    # to ~5.5 past 2K context, which CUDA does not show. The reference config
-    # runs Vulkan on identical hardware for these reasons.
-    accelerator: vulkan
+    # ROCm on retest, reverting the Vulkan fallback. Both reasons that forced
+    # Vulkan have moved since it was written:
+    #
+    #   - llama.cpp#27856 (decode collapse past ~1K on HIP) is CLOSED, fixed by
+    #     #27466 "ROCm: add radix TOP_K for long rows" (f8dbcd6, 2026-08-31).
+    #     Root cause was HIP's supports_op capping TOP_K/ARGSORT at ne[0]<=1024
+    #     without CUB, so the QSA indexer's ggml_top_k fell back to CPU once per
+    #     QSA layer per token - a GPU->CPU->GPU sync 12x per decode. That is the
+    #     cliff, and the image below is 251 commits past the fix.
+    #
+    #   - llama.cpp#27797 (the '//////' garbage) is still open but is NOT this
+    #     model's bug and not gfx1151's: two independent Strix Halo A/Bs
+    #     (2026-08-31, 2026-09-05) pinned it to GGML_CUDA_ENABLE_UNIFIED_MEMORY,
+    #     identical build and flags either way, and it reproduces on DeepSeek
+    #     and Ling too (#25436). It is the cudaMallocManaged path.
+    #
+    # So: do NOT set GGML_CUDA_ENABLE_UNIFIED_MEMORY (or the GGML_HIP_ spelling
+    # the reference config carries - upstream reads only the CUDA name,
+    # ggml-cuda.cu:143 and :4989, so on a stock build that one is a no-op).
+    # Nothing here sets either; this comment exists so nothing adds one.
+    #
+    # Everything else is deliberately unchanged from the Vulkan config so the
+    # A/B is single-variable. Vulkan baseline to beat, measured 2026-09-14
+    # against the live server, 64 tokens generated per depth:
+    #
+    #       depth |     pp t/s |  tg t/s
+    #          34 |       29.6 |   25.90
+    #        7210 |      396.7 |   23.54
+    #       28810 |      371.3 |   21.81
+    #
+    # Reverting is this block plus the image line below.
+    accelerator: rocm
     gpu:
       enabled: true
       vendor: amd
-      runtime: vulkan
+      runtime: rocm
       layers: 99
       resourceClaims:
         - name: gpu
@@ -71,10 +94,13 @@ spec:
   # 10665"; ours was 10664), and it is no longer rebuilt, so no digest bump on
   # it could ever fix that.
   #
-  # vulkan-radv rather than the rocm-10.0 tag: see the accelerator note above -
-  # ROCm loads this model but is a known-bad path for it on gfx1151. Same
-  # publisher, rebuilt nightly.
-  image: docker.io/kyuz0/amd-strix-halo-toolboxes:vulkan-radv@sha256:4769e9296817b79fe2ea94b75a67456f52762cf6e0cda6581e963d392c224458
+  # rocm-10.0, same publisher and the same nightly rebuild as the vulkan-radv
+  # tag it replaces - see the accelerator note above for why ROCm is back.
+  # Verified rather than assumed: this digest reports build 10971 / 96ffdc41c
+  # (2026-09-14), which the compare API puts 251 commits ahead of f8dbcd6 and 0
+  # behind, so it carries the #27466 TOP_K fix. Re-check that on any bump; a
+  # digest older than 2026-08-31 reintroduces the cliff.
+  image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:683bf50b2591ba2ae1e781a6bb59e0437f5a2ad4735e495c032750af10590379
   command:
     - llama-server
   rolloutPolicy:
