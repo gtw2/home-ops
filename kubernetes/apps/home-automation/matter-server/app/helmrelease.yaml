@@ -30,10 +30,10 @@ spec:
               - --storage-path=/data
               - --primary-interface=net1
               - --log-level=debug
-              - --log-level-sdk=info
+              - --log-level-sdk=detail
             resources:
               limits:
-                memory: 100Mi
+                memory: 256Mi
     defaultPodOptions:
       annotations:
         k8s.v1.cni.cncf.io/networks: |
