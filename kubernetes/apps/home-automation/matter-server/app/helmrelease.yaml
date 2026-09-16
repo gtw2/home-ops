@@ -17,7 +17,7 @@ spec:
           reloader.stakater.com/auto: "true"
         containers:
           app:
-            image:
+            image: &image
               repository: ghcr.io/home-assistant-libs/python-matter-server
               tag: 8.1.0@sha256:170aa093ce91c76cde4cc390918307590f0f5558fcec93f913af3cb019e6562a
             env:
@@ -34,6 +34,35 @@ spec:
             resources:
               limits:
                 memory: 256Mi
+        # Thread devices live on the mesh ULA prefix, reachable only via the
+        # border router - not via the VLAN 20 gateway the default route points
+        # at. The border router advertises that prefix in an RA Route
+        # Information Option, but the pod's accept_ra_rt_info_max_plen is 0, so
+        # the kernel discards the option and Thread traffic falls through to the
+        # default route and is dropped. Commissioning a Thread device hangs with
+        # no error; Wi-Fi Matter devices are unaffected.
+        #
+        # The sysctl is the right fix and cannot be set here: /proc/sys is
+        # read-only inside the container under hostUsers: false, and a node-level
+        # value does not propagate into the pod netns. Setting it through the
+        # kubelet needs allowedUnsafeSysctls on every node, so this installs the
+        # route directly instead.
+        #
+        # Both addresses are therefore pinned and will need updating if the
+        # Thread network re-forms with a new prefix or the border router is
+        # replaced. Symptom is the same silent commissioning hang; compare
+        # `ip -6 route get <device addr>` against the border router's link-local.
+        # Reuses the app image purely for its iproute2 - nothing extra to pull.
+        initContainers:
+          thread-route:
+            image: *image
+            command:
+              - sh
+              - -c
+              - ip -6 route replace fda4:a6bf:6c9e::/64 via fe80::1cd2:1436:bde3:3b0a dev net1
+            securityContext:
+              capabilities:
+                add: ["NET_ADMIN"]
     defaultPodOptions:
       annotations:
         k8s.v1.cni.cncf.io/networks: |
