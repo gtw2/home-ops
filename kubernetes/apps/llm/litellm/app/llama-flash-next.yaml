@@ -32,75 +32,40 @@ spec:
   format: gguf
   quantization: UD-Q3_K_XL
   hardware:
-    # ROCm on retest, reverting the Vulkan fallback. Both reasons that forced
-    # Vulkan have moved since it was written:
+    # Vulkan, not ROCm. The original reason was two upstream HIP bugs on
+    # gfx1151 (Strix Halo): llama.cpp#27797, prompts of >=2 message segments
+    # degrading to '//////' garbage, and #27856, a decode collapse from ~20
+    # tok/s to ~5.5 past 2K context. Both have since moved - #27856 is FIXED
+    # (by #27466, f8dbcd6, 2026-08-31) and #27797 was pinned to
+    # GGML_CUDA_ENABLE_UNIFIED_MEMORY, which this config does not set - so
+    # neither is the reason any more. Do not resurrect them as one.
     #
-    #   - llama.cpp#27856 (decode collapse past ~1K on HIP) is CLOSED, fixed by
-    #     #27466 "ROCm: add radix TOP_K for long rows" (f8dbcd6, 2026-08-31).
-    #     Root cause was HIP's supports_op capping TOP_K/ARGSORT at ne[0]<=1024
-    #     without CUB, so the QSA indexer's ggml_top_k fell back to CPU once per
-    #     QSA layer per token - a GPU->CPU->GPU sync 12x per decode. That is the
-    #     cliff, and the image below is 251 commits past the fix.
+    # The reason now is that ROCm does not LOAD this model at all. Retested
+    # three times on 2026-09-14 and 2026-09-17 against an image 251 commits
+    # past the #27466 fix: the pod reads 56-63GiB of the ~84GiB of weights,
+    # then stops. One core pegged in userspace at ~99 utime ticks/s, 36 of 37
+    # threads at exactly 0 ticks, wchan 0, GPU 0% busy, VRAM frozen at 56.8GiB,
+    # read_bytes advancing ~1.5KiB/s, no log line after "loading model" at
+    # 0.03s. It never crashloops, so the startup budget just holds it there and
+    # it has to be reverted by hand.
     #
-    #   - llama.cpp#27797 (the '//////' garbage) is still open but is NOT this
-    #     model's bug and not gfx1151's: two independent Strix Halo A/Bs
-    #     (2026-08-31, 2026-09-05) pinned it to GGML_CUDA_ENABLE_UNIFIED_MEMORY,
-    #     identical build and flags either way, and it reproduces on DeepSeek
-    #     and Ling too (#25436). It is the cudaMallocManaged path.
+    # Ruled out: --no-host (attempt 2 hung without it) and memory pressure
+    # (cgroup 387MiB of 24GiB, 39GiB of the 96GiB VRAM carve-out still free).
+    # The stall point moves between attempts (56.6 / 58.0 / 62.8GiB), which
+    # argues for a single-threaded host-side pass, not one bad tensor. Untested
+    # next suspects, in order: --lazy-mode (the flag that alters the load path;
+    # upstream disabled lazy loading by default on iGPUs in #28326 and this
+    # config forces it back on), then f16 KV. See git log for the full series.
     #
-    # So: do NOT set GGML_CUDA_ENABLE_UNIFIED_MEMORY (or the GGML_HIP_ spelling
-    # the reference config carries - upstream reads only the CUDA name,
-    # ggml-cuda.cu:143 and :4989, so on a stock build that one is a no-op).
-    # Nothing here sets either; this comment exists so nothing adds one.
-    #
-    # Everything else is deliberately unchanged from the Vulkan config so the
-    # A/B is single-variable. Vulkan baseline to beat, measured 2026-09-14
-    # against the live server, 64 tokens generated per depth:
-    #
-    #       depth |     pp t/s |  tg t/s
-    #          34 |       29.6 |   25.90
-    #        7210 |      396.7 |   23.54
-    #       28810 |      371.3 |   21.81
-    #
-    # RESULT 2026-09-14: this does NOT load. The pod read 62.8GiB of the ~84GiB
-    # of weights, then stopped reading entirely and spun one core at 100% in
-    # userspace for 11+ minutes - read_bytes flat at 62825750528 across
-    # repeated samples while utime climbed ~98.8 ticks/s, wchan 0, 37 threads,
-    # no log line after "loading model" at 0.03s, no HTTP server (startup probe
-    # 503 then timeouts). It does not crashloop, so the 2h startup budget just
-    # holds it there; it has to be reverted by hand.
-    #
-    # That is the same signature this file already documents for the repack
-    # hang, at nearly the same byte count (62.4GiB there) - but --no-repack is
-    # set here, so on the HIP path something else is doing an equivalent
-    # single-threaded host-side pass at the same point. First suspect is
-    # --no-host: bypassing the host staging buffer costs nothing on Vulkan's
-    # unified-memory view but may push HIP into a per-tensor host conversion.
-    # RESULT 2026-09-14, attempt 2, --no-host dropped: hangs again, same
-    # signature, at 60770619392 bytes (56.6GiB) instead of 62.8GiB - flat for
-    # 180s while utime climbed at ~98.8 ticks/s. So --no-host is NOT the cause,
-    # and the moving stall point argues against one bad tensor and for a
-    # single-threaded pass that begins partway through the load.
-    #
-    # 56.6GiB is close to the ~56GiB resident-VRAM figure above, which is what
-    # it is BECAUSE --lazy-mode keeps the ~51B embedding table off the GPU - so
-    # --lazy-mode is the next suspect: it is the flag that alters the load path,
-    # and this image's HEAD (llama.cpp#28326) disables lazy loading by default
-    # on iGPUs, which this config forces back on. Note that test is murkier than
-    # this one: without lazy loading the full ~84GiB goes resident against a
-    # 96GiB carve-out, so it can fail by OOM for reasons unrelated to the hang.
-    # After that, f16 KV (what the reference config had to do, ~3GiB more
-    # against a budget already at 91.5).
-    #
-    # Neither the q8_0-KV-aborts-in-build_attn_qsa risk nor any throughput
-    # number was ever reached: both are downstream of a load that completes.
-    #
-    # Reverting is this block plus the image line below.
-    accelerator: rocm
+    # No throughput number was ever reached - that is downstream of a load that
+    # completes. Vulkan baseline to beat, measured 2026-09-14, 64 tokens per
+    # depth: depth 34 / 29.6 pp / 25.90 tg; 7210 / 396.7 / 23.54; 28810 /
+    # 371.3 / 21.81.
+    accelerator: vulkan
     gpu:
       enabled: true
       vendor: amd
-      runtime: rocm
+      runtime: vulkan
       layers: 99
       resourceClaims:
         - name: gpu
@@ -127,13 +92,10 @@ spec:
   # 10665"; ours was 10664), and it is no longer rebuilt, so no digest bump on
   # it could ever fix that.
   #
-  # rocm-10.0, same publisher and the same nightly rebuild as the vulkan-radv
-  # tag it replaces - see the accelerator note above for why ROCm is back.
-  # Verified rather than assumed: this digest reports build 10971 / 96ffdc41c
-  # (2026-09-14), which the compare API puts 251 commits ahead of f8dbcd6 and 0
-  # behind, so it carries the #27466 TOP_K fix. Re-check that on any bump; a
-  # digest older than 2026-08-31 reintroduces the cliff.
-  image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:683bf50b2591ba2ae1e781a6bb59e0437f5a2ad4735e495c032750af10590379
+  # vulkan-radv rather than the rocm-10.0 tag: see the accelerator note above -
+  # ROCm loads this model but is a known-bad path for it on gfx1151. Same
+  # publisher, rebuilt nightly.
+  image: docker.io/kyuz0/amd-strix-halo-toolboxes:vulkan-radv@sha256:4769e9296817b79fe2ea94b75a67456f52762cf6e0cda6581e963d392c224458
   command:
     - llama-server
   rolloutPolicy:
@@ -147,15 +109,7 @@ spec:
     # bounds how long a rollout waits for the current pod to go idle, so a
     # large value reintroduces exactly that deadlock for up to a day. Five
     # minutes still lets in-flight requests drain.
-    # FALSE for the duration of the ROCm experiment, and this is not optional:
-    # a hung pod is strictly worse than the crashlooping one the note above
-    # anticipates. It never answers /slots, the check fails closed ("Deferring
-    # rollout, backend slots are busy", requeueAfter 5s, forever), and
-    # idleTimeoutSeconds does NOT bound it - observed 14 minutes of 5s requeues
-    # with no rollout. So the rollout that would replace a wedged pod can never
-    # start, and the only ways out are this flag or deleting the Deployment.
-    # Goes back to true with the accelerator when this is reverted.
-    waitForIdle: false
+    waitForIdle: true
     idleTimeoutSeconds: 300
   replicas: 1
   priority: high
@@ -239,15 +193,11 @@ spec:
     # the pod sat Running for minutes with read_bytes flat at 62.4GiB, one core
     # pegged at 100%, no log output and no progress. Everything is offloaded to
     # the iGPU, so there is nothing to gain from a CPU layout in the first
-    # place.
-    #
-    # --no-host is DROPPED on the ROCm test (it is still correct on Vulkan, and
-    # comes back with the accelerator if this is reverted). It bypasses the
-    # host staging buffer, which on Vulkan's view of unified memory is a copy
-    # between two views of the same physical RAM and therefore free - but it is
-    # the first suspect for the 62.8GiB load hang, on the theory that HIP
-    # without a staging buffer falls back to a per-tensor host conversion.
+    # place. --no-host bypasses the host staging buffer, which on unified
+    # memory is a copy between two views of the same physical RAM. The
+    # reference config carries both for the same reason.
     - --no-repack
+    - --no-host
     - --cache-prompt
     - --kv-unified
     - --temp
