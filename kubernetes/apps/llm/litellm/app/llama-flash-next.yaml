@@ -218,7 +218,17 @@ spec:
     # host RSS, so ~84GiB of weights scales to ~13.5GiB. 24Gi leaves headroom
     # for that without starving a node that only has 31GiB of system RAM after
     # the BIOS carve-out (docs/talos.md).
-    memory: 30Gi
+    # 26Gi, not the reference's 30Gi. Not a preference: this node's allocatable
+    # is 30029128Ki = 28.64GiB after the 96GiB BIOS VRAM carve-out, and 1.4GiB
+    # is already requested, so 30Gi is unschedulable here and the pod sat
+    # Pending with "Insufficient memory". Their box evidently leaves more
+    # system RAM, presumably a smaller carve-out.
+    #
+    # It still has to cover --cache-ram 12228, which is a 12GiB host-side
+    # prompt cache and the reason their figure is that high. Weights do not
+    # land here: --load-mode none streams them through four pinned 64MiB
+    # buffers straight to the iGPU.
+    memory: 26Gi
   endpoint:
     port: 8080
     type: ClusterIP
