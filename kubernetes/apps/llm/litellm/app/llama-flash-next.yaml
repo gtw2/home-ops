@@ -106,14 +106,14 @@ spec:
   # NB the command below. This image's llama-server is /app/llama-server and
   # /app is NOT on its PATH (/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:
   # /usr/sbin:/usr/bin:/sbin:/bin), so a bare "llama-server" will not resolve.
-  # image: ghcr.io/joryirving/llama-qwen4exp:b0f31f58-rocm-custom@sha256:e9f705a606a147836fab6667199e1443943542026b4091e3110bdfacdbac5048
+  image: ghcr.io/joryirving/llama-qwen4exp:b0f31f58-rocm-custom@sha256:e9f705a606a147836fab6667199e1443943542026b4091e3110bdfacdbac5048
   # Stock, rebuilt nightly. Build 11042 / ec9281505, verified in a throwaway
   # pod: --help lists "-lm, --load-mode ... - dio: use DirectIO if available",
   # which is the flag that fixed the ROCm load hang. No MTP - see the
   # speculativeDecoding block for why that needs the image above.
-  image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:82b22c73dabe7fed8be44fad52e3b752f87889b78e03eaf3a6120dbc6f70486c
+  # image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:82b22c73dabe7fed8be44fad52e3b752f87889b78e03eaf3a6120dbc6f70486c
   command:
-    - llama-server
+    - /app/llama-server
   rolloutPolicy:
     # OFF while the ROCm attempt is in flight, on again once it serves. The
     # idle check asks the CURRENT pod's /slots whether it is busy and treats
@@ -136,7 +136,7 @@ spec:
       operator: Exists
       effect: NoSchedule
   contextSize: 262144
-  parallelSlots: 2
+  parallelSlots: 1
   flashAttention: true
   jinja: true
   # f16, not q8_0, and this is NOT a preference while the image above is in
@@ -156,10 +156,8 @@ spec:
   # f16. Resident VRAM was 68.7GiB of the 96GiB carve-out, so ~3GiB more fits.
   cacheTypeK: f16
   cacheTypeV: f16
-  reasoningBudget: 16384
-  reasoningBudgetMessage: "Stop reasoning and produce the implementation, tool call, or final answer."
-  batchSize: 4096
-  uBatchSize: 2048
+  batchSize: 16384
+  uBatchSize: 16384
   # First-class field rather than the raw --spec-* flags the previous model
   # used: the operator resolves the draft file's staged path itself, which is a
   # content-hash directory the manifest cannot know before the first reconcile.
@@ -188,11 +186,10 @@ spec:
   # CRD resolves a companion file already in spec.files itself, and the file
   # is already staged on the node. nDraftMax 2 copies the reference and is a
   # starting point, not a measured optimum.
-  # TEMPORARILY OFF to measure the no-MTP baseline on this same image.
-  # speculativeDecoding:
-  #   type: draft-mtp
-  #   draftModel: MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
-  #   nDraftMax: 2
+  speculativeDecoding:
+    type: draft-mtp
+    draftModel: MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
+    nDraftMax: 2
 
   # ngram-cache: loads fine and needs no draft weights, but made generation
   # roughly HALF as fast on this workload - 10.5-15.7 tok/s against 22.2
@@ -201,6 +198,17 @@ spec:
   # restating its context, so context n-grams rarely hit. The other
   # context-only variants (ngram-simple, ngram-mod, ngram-map-k) work the same
   # way; they would need evidence of different behaviour to be worth a rollout.
+  # From the reference config, verbatim. HSA_OVERRIDE_GFX_VERSION is a no-op
+  # on this hardware (gfx1151 IS 11.5.1, and that image ships gfx1151 kernels)
+  # but is kept so this run is the reference's config rather than an edit of
+  # it. GGML_HIP_ENABLE_UNIFIED_MEMORY is the one to watch: this repo pinned
+  # llama.cpp#27797, the '//////' garbage on gfx1151, to exactly that variable.
+  # Output has to be checked, not assumed, while it is set.
+  env:
+    - name: HSA_OVERRIDE_GFX_VERSION
+      value: "11.5.1"
+    - name: GGML_HIP_ENABLE_UNIFIED_MEMORY
+      value: "1"
   resources:
     cpu: "500m"
     # Both request AND limit - llmkube maps this single value to each, and the
@@ -210,72 +218,32 @@ spec:
     # host RSS, so ~84GiB of weights scales to ~13.5GiB. 24Gi leaves headroom
     # for that without starving a node that only has 31GiB of system RAM after
     # the BIOS carve-out (docs/talos.md).
-    memory: 24Gi
+    memory: 30Gi
   endpoint:
     port: 8080
     type: ClusterIP
   extraArgs:
+    # The reference's argument list, not ours. Differences that matter:
+    #   --load-mode none + --lazy-mode on-direct instead of our dio + on.
+    #     on-direct is that branch's explicit-pread PLE gather (llama.cpp
+    #     #29030/#28136, both unmerged); dio does not exist as a pairing there.
+    #   -fit off: no auto-fit probe, every size is stated.
+    #   --cache-ram 12228 and batch/ubatch 16384.
+    #   No --no-repack, --no-host, --cont-batching, --cache-prompt,
+    #     --kv-unified, --threads, --threads-batch. Dropped deliberately so
+    #     this is the reference's config; several were added here for the
+    #     stock image's mmap path, which is not in use.
+    #   reasoning_effort low, not medium, plus --no-reasoning-preserve.
     - --alias
     - llama-strix
-    - --image-min-tokens
-    - "1024"
-    - --cont-batching
-    # The load path, and the one thing this ROCm attempt changes.
-    #
-    # dio, not mmap. --load-mode mmap was added to fix an OOMKill at 16Gi and
-    # again at 24Gi: staging ~84GiB of weights through a node with 31GiB of
-    # system RAM. It does fix that, and on Vulkan it is what runs today, but
-    # it is also what hung every ROCm attempt - see the accelerator note.
-    #
-    # dio fixes the OOM a different way and never mmaps the bulk weights.
-    # use_mmap goes false, which is the condition the loader's async upload
-    # path is gated on (llama-model-loader.cpp: `if (use_mmap ||
-    # check_tensors) return nullptr`), so weights stream through four pinned
-    # 64MiB staging buffers with overlapping GPU uploads instead. Host RSS is
-    # bounded at ~256MiB by construction. If the cache filesystem refuses
-    # O_DIRECT the open falls back to buffered reads with a warning, still
-    # without mmap, so the failure mode is slower, not broken.
-    #
-    # --lazy-mode stays on and still works: the loader maps the lazy ranges
-    # alone when mmap is off ("read_lazy also requires mmap; this condition
-    # make sure it's usable even when --load-mode is not set to mmap"). This
-    # model is the case that flag exists for - per_layer_token_embd.weight is
-    # [160, 320001536], the ~51B n-gram/PLE table that dominates the file -
-    # and this image's lineage disabled lazy loading by default on iGPUs
-    # (llama.cpp#28326), so it has to be forced back on.
-    #
-    # NB it is --lazy-mode on, not the reference config's "on-direct". That
-    # value is not a fork invention and not something upstream removed - it
-    # has never been on master. It comes from the unmerged direct-read lazy
-    # PLE work (llama.cpp#29030, #28136) that the reference's image is built
-    # from. LLAMA_LOAD_MODE_DIRECT_IO, on the other hand, IS on master, which
-    # is why dio below works on a stock nightly.
     - --load-mode
-    - dio
+    - none
     - --lazy-mode
-    - "on"
-    # Both kept from the Vulkan config, and both cheap rather than
-    # load-bearing - neither is doing the work this attempt depends on.
-    #
-    # --no-repack: repacking is on by default and rewrites weights into
-    # CPU-optimised layouts, single-threaded. Every layer is offloaded to the
-    # iGPU, so the CPU layout is never read and the pass is pure cost. It was
-    # once credited with fixing a 62.4GiB stall; that was wrong, the stall
-    # reproduced with it set. Keep it for the wasted work it does avoid, not
-    # as a fix for anything.
-    #
-    # --no-host: this was previously described here as bypassing the host
-    # staging buffer. It does not. llama_model_params::no_host only drops
-    # pinned host buffer types from make_cpu_buft_list(), i.e. from the CPU
-    # tensor placement list. The loader's async upload buffers come from
-    # ggml_backend_dev_host_buffer_type() directly and the lazy PLE tensor
-    # from ggml_backend_dev_buffer_type(cpu_dev), so neither is affected and
-    # dio's pinned staging path stays intact. Dropping it was A/B'd on ROCm
-    # (attempt 2) and changed nothing, which fits.
-    - --no-repack
-    - --no-host
-    - --cache-prompt
-    - --kv-unified
+    - on-direct
+    - -fit
+    - "off"
+    - --cache-ram
+    - "12228"
     - --temp
     - "1.0"
     - --top-p
@@ -285,15 +253,14 @@ spec:
     - --min-p
     - "0"
     - --presence-penalty
-    - "0"
+    - "0.0"
     - --repeat-penalty
-    - "1"
-    - --threads
-    - "16"
-    - --threads-batch
-    - "21"
+    - "1.0"
     - --chat-template-kwargs
-    - '{"reasoning_effort":"medium"}'
+    - '{"reasoning_effort":"low"}'
+    - --no-reasoning-preserve
+    - --image-min-tokens
+    - "1024"
   probeOverrides:
     startup:
       httpGet:
