@@ -1,70 +1,55 @@
 ---
-# Qwen3.8-Flash-Next, replacing Qwen3.6-35B-A3B on the Framework's iGPU.
+# Qwen3.8-Flash-Next on the Framework Desktop's Strix Halo iGPU.
 #
-# Deliberately keeps the name llama-strix: the LiteLLMModel, the virtual key and
-# Open WebUI all address the service by that name, so swapping the weights under
-# it leaves the whole downstream chain untouched. Rolling back is one line in
-# kustomization.yaml, not a coordinated edit across four files.
+# Keeps the name llama-strix on purpose: the LiteLLMModel, the virtual key and
+# Open WebUI all address the service by that name, so the weights underneath can
+# change without touching the rest of the chain. Swapping models is one line in
+# kustomization.yaml; swapping quantisations is the block below.
 #
-# Why this model suits Strix Halo specifically:
-#   - 512 experts, 10 active => ~2.4B active params/token, FEWER than the A3B it
-#     replaces, so throughput should hold up despite ~121B of expert weights.
+# Why this model suits this hardware:
+#   - 512 experts, 10 active => ~2.4B active params/token, so throughput holds
+#     up despite ~121B of expert weights.
 #   - Hybrid attention: only 12 of 48 layers are full attention (the rest are
 #     linear, constant-state), so the KV cache at the full 262144 context is
-#     ~3.0GiB at q8_0 rather than the tens of GiB a dense 48-layer model needs.
-# Budget at UD-Q3_K_XL: 83.8 weights + 3.9 MTP + 0.84 mmproj + 3.0 KV = 91.5GiB
-# of the 96GiB BIOS VRAM carve-out. In practice --lazy-mode keeps the ~51B
-# per-layer embedding table on disk, so observed resident VRAM is ~56GiB.
+#     ~6.0GiB at f16 rather than the tens of GiB a dense 48-layer model needs.
+#
+# Measured budget as configured: 81.9GiB resident of the 96GiB BIOS VRAM
+# carve-out. That is well under the file size because --lazy-mode keeps
+# per_layer_token_embd.weight - [160, 320001536], the ~51B n-gram/PLE table
+# that dominates the file - off the GPU and reads its rows on demand.
 apiVersion: inference.llmkube.dev/v1alpha1
 kind: Model
 metadata:
   name: llama-strix
 spec:
-  source: hf://unsloth/Qwen3.8-Flash-Next-GGUF
   # files[0] is the primary; the operator stages each entry at its repo-relative
-  # path under the cache key sha256(spec.source)[:16] = f869f01c859f8577.
+  # path under a cache key of sha256(spec.source)[:16]. Weights stay cached on
+  # the node once pulled, so going back to a previous set costs a reconcile and
+  # no re-download.
+  source: hf://unsloth/Qwen3.8-Flash-Next-GGUF
   files:
     - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00001-of-00003.gguf
     - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00002-of-00003.gguf
     - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00003-of-00003.gguf
     - mmproj-F16.gguf
-    # The MTP head, for speculativeDecoding.draftModel. Only loadable on the
-    # joryirving image - see the speculativeDecoding block.
+    # The MTP head, for speculativeDecoding.draftModel below.
     - MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
   mmproj: mmproj-F16.gguf
   format: gguf
   quantization: UD-Q3_K_XL
   hardware:
-    # ROCm, attempt 4. Attempts 1-3 (2026-09-14, 2026-09-17) all hung at the
-    # same place: llama-server read 56-63GiB of the ~84GiB of weights, then one
-    # core spun in userspace indefinitely - GPU 0% busy, VRAM byte-frozen,
-    # wchan 0, read_bytes advancing ~1.5KiB/s, 36 of 37 threads at exactly 0
-    # ticks. The stall point moved between attempts, so it was never one bad
-    # tensor.
+    # ROCm, not Vulkan. Vulkan was correct for a while and is no longer: the
+    # two bugs it was chosen for are gone (llama.cpp#27856, the decode collapse
+    # past 2K, is fixed by #27466; #27797, the '//////' garbage, does not
+    # reproduce here - see the env block). ROCm now wins on every measurement.
     #
-    # The measurement that names the cause is rchar 21MiB against 58GiB of
-    # read_bytes: every byte came in through page faults, i.e. the load was
-    # entirely mmap-driven. --load-mode mmap was added to fix an OOM, and on
-    # Vulkan it is fine, but on HIP the upload reads its source straight out of
-    # a file-backed mapping and that is the single-threaded pass nothing else
-    # explained.
-    #
-    # --load-mode dio is the fix and it is in extraArgs, not here. It drops
-    # mmap for the bulk weights and takes the loader's async path instead:
-    # O_DIRECT reads into four pinned 64MiB buffers with overlapping uploads to
-    # the iGPU, so host RSS stays ~256MiB (no OOM to re-fix) and no HIP copy
-    # ever sources from a mapping. --lazy-mode still works without mmap - the
-    # loader maps the lazy ranges alone for exactly this case.
-    #
-    # Two earlier reasons for Vulkan are dead and should not be resurrected:
-    # llama.cpp#27856 (decode collapse past 2K) is FIXED by #27466, and
-    # llama.cpp#27797 ('//////' garbage) was pinned to
-    # GGML_CUDA_ENABLE_UNIFIED_MEMORY, which this config does not set.
-    #
-    # Vulkan baseline to beat, measured 2026-09-14, 64 tokens per depth:
-    # depth 34 / 29.6 pp / 25.90 tg; 7210 / 396.7 / 23.54; 28810 / 371.3 /
-    # 21.81. Roll back by restoring accelerator/runtime vulkan, the
-    # vulkan-radv image and --load-mode mmap.
+    # Getting here took four attempts, three of which hung mid-load: the pod
+    # read 56-63GiB of weights, then spun one core in userspace forever with
+    # the GPU 0% busy and VRAM byte-frozen. The cause was mmap. rchar was
+    # 21MiB against 58GiB of read_bytes, i.e. every byte arrived through page
+    # faults, and on HIP the upload sources straight out of that file-backed
+    # mapping. Any config that reaches for --load-mode mmap will hang the same
+    # way; the extraArgs block has what to use instead.
     accelerator: rocm
     gpu:
       enabled: true
@@ -90,56 +75,60 @@ spec:
   modelCache:
     claimName: llmkube-framework-cache
   runtime: llamacpp
-  # joryirving's image, kept after measuring what it buys. All figures below
-  # are the same four realistic prompts, 2000 generated tokens, one harness:
+  # A bespoke image, kept because it was measured, not because it is tidy.
+  # Same four realistic prompts, 2000 generated tokens, one harness:
   #
-  #   22.60 tok/s  stock kyuz0 rocm-10.0, dio, f16 KV, no MTP   (control)
-  #   24.37        this image, same args, f16 KV, no MTP        branch +7.8%
+  #   22.60 tok/s  stock kyuz0 rocm-10.0, f16 KV, no MTP        control
+  #   24.37        this image, same args, f16 KV, no MTP        branch, +7.8%
   #   27.50        + MTP on                                     +21.7%, 65.1% accept
-  #   33.82        + the reference's own arg set                +49.6%, 65.9% accept
+  #   33.82        + this image's own arg set (below)           +49.6%, 65.9% accept
   #
-  # Prefill, 64 tokens per depth: 910.9 t/s at 6857 and 945.5 at 27389,
-  # against the Vulkan baseline's 396.7 and 371.3 - about 2.5x at depth.
-  # Generation no longer decays with depth the way stock does.
+  # Prefill, 64 tokens per depth: 910.9 t/s at 6857 and 945.5 at 27389, against
+  # the old Vulkan baseline's 396.7 and 371.3 - about 2.5x at depth. Generation
+  # also stops decaying with depth; stock ROCm fell 19.63 -> 17.41 across the
+  # same span, this holds flat.
   #
-  # The f16 KV control matters: every earlier stock number used q8_0, so the
-  # 24.37 could have been the KV type rather than the branch. It was not.
+  # It is upstream llama.cpp at ggml-org b0f31f58 plus unmerged qwen4exp work,
+  # NOT a rewrite: `compare master...b0f31f58` says diverged, 50 ahead / 117
+  # behind. The "-rocm-custom" in the tag is its own ROCr/HIP runtime under
+  # /opt/custom over TheRock ROCm 7.14.1. Verified by pulling the layers:
+  # amd64, libggml-hip carries gfx1151 kernels, libllama-common knows every
+  # flag used here including draft-mtp.
   #
-  # The standing cost, which the benchmark does not price: this is a personal
-  # one-off build, the tag is a single commit, it is never rebuilt, Renovate
-  # cannot track it, and it will never pick up a llama.cpp or ROCm fix. The
-  # stock kyuz0 tag directly below is rebuilt nightly. Revisit when
-  # llama.cpp#28097 merges - at that point stock gains the MTP loading and
-  # most of this reason evaporates.
+  # The standing cost the benchmark does not price: a personal one-off build,
+  # a tag that is a single commit, never rebuilt, untrackable by Renovate, and
+  # no future llama.cpp or ROCm fix will ever reach it. Revisit when
+  # llama.cpp#28097 merges - stock gains the MTP loading then and most of the
+  # reason for this line evaporates.
   #
-  # Verified from the pulled layers, not assumed: amd64; libggml-hip carries
-  # gfx1151 kernels; libllama-common knows every flag here, draft-mtp
-  # included.
-  #
-  # NB the command below. This image's llama-server is /app/llama-server and
-  # /app is NOT on its PATH, so a bare "llama-server" will not resolve.
+  # NB the command below: this image's binary is /app/llama-server and /app is
+  # NOT on its PATH, so a bare "llama-server" does not resolve.
   image: ghcr.io/joryirving/llama-qwen4exp:b0f31f58-rocm-custom@sha256:e9f705a606a147836fab6667199e1443943542026b4091e3110bdfacdbac5048
-  # Stock, rebuilt nightly. Build 11042 / ec9281505, verified in a throwaway
-  # pod: --help lists "-lm, --load-mode ... - dio: use DirectIO if available",
-  # which is the flag that fixed the ROCm load hang. No MTP - see the
-  # speculativeDecoding block for why that needs the image above.
+  # The stock fallback, rebuilt nightly. Build 11042 / ec9281505. Switching to
+  # it means three coordinated edits, not one: command back to llama-server,
+  # cacheTypeK/V back to q8_0, and the speculativeDecoding block removed. Each
+  # is explained at its own field.
   # image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:82b22c73dabe7fed8be44fad52e3b752f87889b78e03eaf3a6120dbc6f70486c
   command:
     - /app/llama-server
   rolloutPolicy:
-    # On again now that the config is settled and serving. It was off through
-    # the ROCm and image work because the idle check asks the CURRENT pod's
-    # /slots whether it is busy and treats any failure as busy, so a pod stuck
-    # mid-load or crashlooping blocks the very rollout that would replace it.
+    # The idle check asks the CURRENT pod's /slots whether it is busy and
+    # treats any failure as busy, so a pod that is down, crashlooping or stuck
+    # mid-load blocks the very rollout that would replace it. Turn waitForIdle
+    # off while experimenting, back on once a config is settled.
     #
-    # idleTimeoutSeconds stays at 300, not the reference's 86400: the timeout
-    # bounds how long a rollout waits for the current pod to go idle, so a
-    # large value reintroduces exactly that deadlock for up to a day. Five
-    # minutes still lets in-flight requests drain.
+    # idleTimeoutSeconds stays at 300 rather than the reference's 86400: the
+    # timeout bounds how long a rollout waits for the current pod to go idle,
+    # so a large value reintroduces that deadlock for up to a day.
     waitForIdle: true
     idleTimeoutSeconds: 300
   replicas: 1
   priority: high
+  # node.kubernetes.io/gpu-vendor, not topology.kubernetes.io/gpus:
+  # NodeRestriction only lets a kubelet self-set labels from an allowlist,
+  # which permits topology.kubernetes.io/{region,zone} and nothing else under
+  # that prefix. Talos retries the patch forever, the label never appears, and
+  # a pod selecting on it stays Pending (docs/talos.md).
   nodeSelector:
     node.kubernetes.io/gpu-vendor: amd
   tolerations:
@@ -150,71 +139,68 @@ spec:
   parallelSlots: 1
   flashAttention: true
   jinja: true
-  # f16, not q8_0, and this is NOT a preference while the image above is in
-  # use - it is a hard requirement of that branch. Its QSA path asserts:
+  # f16 is REQUIRED by the image above, not preferred. Its QSA path asserts:
   #
   #   qwen4exp.cpp:1365: GGML_ASSERT(q->ne[0] == 256 &&
   #     k->type == GGML_TYPE_F16 && v->type == GGML_TYPE_F16) failed
   #     in llama_model_qwen4exp::graph::build_attn_qsa
   #
-  # q8_0 crashloops the pod at context creation, before any weights matter.
-  # That is why the reference config carries f16 KV; it is not tuning. Stock
-  # llama.cpp has no such constraint and ran fine at q8_0, so revert this to
-  # q8_0 whenever the image goes back to the kyuz0 line.
+  # q8_0 crashloops at context creation, before any weight is read. Stock
+  # llama.cpp has no such constraint and ran fine at q8_0, so this goes back to
+  # q8_0 with the image.
   #
-  # Cost is bounded: the hybrid attention means only 12 of 48 layers are full
-  # attention, so the whole KV at 262144 is ~3.0GiB at q8_0 and ~6.0GiB at
-  # f16. Resident VRAM was 68.7GiB of the 96GiB carve-out, so ~3GiB more fits.
+  # The cost is small and was measured rather than feared: only 12 of 48 layers
+  # are full attention, so the whole KV at 262144 is ~3.0GiB at q8_0 against
+  # ~6.0GiB at f16. It is also not what made this image fast - stock at f16
+  # measured 22.60 tok/s against this image's 24.37 on identical args.
   cacheTypeK: f16
   cacheTypeV: f16
   batchSize: 16384
   uBatchSize: 16384
-  # First-class field rather than the raw --spec-* flags the previous model
-  # used: the operator resolves the draft file's staged path itself, which is a
-  # content-hash directory the manifest cannot know before the first reconcile.
-  # Speculative decoding is OFF, and BOTH routes to it are closed. Measured,
-  # not assumed - do not re-litigate without new numbers.
-  #
-  # MTP is ON, and it is the reason the joryirving image is pinned above. It
-  # is NOT in upstream llama.cpp: master hardcodes token_embd.weight required
-  # (src/models/qwen4exp.cpp, `create_tensor(..., 0)`), while that branch has
+  # MTP is the single reason the bespoke image is pinned, and it is NOT
+  # available upstream. Master requires the trunk tensors unconditionally
+  # (src/models/qwen4exp.cpp: create_tensor(tn(LLM_TENSOR_TOKEN_EMBD, ...), 0))
+  # while that branch has:
   #
   #   const bool mtp_only    = (hparams.n_layer_nextn > 0) &&
   #                            (ml.get_weight("blk.0.hc_attn_norm.weight") == nullptr);
   #   const int  trunk_flags = mtp_only ? TENSOR_NOT_REQUIRED : 0;
   #
   # i.e. it recognises a standalone MTP head - nextn layers present, trunk
-  # block 0 absent - and lets the trunk tensors be missing. Retested on stock
-  # build 11042 (2026-09-18) and it fails with exactly that required-tensor
-  # check. The relevant PRs are all unmerged: #28097 (open, "support
-  # draft-head-only GGUFs (unsloth layout)"), #28610 (closed unmerged).
-  # b0f31f58 compares "diverged" against master, 50 ahead / 117 behind.
+  # block 0 absent - and lets the trunk tensors be missing. That is exactly
+  # what the published head is: block_count 49 carrying only blk.48, the
+  # parent's next layer in its own file. On stock build 11042 it dies on
+  # check_tensor_dims for token_embd.weight, retested 2026-09-18.
   #
-  # So this block and the kyuz0 image are mutually exclusive. If the image
-  # line is rolled back, this must come out too or the pod crashloops.
+  # The enabling PRs are all unmerged: #28097 (open, "support draft-head-only
+  # GGUFs (unsloth layout)"), #28610 (closed without merging).
   #
-  # draftModel, not the reference's draftModelRef plus a second Model CR: the
-  # CRD resolves a companion file already in spec.files itself, and the file
-  # is already staged on the node. nDraftMax 2 copies the reference and is a
-  # starting point, not a measured optimum.
+  # So this block and the stock image are mutually exclusive - remove it if the
+  # image line is rolled back, or the pod crashloops.
+  #
+  # draftModel rather than draftModelRef plus a second Model CR: the CRD
+  # resolves a companion file already listed in spec.files itself, which avoids
+  # naming a content-hash cache directory the manifest cannot know before the
+  # first reconcile. nDraftMax 2 is copied from the reference and is a starting
+  # point, not a measured optimum.
+  #
+  # Beware the benchmark trap here. A random-word prompt makes MTP look awful -
+  # 17.15 tok/s at 16% acceptance - because random words are unpredictable.
+  # Real prompts accept 65.9%. Judge speculation on realistic work only. The
+  # same trap sank ngram-cache, noted at the end of extraArgs.
   speculativeDecoding:
     type: draft-mtp
     draftModel: MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
     nDraftMax: 2
-
-  # ngram-cache: loads fine and needs no draft weights, but made generation
-  # roughly HALF as fast on this workload - 10.5-15.7 tok/s against 22.2
-  # without it. Acceptance is too low to pay for the verification passes: this
-  # model is asked reasoning questions and writes new prose rather than
-  # restating its context, so context n-grams rarely hit. The other
-  # context-only variants (ngram-simple, ngram-mod, ngram-map-k) work the same
-  # way; they would need evidence of different behaviour to be worth a rollout.
-  # From the reference config, verbatim. HSA_OVERRIDE_GFX_VERSION is a no-op
-  # on this hardware (gfx1151 IS 11.5.1, and that image ships gfx1151 kernels)
-  # but is kept so this run is the reference's config rather than an edit of
-  # it. GGML_HIP_ENABLE_UNIFIED_MEMORY is the one to watch: this repo pinned
-  # llama.cpp#27797, the '//////' garbage on gfx1151, to exactly that variable.
-  # Output has to be checked, not assumed, while it is set.
+  # Copied from the reference. HSA_OVERRIDE_GFX_VERSION is a no-op here
+  # (gfx1151 IS 11.5.1 and the image ships gfx1151 kernels) and is kept only so
+  # this stays its config rather than an edit of it.
+  #
+  # GGML_HIP_ENABLE_UNIFIED_MEMORY is the one to watch: llama.cpp#27797, the
+  # '//////' garbage on gfx1151, was pinned to exactly this variable. It did
+  # NOT reproduce - a six-segment chat came back clean, longest run of '/' in
+  # 926 characters was one - but re-check output after any change here rather
+  # than assuming.
   env:
     - name: HSA_OVERRIDE_GFX_VERSION
       value: "11.5.1"
@@ -222,47 +208,45 @@ spec:
       value: "1"
   resources:
     cpu: "500m"
-    # Both request AND limit - llmkube maps this single value to each, and the
-    # first attempt was OOMKilled at 16Gi. Weights live in the 96GiB VRAM
-    # carve-out, not here; this is the staging RSS while they upload. Measured
-    # basis rather than a guess: the 22.9GiB model it replaces holds 3.7GiB of
-    # host RSS, so ~84GiB of weights scales to ~13.5GiB. 24Gi leaves headroom
-    # for that without starving a node that only has 31GiB of system RAM after
-    # the BIOS carve-out (docs/talos.md).
-    # 26Gi, not the reference's 30Gi. Not a preference: this node's allocatable
-    # is 30029128Ki = 28.64GiB after the 96GiB BIOS VRAM carve-out, and 1.4GiB
-    # is already requested, so 30Gi is unschedulable here and the pod sat
-    # Pending with "Insufficient memory". Their box evidently leaves more
-    # system RAM, presumably a smaller carve-out.
+    # llmkube maps this single value to BOTH request and limit.
     #
-    # It still has to cover --cache-ram 12228, which is a 12GiB host-side
-    # prompt cache and the reason their figure is that high. Weights do not
-    # land here: --load-mode none streams them through four pinned 64MiB
-    # buffers straight to the iGPU.
+    # 26Gi, not the reference's 30Gi, and not a preference: this node's
+    # allocatable is 30029128Ki = 28.64GiB once the 96GiB BIOS VRAM carve-out
+    # is taken, with ~1.4GiB already requested, so 30Gi is unschedulable and
+    # the pod sits Pending on "Insufficient memory".
+    #
+    # Weights do not live here - --load-mode none streams them through four
+    # pinned 64MiB buffers straight to the iGPU. What this has to cover is
+    # --cache-ram 12228, a 12GiB host-side prompt cache. Early attempts were
+    # OOMKilled at 16Gi and again at 24Gi, but that was the old full-staging
+    # path and does not apply to this config.
     memory: 26Gi
   endpoint:
     port: 8080
     type: ClusterIP
   extraArgs:
-    # The reference's argument list, not ours. Differences that matter:
-    #   --load-mode none + --lazy-mode on-direct instead of our dio + on.
-    #     on-direct is that branch's explicit-pread PLE gather (llama.cpp
-    #     #29030/#28136, both unmerged); dio does not exist as a pairing there.
-    #   -fit off: no auto-fit probe, every size is stated.
-    #   --cache-ram 12228 and batch/ubatch 16384.
-    #   No --no-repack, --no-host, --cont-batching, --cache-prompt,
-    #     --kv-unified, --threads, --threads-batch. Dropped deliberately so
-    #     this is the reference's config; several were added here for the
-    #     stock image's mmap path, which is not in use.
-    #   reasoning_effort low, not medium, plus --no-reasoning-preserve.
     - --alias
     - llama-strix
+    # The load path, and the thing that made ROCm work at all.
+    #
+    # NOT --load-mode mmap: that is what hung three ROCm attempts (see the
+    # hardware block). Two working alternatives, both mmap-free:
+    #   - none + --lazy-mode on-direct, used here. on-direct gathers the PLE
+    #     rows with explicit pread()s instead of demand-paging an mmap. It
+    #     exists only on this image's branch (llama.cpp#29030, #28136, both
+    #     unmerged) and is worth a lot: this pairing is most of the 27.50 ->
+    #     33.82 tok/s step.
+    #   - dio + --lazy-mode on, for the stock image, which has
+    #     LLAMA_LOAD_MODE_DIRECT_IO but not LAZY_MODE_DIRECT. Same idea, fewer
+    #     of the gains. Load time went from a 2h startup budget to 12.3s.
     - --load-mode
     - none
     - --lazy-mode
     - on-direct
+    # No auto-fit probe; every size here is stated explicitly.
     - -fit
     - "off"
+    # 12GiB host-side prompt cache. See resources.memory.
     - --cache-ram
     - "12228"
     - --temp
@@ -282,14 +266,34 @@ spec:
     - --no-reasoning-preserve
     - --image-min-tokens
     - "1024"
+    #
+    # Deliberately absent, so they are not re-added by pattern-matching:
+    #
+    #   --no-repack, --no-host   added for the stock image's mmap path, which
+    #                            is not in use. --no-host in particular never
+    #                            did what an earlier comment here claimed:
+    #                            no_host only drops pinned buffer types from
+    #                            make_cpu_buft_list(), while the loader's
+    #                            upload buffers come from
+    #                            ggml_backend_dev_host_buffer_type() directly.
+    #   --cont-batching, --kv-unified, --cache-prompt, --threads,
+    #   --threads-batch          dropped with parallelSlots 1 and the reference
+    #                            arg set; re-add only with numbers.
+    #
+    # Speculative decoding other than MTP stays off. ngram-cache loads fine and
+    # needs no draft weights, but halved generation on this workload - 10.5-15.7
+    # tok/s against 22.2 - because this model answers reasoning questions and
+    # writes new prose rather than restating its context, so context n-grams
+    # rarely hit. ngram-simple, ngram-mod and ngram-map-k work the same way.
   probeOverrides:
     startup:
       httpGet:
         path: /health
         port: 8080
       periodSeconds: 10
-      # 84GiB of weights off local NVMe, so the startup window is much longer
-      # than the 35B model needed. 720 x 10s = 2h, matching the reference.
+      # The load itself is now ~15s, but this stays generous: a cold cache has
+      # to pull the whole quantisation from HuggingFace first, in an init
+      # container whose time counts against nothing else. 720 x 10s = 2h.
       failureThreshold: 720
     liveness:
       httpGet:
