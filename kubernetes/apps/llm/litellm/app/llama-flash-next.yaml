@@ -143,33 +143,47 @@ spec:
   #
   # MTP: the CRD's "mtp" is only an alias for "draft-mtp", which needs a
   # separate draft model, and neither published MTP file can be one. Retested
-  # on build 11042 (2026-09-18) because the reference config runs MTP on the
-  # shared head; it failed identically to build ~10867, so the reference's
-  # private fork is what makes that work, not a newer upstream.
+  # on build 11042 (2026-09-18) and it failed the same way it did on ~10867.
   #
-  # The GGUF headers say why, and this is the durable answer - read them rather
-  # than retrying flags. Parent: qwen4exp.block_count = 48, so blocks 0..47.
-  # Both MTP files: block_count = 49, and the ONLY block either one contains is
-  # blk.48. The MTP head is literally the parent's next layer shipped in its
-  # own file:
+  # The reference config sets MTP, and that is NOT evidence it runs. Its image
+  # was inspected rather than assumed (ghcr.io/joryirving/llama-qwen4exp:
+  # b0f31f58-rocm-custom, public):
   #
-  #   shared      32 tensors, blk.48 only, no non-block tensors at all, and
-  #               qwen4exp.nextn_shared_target_tensors = true - the file
-  #               announcing that it borrows its target's embeddings
-  #   non-shared  34 tensors, blk.48 plus its own token_embd.weight and
-  #               output.weight [2560, 248320]; still no output_norm.weight
+  #   - it is stock upstream llama.cpp at ggml-org commit b0f31f58
+  #     (2026-09-16). "custom" is its ROCr/HIP runtime, built into
+  #     /opt/custom and layered on TheRock ROCm 7.14.1 - not a llama.cpp patch.
+  #   - common_speculative_init_result is byte-identical between b0f31f58 and
+  #     master, so the draft-load path there is the one that fails here.
+  #   - qwen4exp.nextn_shared_target_tensors, the key the shared head sets to
+  #     announce that it borrows its target's embeddings, appears NOWHERE in
+  #     upstream: not in the source, and not in the strings of that image's
+  #     own libllama. Unsloth writes it; llama.cpp never reads it.
+  #   - their target is bartowski IQ4_NL, block_count 48, same as ours - so
+  #     the no-draft branch ("creating MTP draft context against the target
+  #     model"), which needs the head fused into the target, cannot fire for
+  #     them either.
   #
-  # common_speculative_init_result loads a draft as an INDEPENDENT llama_model.
-  # Given block_count 49 it builds a 49-block model and goes looking for
-  # blk.0..47, which are in the parent file, and dies on the first required
-  # tensor it misses - token_embd.weight for the shared head, because that one
-  # is checked earliest. Adding the missing tensors is not a fix; the head is
-  # 1/49th of a model.
+  # So the reference would hit the identical failure. Do not copy MTP from it.
   #
-  # So there is nothing to tune on this side and no kyuz0 tag that changes it.
-  # The condition to retry is upstream learning to attach a NextN/MTP head to
-  # its parent - the way it did for GLM-4.5/4.6 in llama.cpp#16359, "make a few
-  # NextN/MTP tensors not required" - for a head that ships as a separate file.
+  # The mechanism, from the GGUF headers of the staged files:
+  #
+  #   parent      qwen4exp.block_count = 48   blocks 0..47
+  #   shared      block_count = 49, 32 tensors, blk.48 ONLY, zero non-block
+  #               tensors, qwen4exp.nextn_shared_target_tensors = true
+  #   non-shared  block_count = 49, 34 tensors, blk.48 plus its own
+  #               token_embd.weight and output.weight [2560, 248320];
+  #               still no output_norm.weight
+  #
+  # The MTP head is the parent's next layer in its own file. A draft is loaded
+  # as an INDEPENDENT llama_model, so with block_count 49 llama.cpp builds a
+  # 49-block model, looks for blk.0..47, and dies on the first required tensor
+  # missing - token_embd.weight for the shared head because it is checked
+  # first. Supplying that tensor is not a fix: the head is 1/49th of a model.
+  #
+  # Two conditions would open this, and neither is a flag: upstream honouring
+  # nextn_shared_target_tensors to load a separately-shipped head against its
+  # parent, or a target GGUF that ships with block_count 49 and the head fused
+  # in, which would take the no-draft branch with no draft model at all.
   #
   # ngram-cache: loads fine and needs no draft weights, but made generation
   # roughly HALF as fast on this workload - 10.5-15.7 tok/s against 22.2
@@ -222,8 +236,12 @@ spec:
     # (llama.cpp#28326), so it has to be forced back on.
     #
     # NB it is --lazy-mode, not the reference config's --tensor-read-lazy, and
-    # not its "on-direct" value either: both exist only in the fork the
-    # reference runs and are rejected here.
+    # not its "on-direct" value either - but NOT because the reference runs a
+    # fork. It runs upstream at b0f31f58 (2026-09-16), where llama.h still had
+    # LLAMA_LAZY_MODE_DIRECT and --lazy-mode took on|on-direct|auto|off.
+    # Upstream deleted that enum before build 11042, which is why it is
+    # rejected here. LLAMA_LOAD_MODE_DIRECT_IO existed at both commits, so dio
+    # is the surviving spelling of the same idea, not a substitute for it.
     - --load-mode
     - dio
     - --lazy-mode
