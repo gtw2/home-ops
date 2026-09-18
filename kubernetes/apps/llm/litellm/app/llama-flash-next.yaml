@@ -106,14 +106,14 @@ spec:
   # NB the command below. This image's llama-server is /app/llama-server and
   # /app is NOT on its PATH (/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:
   # /usr/sbin:/usr/bin:/sbin:/bin), so a bare "llama-server" will not resolve.
-  image: ghcr.io/joryirving/llama-qwen4exp:b0f31f58-rocm-custom@sha256:e9f705a606a147836fab6667199e1443943542026b4091e3110bdfacdbac5048
+  # image: ghcr.io/joryirving/llama-qwen4exp:b0f31f58-rocm-custom@sha256:e9f705a606a147836fab6667199e1443943542026b4091e3110bdfacdbac5048
   # Stock, rebuilt nightly. Build 11042 / ec9281505, verified in a throwaway
   # pod: --help lists "-lm, --load-mode ... - dio: use DirectIO if available",
   # which is the flag that fixed the ROCm load hang. No MTP - see the
   # speculativeDecoding block for why that needs the image above.
-  # image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:82b22c73dabe7fed8be44fad52e3b752f87889b78e03eaf3a6120dbc6f70486c
+  image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:82b22c73dabe7fed8be44fad52e3b752f87889b78e03eaf3a6120dbc6f70486c
   command:
-    - /app/llama-server
+    - llama-server
   rolloutPolicy:
     # OFF while the ROCm attempt is in flight, on again once it serves. The
     # idle check asks the CURRENT pod's /slots whether it is busy and treats
