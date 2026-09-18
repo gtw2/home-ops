@@ -136,8 +136,23 @@ spec:
   parallelSlots: 2
   flashAttention: true
   jinja: true
-  cacheTypeK: q8_0
-  cacheTypeV: q8_0
+  # f16, not q8_0, and this is NOT a preference while the image above is in
+  # use - it is a hard requirement of that branch. Its QSA path asserts:
+  #
+  #   qwen4exp.cpp:1365: GGML_ASSERT(q->ne[0] == 256 &&
+  #     k->type == GGML_TYPE_F16 && v->type == GGML_TYPE_F16) failed
+  #     in llama_model_qwen4exp::graph::build_attn_qsa
+  #
+  # q8_0 crashloops the pod at context creation, before any weights matter.
+  # That is why the reference config carries f16 KV; it is not tuning. Stock
+  # llama.cpp has no such constraint and ran fine at q8_0, so revert this to
+  # q8_0 whenever the image goes back to the kyuz0 line.
+  #
+  # Cost is bounded: the hybrid attention means only 12 of 48 layers are full
+  # attention, so the whole KV at 262144 is ~3.0GiB at q8_0 and ~6.0GiB at
+  # f16. Resident VRAM was 68.7GiB of the 96GiB carve-out, so ~3GiB more fits.
+  cacheTypeK: f16
+  cacheTypeV: f16
   reasoningBudget: 16384
   reasoningBudgetMessage: "Stop reasoning and produce the implementation, tool call, or final answer."
   batchSize: 4096
