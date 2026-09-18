@@ -32,40 +32,41 @@ spec:
   format: gguf
   quantization: UD-Q3_K_XL
   hardware:
-    # Vulkan, not ROCm. The original reason was two upstream HIP bugs on
-    # gfx1151 (Strix Halo): llama.cpp#27797, prompts of >=2 message segments
-    # degrading to '//////' garbage, and #27856, a decode collapse from ~20
-    # tok/s to ~5.5 past 2K context. Both have since moved - #27856 is FIXED
-    # (by #27466, f8dbcd6, 2026-08-31) and #27797 was pinned to
-    # GGML_CUDA_ENABLE_UNIFIED_MEMORY, which this config does not set - so
-    # neither is the reason any more. Do not resurrect them as one.
+    # ROCm, attempt 4. Attempts 1-3 (2026-09-14, 2026-09-17) all hung at the
+    # same place: llama-server read 56-63GiB of the ~84GiB of weights, then one
+    # core spun in userspace indefinitely - GPU 0% busy, VRAM byte-frozen,
+    # wchan 0, read_bytes advancing ~1.5KiB/s, 36 of 37 threads at exactly 0
+    # ticks. The stall point moved between attempts, so it was never one bad
+    # tensor.
     #
-    # The reason now is that ROCm does not LOAD this model at all. Retested
-    # three times on 2026-09-14 and 2026-09-17 against an image 251 commits
-    # past the #27466 fix: the pod reads 56-63GiB of the ~84GiB of weights,
-    # then stops. One core pegged in userspace at ~99 utime ticks/s, 36 of 37
-    # threads at exactly 0 ticks, wchan 0, GPU 0% busy, VRAM frozen at 56.8GiB,
-    # read_bytes advancing ~1.5KiB/s, no log line after "loading model" at
-    # 0.03s. It never crashloops, so the startup budget just holds it there and
-    # it has to be reverted by hand.
+    # The measurement that names the cause is rchar 21MiB against 58GiB of
+    # read_bytes: every byte came in through page faults, i.e. the load was
+    # entirely mmap-driven. --load-mode mmap was added to fix an OOM, and on
+    # Vulkan it is fine, but on HIP the upload reads its source straight out of
+    # a file-backed mapping and that is the single-threaded pass nothing else
+    # explained.
     #
-    # Ruled out: --no-host (attempt 2 hung without it) and memory pressure
-    # (cgroup 387MiB of 24GiB, 39GiB of the 96GiB VRAM carve-out still free).
-    # The stall point moves between attempts (56.6 / 58.0 / 62.8GiB), which
-    # argues for a single-threaded host-side pass, not one bad tensor. Untested
-    # next suspects, in order: --lazy-mode (the flag that alters the load path;
-    # upstream disabled lazy loading by default on iGPUs in #28326 and this
-    # config forces it back on), then f16 KV. See git log for the full series.
+    # --load-mode dio is the fix and it is in extraArgs, not here. It drops
+    # mmap for the bulk weights and takes the loader's async path instead:
+    # O_DIRECT reads into four pinned 64MiB buffers with overlapping uploads to
+    # the iGPU, so host RSS stays ~256MiB (no OOM to re-fix) and no HIP copy
+    # ever sources from a mapping. --lazy-mode still works without mmap - the
+    # loader maps the lazy ranges alone for exactly this case.
     #
-    # No throughput number was ever reached - that is downstream of a load that
-    # completes. Vulkan baseline to beat, measured 2026-09-14, 64 tokens per
-    # depth: depth 34 / 29.6 pp / 25.90 tg; 7210 / 396.7 / 23.54; 28810 /
-    # 371.3 / 21.81.
-    accelerator: vulkan
+    # Two earlier reasons for Vulkan are dead and should not be resurrected:
+    # llama.cpp#27856 (decode collapse past 2K) is FIXED by #27466, and
+    # llama.cpp#27797 ('//////' garbage) was pinned to
+    # GGML_CUDA_ENABLE_UNIFIED_MEMORY, which this config does not set.
+    #
+    # Vulkan baseline to beat, measured 2026-09-14, 64 tokens per depth:
+    # depth 34 / 29.6 pp / 25.90 tg; 7210 / 396.7 / 23.54; 28810 / 371.3 /
+    # 21.81. Roll back by restoring accelerator/runtime vulkan, the
+    # vulkan-radv image and --load-mode mmap.
+    accelerator: rocm
     gpu:
       enabled: true
       vendor: amd
-      runtime: vulkan
+      runtime: rocm
       layers: 99
       resourceClaims:
         - name: gpu
@@ -92,24 +93,29 @@ spec:
   # 10665"; ours was 10664), and it is no longer rebuilt, so no digest bump on
   # it could ever fix that.
   #
-  # vulkan-radv rather than the rocm-10.0 tag: see the accelerator note above -
-  # ROCm loads this model but is a known-bad path for it on gfx1151. Same
-  # publisher, rebuilt nightly.
-  image: docker.io/kyuz0/amd-strix-halo-toolboxes:vulkan-radv@sha256:4769e9296817b79fe2ea94b75a67456f52762cf6e0cda6581e963d392c224458
+  # rocm-10.0, rebuilt nightly by the same publisher. This digest was checked
+  # in a throwaway pod on the Framework before the swap, not assumed:
+  # llama.cpp 0.4.1-dev build 11042 / ec9281505, and `llama-server --help`
+  # lists "-lm, --load-mode ... - dio: use DirectIO if available", which is
+  # the upstream flag this attempt turns on. It is worth naming that the
+  # reference config's "--lazy-mode on-direct" does NOT exist upstream -
+  # --lazy-mode still takes only on|auto|off - so dio is the equivalent this
+  # image can actually run, and is why no private fork image is needed here.
+  image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:82b22c73dabe7fed8be44fad52e3b752f87889b78e03eaf3a6120dbc6f70486c
   command:
     - llama-server
   rolloutPolicy:
-    # On now that the model is up and serving. It was off during bring-up
-    # because the idle check asks the CURRENT pod's /slots whether it is busy
-    # and treats any failure as busy, so a crashlooping pod blocks the very
-    # rollout that would fix it - and this model crashlooped through five
-    # distinct failures getting here.
+    # OFF while the ROCm attempt is in flight, on again once it serves. The
+    # idle check asks the CURRENT pod's /slots whether it is busy and treats
+    # any failure as busy, so a pod stuck mid-load blocks the very rollout
+    # that would replace it - and the previous three attempts hung without
+    # ever crashlooping, so the startup budget just holds them there.
     #
     # idleTimeoutSeconds stays at 300, not the reference's 86400: the timeout
     # bounds how long a rollout waits for the current pod to go idle, so a
     # large value reintroduces exactly that deadlock for up to a day. Five
     # minutes still lets in-flight requests drain.
-    waitForIdle: true
+    waitForIdle: false
     idleTimeoutSeconds: 300
   replicas: 1
   priority: high
@@ -167,35 +173,55 @@ spec:
     - --image-min-tokens
     - "1024"
     - --cont-batching
-    # Both required, and both load-bearing on this hardware.
+    # The load path, and the one thing this ROCm attempt changes.
     #
-    # mmap makes the ~84GiB of weights file-backed and evictable rather than
-    # anonymous; without it the pod was OOMKilled at 16Gi and again at 24Gi,
-    # staging weights through a node that only has 31GiB of system RAM.
+    # dio, not mmap. --load-mode mmap was added to fix an OOMKill at 16Gi and
+    # again at 24Gi: staging ~84GiB of weights through a node with 31GiB of
+    # system RAM. It does fix that, and on Vulkan it is what runs today, but
+    # it is also what hung every ROCm attempt - see the accelerator note.
     #
-    # --lazy-mode reads certain tensors from disk on demand instead of keeping
-    # them resident, and this model is the case it exists for: its
-    # per_layer_token_embd.weight is [160, 320001536] - the ~51B n-gram/PLE
-    # table - which dominates the file. This image's HEAD commit is
-    # llama.cpp#28326, "disable lazy tensor loading by default on iGPUs", so
-    # the default is off for exactly this class of hardware and has to be
-    # forced back on. It requires mmap, hence the pair.
+    # dio fixes the OOM a different way and never mmaps the bulk weights.
+    # use_mmap goes false, which is the condition the loader's async upload
+    # path is gated on (llama-model-loader.cpp: `if (use_mmap ||
+    # check_tensors) return nullptr`), so weights stream through four pinned
+    # 64MiB staging buffers with overlapping GPU uploads instead. Host RSS is
+    # bounded at ~256MiB by construction. If the cache filesystem refuses
+    # O_DIRECT the open falls back to buffered reads with a warning, still
+    # without mmap, so the failure mode is slower, not broken.
     #
-    # NB it is --lazy-mode, not the reference config's --tensor-read-lazy:
-    # that spelling exists only in the fork the reference runs and is rejected
-    # outright here ("error: invalid argument: --tensor-read-lazy").
+    # --lazy-mode stays on and still works: the loader maps the lazy ranges
+    # alone when mmap is off ("read_lazy also requires mmap; this condition
+    # make sure it's usable even when --load-mode is not set to mmap"). This
+    # model is the case that flag exists for - per_layer_token_embd.weight is
+    # [160, 320001536], the ~51B n-gram/PLE table that dominates the file -
+    # and this image's lineage disabled lazy loading by default on iGPUs
+    # (llama.cpp#28326), so it has to be forced back on.
+    #
+    # NB it is --lazy-mode, not the reference config's --tensor-read-lazy, and
+    # not its "on-direct" value either: both exist only in the fork the
+    # reference runs and are rejected here.
     - --load-mode
-    - mmap
+    - dio
     - --lazy-mode
     - "on"
-    # Repacking is ON by default and rewrites weights into CPU-optimised
-    # layouts. With 84GiB of weights that is not a warm-up cost, it is a hang:
-    # the pod sat Running for minutes with read_bytes flat at 62.4GiB, one core
-    # pegged at 100%, no log output and no progress. Everything is offloaded to
-    # the iGPU, so there is nothing to gain from a CPU layout in the first
-    # place. --no-host bypasses the host staging buffer, which on unified
-    # memory is a copy between two views of the same physical RAM. The
-    # reference config carries both for the same reason.
+    # Both kept from the Vulkan config, and both cheap rather than
+    # load-bearing - neither is doing the work this attempt depends on.
+    #
+    # --no-repack: repacking is on by default and rewrites weights into
+    # CPU-optimised layouts, single-threaded. Every layer is offloaded to the
+    # iGPU, so the CPU layout is never read and the pass is pure cost. It was
+    # once credited with fixing a 62.4GiB stall; that was wrong, the stall
+    # reproduced with it set. Keep it for the wasted work it does avoid, not
+    # as a fix for anything.
+    #
+    # --no-host: this was previously described here as bypassing the host
+    # staging buffer. It does not. llama_model_params::no_host only drops
+    # pinned host buffer types from make_cpu_buft_list(), i.e. from the CPU
+    # tensor placement list. The loader's async upload buffers come from
+    # ggml_backend_dev_host_buffer_type() directly and the lazy PLE tensor
+    # from ggml_backend_dev_buffer_type(cpu_dev), so neither is affected and
+    # dio's pinned staging path stays intact. Dropping it was A/B'd on ROCm
+    # (attempt 2) and changed nothing, which fits.
     - --no-repack
     - --no-host
     - --cache-prompt
