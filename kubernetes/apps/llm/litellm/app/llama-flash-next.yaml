@@ -188,10 +188,11 @@ spec:
   # CRD resolves a companion file already in spec.files itself, and the file
   # is already staged on the node. nDraftMax 2 copies the reference and is a
   # starting point, not a measured optimum.
-  speculativeDecoding:
-    type: draft-mtp
-    draftModel: MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
-    nDraftMax: 2
+  # TEMPORARILY OFF to measure the no-MTP baseline on this same image.
+  # speculativeDecoding:
+  #   type: draft-mtp
+  #   draftModel: MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
+  #   nDraftMax: 2
 
   # ngram-cache: loads fine and needs no draft weights, but made generation
   # roughly HALF as fast on this workload - 10.5-15.7 tok/s against 22.2
