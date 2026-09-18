@@ -87,23 +87,30 @@ spec:
   modelCache:
     claimName: llmkube-framework-cache
   runtime: llamacpp
-  # Not the rocm-6.4.4 tag this repo used elsewhere: that tag was last built
-  # 2026-08-27, one llama.cpp build before the fix this model needs
-  # (llama.cpp#28355, "51B N-gram embedding table not loaded after build
-  # 10665"; ours was 10664), and it is no longer rebuilt, so no digest bump on
-  # it could ever fix that.
+  # TESTING joryirving's image, to price what a bespoke image actually buys.
+  # Roll back to the stock line below by swapping which is commented.
   #
-  # rocm-10.0, rebuilt nightly by the same publisher. This digest was checked
-  # in a throwaway pod on the Framework before the swap, not assumed:
-  # llama.cpp 0.4.1-dev build 11042 / ec9281505, and `llama-server --help`
-  # lists "-lm, --load-mode ... - dio: use DirectIO if available", which is
-  # the upstream flag this attempt turns on. It is worth naming that the
-  # reference config's "--lazy-mode on-direct" does NOT exist upstream -
-  # --lazy-mode still takes only on|auto|off - so dio is the equivalent this
-  # image can actually run, and is why no private fork image is needed here.
-  image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:82b22c73dabe7fed8be44fad52e3b752f87889b78e03eaf3a6120dbc6f70486c
+  # This is a personal one-off build, not a published project artifact: the
+  # tag is a single commit, it is not rebuilt, and it will never pick up a
+  # llama.cpp or ROCm fix. The stock kyuz0 tag is rebuilt nightly. That is the
+  # standing cost of this line, separate from whatever the benchmark says.
+  #
+  # Verified before the swap by pulling the layers, not assumed: amd64; its
+  # libggml-hip carries gfx1151 kernels (and gfx1250), so no
+  # HSA_OVERRIDE_GFX_VERSION is needed the way the reference sets it; and its
+  # libllama-common knows every flag this config passes, draft-mtp included.
+  #
+  # NB the command below. This image's llama-server is /app/llama-server and
+  # /app is NOT on its PATH (/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:
+  # /usr/sbin:/usr/bin:/sbin:/bin), so a bare "llama-server" will not resolve.
+  image: ghcr.io/joryirving/llama-qwen4exp:b0f31f58-rocm-custom@sha256:e9f705a606a147836fab6667199e1443943542026b4091e3110bdfacdbac5048
+  # Stock, rebuilt nightly. Build 11042 / ec9281505, verified in a throwaway
+  # pod: --help lists "-lm, --load-mode ... - dio: use DirectIO if available",
+  # which is the flag that fixed the ROCm load hang. No MTP - see the
+  # speculativeDecoding block for why that needs the image above.
+  # image: docker.io/kyuz0/amd-strix-halo-toolboxes:rocm-10.0@sha256:82b22c73dabe7fed8be44fad52e3b752f87889b78e03eaf3a6120dbc6f70486c
   command:
-    - llama-server
+    - /app/llama-server
   rolloutPolicy:
     # OFF while the ROCm attempt is in flight, on again once it serves. The
     # idle check asks the CURRENT pod's /slots whether it is busy and treats
