@@ -13,8 +13,8 @@
 #     linear, constant-state), so the KV cache at the full 262144 context is
 #     ~6.0GiB at f16 rather than the tens of GiB a dense 48-layer model needs.
 #
-# Measured budget as configured: 81.9GiB resident of the 96GiB BIOS VRAM
-# carve-out. That is well under the file size because --lazy-mode keeps
+# Measured budget as configured: 88.2GiB resident of the 96GiB BIOS VRAM
+# carve-out, leaving 7.8GiB. (UD-Q3_K_XL sat at 81.9GiB.) That is well under the file size because --lazy-mode keeps
 # per_layer_token_embd.weight - [160, 320001536], the ~51B n-gram/PLE table
 # that dominates the file - off the GPU and reads its rows on demand.
 apiVersion: inference.llmkube.dev/v1alpha1
@@ -26,11 +26,28 @@ spec:
   # path under a cache key of sha256(spec.source)[:16]. Weights stay cached on
   # the node once pulled, so going back to a previous set costs a reconcile and
   # no re-download.
-  # WEIGHTS A/B. bartowski IQ4_NL active, unsloth UD-Q3_K_XL commented below.
-  # Both stay staged on the node, so switching back is a reconcile and no
-  # re-download. Sizes are the real ones, read from the HF API: IQ4_NL is
-  # 93.41GiB, NOT the 87.2 an earlier note here claimed, against UD-Q3_K_XL's
-  # 83.8GiB. That +9.6GiB is the risk on this swap - VRAM, not disk.
+  # WEIGHTS: bartowski IQ4_NL, chosen on measurement. unsloth UD-Q3_K_XL is
+  # commented below; both stay staged on the node, so switching back is a
+  # reconcile and no re-download.
+  #
+  # IQ4_NL wins on everything measured, which is not what the sizes suggest -
+  # it is the LARGER file (93.41GiB against 83.8GiB; the 87.2 figure an earlier
+  # note here quoted was wrong). Same image, same args, same four realistic
+  # prompts, 2000 generated tokens:
+  #
+  #                       UD-Q3_K_XL   IQ4_NL
+  #   generation           33.82        39.66 tok/s   +17.3%
+  #   MTP acceptance       65.9%        70.2%
+  #   prefill @ 6857      910.9       1223.3 tok/s    +34%
+  #   prefill @ 27389     945.5       1238.0 tok/s    +31%
+  #   resident VRAM        81.9GiB      88.2GiB       +6.3GiB
+  #
+  # The acceptance gain is probably the mechanism behind part of the
+  # generation gain: a higher-fidelity quant agrees with the MTP draft head
+  # more often, so more drafted tokens survive verification, which compounds.
+  #
+  # Cost is VRAM headroom: 7.8GiB left of the carve-out against 14.1GiB
+  # before. Raising contextSize or moving off f16 KV needs that checked first.
   source: hf://bartowski/Qwen3.8-Flash-Next-GGUF
   files:
     - Qwen3.8-Flash-Next-IQ4_NL/Qwen3.8-Flash-Next-IQ4_NL-00001-of-00003.gguf
@@ -103,7 +120,9 @@ spec:
     claimName: llmkube-framework-cache
   runtime: llamacpp
   # A bespoke image, kept because it was measured, not because it is tidy.
-  # Same four realistic prompts, 2000 generated tokens, one harness:
+  # Same four realistic prompts, 2000 generated tokens, one harness. These
+  # were measured on UD-Q3_K_XL; the weights block above has the IQ4_NL
+  # figures, which are higher across the board but move together:
   #
   #   22.60 tok/s  stock kyuz0 rocm-10.0, f16 KV, no MTP        control
   #   24.37        this image, same args, f16 KV, no MTP        branch, +7.8%
