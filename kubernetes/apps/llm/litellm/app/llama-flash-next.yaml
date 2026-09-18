@@ -28,6 +28,9 @@ spec:
     - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00002-of-00003.gguf
     - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00003-of-00003.gguf
     - mmproj-F16.gguf
+    # The MTP head, for speculativeDecoding.draftModel. Only loadable on the
+    # joryirving image - see the speculativeDecoding block.
+    - MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
   mmproj: mmproj-F16.gguf
   format: gguf
   quantization: UD-Q3_K_XL
@@ -163,47 +166,33 @@ spec:
   # Speculative decoding is OFF, and BOTH routes to it are closed. Measured,
   # not assumed - do not re-litigate without new numbers.
   #
-  # MTP is OFF because it is not in upstream llama.cpp at all - not because
-  # the files are wrong. Retested on build 11042 (2026-09-18) and it failed
-  # the same way it did on ~10867.
-  #
-  # The reference config DOES have working MTP, and the difference is its
-  # image. That image is not stock upstream, despite being tagged with a real
-  # ggml-org commit: b0f31f58 compares "diverged" against master, 50 ahead of
-  # the merge base and 117 behind, on an unmerged qwen4exp branch. Its
-  # src/models/qwen4exp.cpp carries the thing master lacks:
+  # MTP is ON, and it is the reason the joryirving image is pinned above. It
+  # is NOT in upstream llama.cpp: master hardcodes token_embd.weight required
+  # (src/models/qwen4exp.cpp, `create_tensor(..., 0)`), while that branch has
   #
   #   const bool mtp_only    = (hparams.n_layer_nextn > 0) &&
   #                            (ml.get_weight("blk.0.hc_attn_norm.weight") == nullptr);
   #   const int  trunk_flags = mtp_only ? TENSOR_NOT_REQUIRED : 0;
-  #   tok_embd = create_tensor(tn(LLM_TENSOR_TOKEN_EMBD, "weight"), ..., trunk_flags);
   #
-  # That is precisely a standalone MTP head: nextn layers present, trunk block
-  # 0 absent - so the trunk tensors become optional. Master hardcodes the flag
-  # to 0, i.e. token_embd.weight is always required, which is our exact error.
+  # i.e. it recognises a standalone MTP head - nextn layers present, trunk
+  # block 0 absent - and lets the trunk tensors be missing. Retested on stock
+  # build 11042 (2026-09-18) and it fails with exactly that required-tensor
+  # check. The relevant PRs are all unmerged: #28097 (open, "support
+  # draft-head-only GGUFs (unsloth layout)"), #28610 (closed unmerged).
+  # b0f31f58 compares "diverged" against master, 50 ahead / 117 behind.
   #
-  # The relevant PRs, none of them merged:
-  #   #28097 open    qwen4exp: support draft-head-only GGUFs (unsloth layout)
-  #                  + fix draft-load regression   <-- the one that matters
-  #   #28610 CLOSED  qwen4exp: NextN/MTP speculative decoding (draft tensor
-  #                  loading + draft graph), closed without merging
-  #   #29030, #28136 open, the direct-read lazy PLE work that gives that image
-  #                  its --lazy-mode on-direct
+  # So this block and the kyuz0 image are mutually exclusive. If the image
+  # line is rolled back, this must come out too or the pod crashloops.
   #
-  # So MTP cannot be had from any kyuz0 nightly, however new: the code is not
-  # on master for it to be built from. The retry condition is #28097 merging,
-  # not a digest bump. Getting it sooner means building an image from that
-  # branch, which is the tradeoff the reference made.
-  #
-  # For the record, the staged files are the right ones and match what the
-  # reference feeds its own MTP:
-  #
-  #   parent      qwen4exp.block_count = 48   blocks 0..47
-  #   shared      block_count = 49, 32 tensors, blk.48 ONLY, zero non-block
-  #               tensors, qwen4exp.nextn_shared_target_tensors = true
-  #   non-shared  block_count = 49, 34 tensors, blk.48 plus its own
-  #               token_embd.weight and output.weight [2560, 248320]
-  #
+  # draftModel, not the reference's draftModelRef plus a second Model CR: the
+  # CRD resolves a companion file already in spec.files itself, and the file
+  # is already staged on the node. nDraftMax 2 copies the reference and is a
+  # starting point, not a measured optimum.
+  speculativeDecoding:
+    type: draft-mtp
+    draftModel: MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
+    nDraftMax: 2
+
   # ngram-cache: loads fine and needs no draft weights, but made generation
   # roughly HALF as fast on this workload - 10.5-15.7 tok/s against 22.2
   # without it. Acceptance is too low to pay for the verification passes: this
