@@ -26,17 +26,30 @@ spec:
   # path under a cache key of sha256(spec.source)[:16]. Weights stay cached on
   # the node once pulled, so going back to a previous set costs a reconcile and
   # no re-download.
-  source: hf://unsloth/Qwen3.8-Flash-Next-GGUF
+  # WEIGHTS A/B. bartowski IQ4_NL active, unsloth UD-Q3_K_XL commented below.
+  # Both stay staged on the node, so switching back is a reconcile and no
+  # re-download. Sizes are the real ones, read from the HF API: IQ4_NL is
+  # 93.41GiB, NOT the 87.2 an earlier note here claimed, against UD-Q3_K_XL's
+  # 83.8GiB. That +9.6GiB is the risk on this swap - VRAM, not disk.
+  source: hf://bartowski/Qwen3.8-Flash-Next-GGUF
   files:
-    - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00001-of-00003.gguf
-    - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00002-of-00003.gguf
-    - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00003-of-00003.gguf
-    - mmproj-F16.gguf
-    # The MTP head, for speculativeDecoding.draftModel below.
-    - MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
-  mmproj: mmproj-F16.gguf
+    - Qwen3.8-Flash-Next-IQ4_NL/Qwen3.8-Flash-Next-IQ4_NL-00001-of-00003.gguf
+    - Qwen3.8-Flash-Next-IQ4_NL/Qwen3.8-Flash-Next-IQ4_NL-00002-of-00003.gguf
+    - Qwen3.8-Flash-Next-IQ4_NL/Qwen3.8-Flash-Next-IQ4_NL-00003-of-00003.gguf
+    - mmproj-Qwen3.8-Flash-Next-f16.gguf
+  mmproj: mmproj-Qwen3.8-Flash-Next-f16.gguf
   format: gguf
-  quantization: UD-Q3_K_XL
+  quantization: IQ4_NL
+  # source: hf://unsloth/Qwen3.8-Flash-Next-GGUF
+  # files:
+  #   - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00001-of-00003.gguf
+  #   - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00002-of-00003.gguf
+  #   - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00003-of-00003.gguf
+  #   - mmproj-F16.gguf
+  #   - MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
+  # mmproj: mmproj-F16.gguf
+  # format: gguf
+  # quantization: UD-Q3_K_XL
   hardware:
     # ROCm, not Vulkan. Vulkan was correct for a while and is no longer: the
     # two bugs it was chosen for are gone (llama.cpp#27856, the decode collapse
@@ -59,6 +72,20 @@ spec:
       resourceClaims:
         - name: gpu
           resourceClaimTemplateName: framework-gpu
+---
+# The MTP head on its own Model. Needed only because the active weights come
+# from bartowski, who does not publish one - with the unsloth weights the head
+# is a companion file in the same repo and speculativeDecoding.draftModel can
+# name it directly. Same file either way; this is the reference's arrangement.
+apiVersion: inference.llmkube.dev/v1alpha1
+kind: Model
+metadata:
+  name: llama-strix-mtp
+spec:
+  source: hf://unsloth/Qwen3.8-Flash-Next-GGUF
+  files:
+    - MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
+  format: gguf
 ---
 apiVersion: inference.llmkube.dev/v1alpha1
 kind: InferenceService
@@ -178,11 +205,11 @@ spec:
   # So this block and the stock image are mutually exclusive - remove it if the
   # image line is rolled back, or the pod crashloops.
   #
-  # draftModel rather than draftModelRef plus a second Model CR: the CRD
-  # resolves a companion file already listed in spec.files itself, which avoids
-  # naming a content-hash cache directory the manifest cannot know before the
-  # first reconcile. nDraftMax 2 is copied from the reference and is a starting
-  # point, not a measured optimum.
+  # draftModelRef plus the second Model CR above, because the active weights
+  # are bartowski's and the head is unsloth's. On the unsloth weights this can
+  # go back to `draftModel: MTP/...gguf`, a companion file in the same Model.
+  # nDraftMax 2 is copied from the reference and is a starting point, not a
+  # measured optimum.
   #
   # Beware the benchmark trap here. A random-word prompt makes MTP look awful -
   # 17.15 tok/s at 16% acceptance - because random words are unpredictable.
@@ -190,7 +217,7 @@ spec:
   # same trap sank ngram-cache, noted at the end of extraArgs.
   speculativeDecoding:
     type: draft-mtp
-    draftModel: MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
+    draftModelRef: llama-strix-mtp
     nDraftMax: 2
   # Copied from the reference. HSA_OVERRIDE_GFX_VERSION is a no-op here
   # (gfx1151 IS 11.5.1 and the image ships gfx1151 kernels) and is kept only so
