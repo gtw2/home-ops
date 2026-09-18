@@ -90,22 +90,34 @@ spec:
   modelCache:
     claimName: llmkube-framework-cache
   runtime: llamacpp
-  # TESTING joryirving's image, to price what a bespoke image actually buys.
-  # Roll back to the stock line below by swapping which is commented.
+  # joryirving's image, kept after measuring what it buys. All figures below
+  # are the same four realistic prompts, 2000 generated tokens, one harness:
   #
-  # This is a personal one-off build, not a published project artifact: the
-  # tag is a single commit, it is not rebuilt, and it will never pick up a
-  # llama.cpp or ROCm fix. The stock kyuz0 tag is rebuilt nightly. That is the
-  # standing cost of this line, separate from whatever the benchmark says.
+  #   22.60 tok/s  stock kyuz0 rocm-10.0, dio, f16 KV, no MTP   (control)
+  #   24.37        this image, same args, f16 KV, no MTP        branch +7.8%
+  #   27.50        + MTP on                                     +21.7%, 65.1% accept
+  #   33.82        + the reference's own arg set                +49.6%, 65.9% accept
   #
-  # Verified before the swap by pulling the layers, not assumed: amd64; its
-  # libggml-hip carries gfx1151 kernels (and gfx1250), so no
-  # HSA_OVERRIDE_GFX_VERSION is needed the way the reference sets it; and its
-  # libllama-common knows every flag this config passes, draft-mtp included.
+  # Prefill, 64 tokens per depth: 910.9 t/s at 6857 and 945.5 at 27389,
+  # against the Vulkan baseline's 396.7 and 371.3 - about 2.5x at depth.
+  # Generation no longer decays with depth the way stock does.
+  #
+  # The f16 KV control matters: every earlier stock number used q8_0, so the
+  # 24.37 could have been the KV type rather than the branch. It was not.
+  #
+  # The standing cost, which the benchmark does not price: this is a personal
+  # one-off build, the tag is a single commit, it is never rebuilt, Renovate
+  # cannot track it, and it will never pick up a llama.cpp or ROCm fix. The
+  # stock kyuz0 tag directly below is rebuilt nightly. Revisit when
+  # llama.cpp#28097 merges - at that point stock gains the MTP loading and
+  # most of this reason evaporates.
+  #
+  # Verified from the pulled layers, not assumed: amd64; libggml-hip carries
+  # gfx1151 kernels; libllama-common knows every flag here, draft-mtp
+  # included.
   #
   # NB the command below. This image's llama-server is /app/llama-server and
-  # /app is NOT on its PATH (/opt/rocm/bin:/usr/local/sbin:/usr/local/bin:
-  # /usr/sbin:/usr/bin:/sbin:/bin), so a bare "llama-server" will not resolve.
+  # /app is NOT on its PATH, so a bare "llama-server" will not resolve.
   image: ghcr.io/joryirving/llama-qwen4exp:b0f31f58-rocm-custom@sha256:e9f705a606a147836fab6667199e1443943542026b4091e3110bdfacdbac5048
   # Stock, rebuilt nightly. Build 11042 / ec9281505, verified in a throwaway
   # pod: --help lists "-lm, --load-mode ... - dio: use DirectIO if available",
@@ -115,17 +127,16 @@ spec:
   command:
     - /app/llama-server
   rolloutPolicy:
-    # OFF while the ROCm attempt is in flight, on again once it serves. The
-    # idle check asks the CURRENT pod's /slots whether it is busy and treats
-    # any failure as busy, so a pod stuck mid-load blocks the very rollout
-    # that would replace it - and the previous three attempts hung without
-    # ever crashlooping, so the startup budget just holds them there.
+    # On again now that the config is settled and serving. It was off through
+    # the ROCm and image work because the idle check asks the CURRENT pod's
+    # /slots whether it is busy and treats any failure as busy, so a pod stuck
+    # mid-load or crashlooping blocks the very rollout that would replace it.
     #
     # idleTimeoutSeconds stays at 300, not the reference's 86400: the timeout
     # bounds how long a rollout waits for the current pod to go idle, so a
     # large value reintroduces exactly that deadlock for up to a day. Five
     # minutes still lets in-flight requests drain.
-    waitForIdle: false
+    waitForIdle: true
     idleTimeoutSeconds: 300
   replicas: 1
   priority: high
