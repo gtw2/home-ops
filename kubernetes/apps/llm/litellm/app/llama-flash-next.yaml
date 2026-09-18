@@ -28,11 +28,6 @@ spec:
     - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00002-of-00003.gguf
     - UD-Q3_K_XL/Qwen3.8-Flash-Next-UD-Q3_K_XL-00003-of-00003.gguf
     - mmproj-F16.gguf
-    # The MTP head, for speculativeDecoding.draftModel below. A companion file
-    # in this same Model rather than a second Model CR the way the reference
-    # does it: same hf:// source, so it lands under the same cache key and is
-    # already staged on the node from the earlier MTP attempts - no download.
-    - MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
   mmproj: mmproj-F16.gguf
   format: gguf
   quantization: UD-Q3_K_XL
@@ -140,34 +135,42 @@ spec:
   reasoningBudgetMessage: "Stop reasoning and produce the implementation, tool call, or final answer."
   batchSize: 4096
   uBatchSize: 2048
-  # Speculative decoding, retested on build 11042 after the ROCm/dio swap.
+  # First-class field rather than the raw --spec-* flags the previous model
+  # used: the operator resolves the draft file's staged path itself, which is a
+  # content-hash directory the manifest cannot know before the first reconcile.
+  # Speculative decoding is OFF, and BOTH routes to it are closed. Measured,
+  # not assumed - do not re-litigate without new numbers.
   #
-  # This was OFF with a note saying both routes were closed. That note was
-  # written against build ~10867 and the reference config has since been shown
-  # running MTP on the SHARED head, so the "neither MTP file loads" half is
-  # worth re-testing rather than trusting - the shared file is the one that
-  # failed on token_embd.weight, which is exactly the tensor it is supposed to
-  # borrow from the parent. If upstream has since learned to load it fused,
-  # this works; if not, the pod fails fast and the block comes back out.
+  # MTP: the CRD's "mtp" is only an alias for "draft-mtp", which needs a
+  # separate draft model, and neither published MTP file loads standalone. The
+  # shared one has no token_embd.weight; the non-shared one dies on
+  # output_hc_norm.weight, a tensor the PARENT model has. MTP is a head meant
+  # to load fused to its parent and upstream llama.cpp has no path for that.
   #
-  # draftModel, not the reference's draftModelRef + second Model CR: the CRD
-  # accepts a companion file already listed in spec.files and resolves its
-  # staged path itself, which is a content-hash directory the manifest cannot
-  # know before the first reconcile. Same result, one CR instead of two.
+  # RETESTED on build 11042 (2026-09-18) because the reference config runs MTP
+  # on the shared head, and failed identically - so the reference's private
+  # fork is what makes that work, not a newer upstream. Verbatim, and worth
+  # keeping because the error names the mechanism:
   #
-  # nDraftMax 2 copies the reference and is a starting point, not a measured
-  # optimum - the CRD's own docs say it is per-model and per-topology.
+  #   common_speculative_init_result: loading draft model '.../MTP/
+  #     mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf'
+  #   llama_model_load: error loading model: check_tensor_dims:
+  #     tensor 'token_embd.weight' not found
+  #   srv load_model: failed to load draft model
   #
-  # Still-closed route, do not re-litigate without new numbers: ngram-cache
-  # loads fine and needs no draft weights, but made generation roughly HALF as
-  # fast on this workload - 10.5-15.7 tok/s against 22.2 without it. This model
-  # is asked reasoning questions and writes new prose rather than restating its
-  # context, so context n-grams rarely hit. ngram-simple, ngram-mod and
-  # ngram-map-k work the same way.
-  speculativeDecoding:
-    type: draft-mtp
-    draftModel: MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
-    nDraftMax: 2
+  # common_speculative_init_result loads the draft as an INDEPENDENT
+  # llama_model. A shared head has no token_embd.weight precisely because it
+  # borrows the parent's, so there is nothing to fix on this side of the
+  # config: it needs a fused-load path upstream does not have. Do not retry
+  # this on a kyuz0 image - retry it only when upstream lands fused MTP.
+  #
+  # ngram-cache: loads fine and needs no draft weights, but made generation
+  # roughly HALF as fast on this workload - 10.5-15.7 tok/s against 22.2
+  # without it. Acceptance is too low to pay for the verification passes: this
+  # model is asked reasoning questions and writes new prose rather than
+  # restating its context, so context n-grams rarely hit. The other
+  # context-only variants (ngram-simple, ngram-mod, ngram-map-k) work the same
+  # way; they would need evidence of different behaviour to be worth a rollout.
   resources:
     cpu: "500m"
     # Both request AND limit - llmkube maps this single value to each, and the
