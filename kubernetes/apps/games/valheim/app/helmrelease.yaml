@@ -94,28 +94,8 @@ spec:
           warden.dev/query-port: "2457"        # steam2 / A2S
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
-          # The game port, as players type it into Join IP. 2456 is the game
-          # port; 2457 above is the A2S query port and is not joinable.
           warden.dev/address: "valheim.${SECRET_GAMING_DOMAIN}:2456"
-          # Split horizon. Read ONLY by unifi-dns (sources: service), which
-          # answers the LAN with this LoadBalancer address; cloudflare-dns has
-          # no service source, so the public record keeps pointing at the
-          # towonel edge. Players at home therefore skip the tunnel entirely
-          # while remote players still get a static endpoint - measured at ~98ms
-          # round trip saved, since the hop is Knoxville -> Virginia -> Knoxville.
-          #
-          # Same pattern external.${SECRET_DOMAIN} already uses: public CNAME to
-          # the cloudflare tunnel, LAN A record to the gateway.
           external-dns.alpha.kubernetes.io/hostname: valheim.${SECRET_GAMING_DOMAIN}
-          # Towonel routing, keyed off the port names below - the operator reads
-          # towonel.io/<portName>.udp and .public-port straight off this Service,
-          # so there is no separate TowonelAgent object to keep in sync.
-          #
-          # Live, but NOT yet in the player path: ./dnsendpoint.yaml still points
-          # valheim.${SECRET_GAMING_DOMAIN} at ipv4.${SECRET_GAMING_DOMAIN}, i.e.
-          # straight at the WAN IP. Both routes are therefore reachable at once,
-          # which is what lets the tunnel be measured against the direct path
-          # before anyone is moved onto it.
           towonel.io/tunnel: enable
           towonel.io/tunnel-ref: network/home-ops
           towonel.io/steam1.udp: "true"
