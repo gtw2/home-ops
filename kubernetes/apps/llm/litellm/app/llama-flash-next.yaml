@@ -166,7 +166,7 @@ spec:
     # idleTimeoutSeconds stays at 300 rather than the reference's 86400: the
     # timeout bounds how long a rollout waits for the current pod to go idle,
     # so a large value reintroduces that deadlock for up to a day.
-    waitForIdle: false
+    waitForIdle: true
     idleTimeoutSeconds: 300
   replicas: 1
   priority: high
