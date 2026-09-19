@@ -18,7 +18,7 @@ spec:
           app:
             image:
               repository: docker.io/bitr8/agregarr
-              tag: 2.9.1@sha256:64b3a8c0136c59529592a8bfcff9ee10aa52e6afd2494cc00c461b47e4eb2406
+              tag: 2.10.0@sha256:bc75129e7ebd7ead814fb3a9e18c241e09dfaaefd9efb1e73a2cb029087b0253
             env:
               PORT: &port 80
               TZ: ${TIMEZONE}
