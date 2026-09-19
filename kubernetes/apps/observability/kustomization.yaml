@@ -15,9 +15,24 @@ resources:
   - ./loki/ks.yaml
   - ./mcp-grafana/ks.yaml
   - ./nut-exporter/ks.yaml
+  - ./drm-exporter/ks.yaml
   - ./prometheus-adapter/ks.yaml
   - ./promtail/ks.yaml
   - ./silence-operator/ks.yaml
   - ./smartctl-exporter/ks.yaml
   # - ./snmp-exporter/ks.yaml
   - ./unpoller/ks.yaml
+patches:
+  # drm-exporter claims GPUs through DRA with adminAccess, which Kubernetes
+  # gates on a per-namespace opt-in rather than letting a claim grant itself
+  # privileged device visibility. The Namespace comes from components/common,
+  # where it is named `not-used` until kustomize's namespace transformer
+  # renames it - so the patch must target that pre-rename name.
+  - target:
+      kind: Namespace
+      name: not-used
+    patch: |-
+      - op: add
+        path: /metadata/labels
+        value:
+          resource.kubernetes.io/admin-access: "true"

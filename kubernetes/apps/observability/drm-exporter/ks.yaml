@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: drm-exporter
+spec:
+  # The DRA claim needs the gpu.amd.com DeviceClass to exist, which the driver
+  # in kube-system creates. Without it the ResourceClaimTemplate is accepted
+  # but never allocates and the pod stays Pending.
+  dependsOn:
+    - name: amd-gpu-dra-driver
+      namespace: kube-system
+  interval: 1h
+  path: ./kubernetes/apps/observability/drm-exporter/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: observability
+  wait: false
