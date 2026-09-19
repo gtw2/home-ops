@@ -23,6 +23,16 @@ spec:
     # `kubectl get podmonitor`. Prometheus reported 0 active / 44 dropped for
     # podMonitor/llm/mcp-gateway/0, the only discovered port was 4483, and no
     # metric named mcp* or vmcp* ever reached the TSDB.
+    #
+    # Set expectations: this endpoint is the vmcp process's controller-runtime
+    # metrics, 193 families of Go runtime, workqueue and reconcile counters.
+    # It is NOT MCP telemetry - there is no tool-call count, session count or
+    # per-backend latency here. Useful for "is the gateway process healthy",
+    # not for "which tools are being called".
+    #
+    # MCPTelemetryConfig sets prometheus.enabled: true, but the backend proxy
+    # pods (kubectl-0, flux-0, arr-0, ha-0, seerr-0) expose nothing on 8080,
+    # 9090 or 9464, so that telemetry is not reachable yet. Unresolved.
     - port: metrics
       path: /metrics
       interval: 15s
