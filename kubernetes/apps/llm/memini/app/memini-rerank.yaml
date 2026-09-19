@@ -21,7 +21,7 @@ metadata:
 spec:
   modelRef: memini-rerank
   runtime: llamacpp
-  image: ghcr.io/ggml-org/llama.cpp:server@sha256:cbcdcb52d484e08e23bfc0135afa5beadd2d540513bbb7c65b233231fa033ff4
+  image: ghcr.io/ggml-org/llama.cpp:server@sha256:9002e60256635720c05c50455fdebf992a98dc25466dc932758ecd7936244c1c
   mode: rerank
   replicas: 3
   priority: normal
