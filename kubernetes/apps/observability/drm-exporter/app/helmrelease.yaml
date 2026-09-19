@@ -4,6 +4,36 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: drm-exporter
+# MEASURED RESULT, 2026-09-19. It runs, it scrapes, and it does NOT deliver the
+# metric this was deployed for.
+#
+# What arrives, per GPU, labelled by node and PCI device:
+#   drm_engine_utilization_ratio   engine=gpu, engine=vcn
+#   drm_frequency_hertz            domain=sclk, kind=actual|max
+#   drm_memory_used/total_bytes    pool=smem ONLY - system memory, 31.1GiB
+#   drm_info                       identity, type="Integrated", driver=amdgpu
+#
+# What does NOT arrive: any vram pool, drm_power_watts,
+# drm_temperature_celsius, drm_fan_speed_rpm. The chart's support matrix warned
+# this would happen - it marks AMD power and temps as "dGPU via hwmon" and VRAM
+# as discrete-only - and Strix Halo is an integrated part.
+#
+# The data is not missing from the kernel, only from the exporter. On this very
+# node, read out of the same sysfs the exporter has mounted read-only:
+#
+#   /sys/class/drm/card1/device/mem_info_vram_used  = 99972861952  (93.1GiB)
+#   /sys/class/drm/card1/device/mem_info_vram_total = 103079215104 (96.0GiB)
+#   /sys/class/drm/card1/device/hwmon/hwmon5/       power1_average, power1_input,
+#                                                   temp1_input, temp1_label
+#
+# So the gate is the exporter treating a BIOS VRAM carve-out on an APU as if it
+# were shared system memory. Worth raising upstream
+# (home-operations/drm-exporter) rather than working around here.
+#
+# Keeping it regardless: utilisation and clocks are still more than the nothing
+# that existed before, and this costs 64Mi. But VRAM headroom - the number that
+# actually matters on a 96GiB carve-out, and which read 93.1GiB the moment this
+# was checked - is still only visible by exec'ing into a pod and catting sysfs.
 spec:
   chartRef:
     kind: OCIRepository
