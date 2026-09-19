@@ -28,7 +28,7 @@ services:
       timeout: 5s
       retries: 3
     # renovate: datasource=docker depName=ghcr.io/kimdre/doco-cd
-    image: ghcr.io/kimdre/doco-cd:0.117.1
+    image: 0.119
     restart: unless-stopped
     secrets:
       - api_secret
