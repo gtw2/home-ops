@@ -28,3 +28,7 @@ resources:
   # - ./llama-strix.yaml
   # LiteLLMModel: how the proxy addresses that pod
   - ./models
+  # Grafana dashboards: one ConfigMap and one CR per dashboard, so they can be
+  # added or dropped independently.
+  - ./dashboard
+  - ./grafanadashboard.yaml

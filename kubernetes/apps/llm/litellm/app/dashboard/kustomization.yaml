@@ -1,0 +1,28 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+# One dashboard per JSON, one ConfigMap per dashboard, one GrafanaDashboard CR
+# per ConfigMap (../grafanadashboard.yaml). Adding or dropping a dashboard is
+# one entry here plus one CR there, and nothing else moves.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: llm-dashboard-llama-server
+    files:
+      - llama-server.json
+  - name: llm-dashboard-litellm
+    files:
+      - litellm.json
+  - name: llm-dashboard-litellm-routing
+    files:
+      - litellm-routing.json
+generatorOptions:
+  # The GrafanaDashboard CRs reference these ConfigMaps by name, so the name
+  # has to be stable rather than content-hashed.
+  disableNameSuffixHash: true
+  annotations:
+    # REQUIRED, not decoration. kubernetes/flux/cluster/ks.yaml applies
+    # postBuild.substituteFrom cluster-wide, and dashboard JSON is full of
+    # Grafana's own ${...} tokens - ${datasource}, ${__rate_interval},
+    # ${__field.labels}. Without this, Flux tries to resolve them from
+    # cluster-secrets and the Kustomization fails to build.
+    kustomize.toolkit.fluxcd.io/substitute: disabled

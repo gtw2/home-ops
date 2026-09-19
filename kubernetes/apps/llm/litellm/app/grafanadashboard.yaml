@@ -1,0 +1,78 @@
+---
+# Dashboards for the llm namespace. Adapted from joryirving/home-ops, which is
+# a peer repo rather than an upstream, so these are vendored snapshots and are
+# expected to be edited here rather than tracked.
+#
+# Two adaptations were applied at import (see the dashboard/ JSONs):
+#   - every prometheus datasource template variable was repointed at this
+#     cluster's datasource, named "prometheus". The originals carried saved
+#     selections of "Prometheus" and "prometheus-main", which do not exist
+#     here and leave every panel empty until the datasource is re-picked
+#     by hand.
+#   - llama-server dropped 3 of its 25 panels (Prompt cache size, Cached
+#     prompt count, Cache evictions / interval). They query a
+#     victoriametrics-logs-datasource in LogsQL; this cluster runs Loki, and
+#     LogsQL is not LogQL, so repointing them would not have made them work.
+#
+# instanceSelector is grafana.internal/instance, which is what this repo's
+# Grafana matches on. The source repo uses "dashboards: grafana" - copying that
+# verbatim imports nothing, silently.
+#
+# Deliberately NOT imported, and why:
+#   llm-rocm-node   every GPU panel needs amdgpu_* metrics and nothing exports
+#                   them here. The amd-gpu-dra-driver does scheduling, not
+#                   telemetry. Worth revisiting behind an AMD device metrics
+#                   exporter, at which point this becomes the most useful
+#                   dashboard of the set - VRAM headroom is currently 7.8GiB
+#                   of 96 and is invisible to Prometheus.
+#   llm-nvidia-node, vllm
+#                   no NVIDIA hardware and no vLLM deployment.
+#   litellm-economics, litellm-selfhosted
+#                   both price tokens against unpoller_device_outlet_outlet_power
+#                   (a UniFi PDU we do not have), and economics additionally
+#                   hardcodes the source author's own subscription costs and a
+#                   USD/CAD conversion.
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/grafana.integreatly.org/grafanadashboard_v1beta1.json
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: llm-llama-server
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.internal/instance: grafana
+  folder: LLM
+  configMapRef:
+    name: llm-dashboard-llama-server
+    key: llama-server.json
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/grafana.integreatly.org/grafanadashboard_v1beta1.json
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: llm-litellm
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.internal/instance: grafana
+  folder: LLM
+  configMapRef:
+    name: llm-dashboard-litellm
+    key: litellm.json
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/grafana.integreatly.org/grafanadashboard_v1beta1.json
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: llm-litellm-routing
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      grafana.internal/instance: grafana
+  folder: LLM
+  configMapRef:
+    name: llm-dashboard-litellm-routing
+    key: litellm-routing.json
