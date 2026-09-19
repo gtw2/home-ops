@@ -58,6 +58,18 @@ spec:
     spec:
       containers:
         - name: vmcp
+          # Declares the metrics port so Prometheus can discover it. The
+          # process already listens on 8080 and answers /metrics with a 200,
+          # but the operator's pod spec declares only containerPort 4483
+          # ("http"), and kubernetes_sd only ever emits candidates for
+          # DECLARED container ports. With 8080 undeclared, the PodMonitor
+          # matched nothing whether it asked by name or by targetPort number -
+          # Prometheus reported 0 active / 44 dropped, and the only port in
+          # the discovered labels was 4483.
+          ports:
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
           resources:
             requests:
               cpu: 50m
