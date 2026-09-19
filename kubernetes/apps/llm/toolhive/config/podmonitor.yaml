@@ -15,6 +15,17 @@ spec:
     matchNames:
       - llm
   podMetricsEndpoints:
-    - port: "8080"
+    # targetPort, NOT port. PodMonitor's "port" takes the NAME of a port
+    # declared in the pod spec, and the vmcp pod declares exactly one -
+    # containerPort 4483, name "http". Nothing is named "8080", so `port:
+    # "8080"` matched nothing and this PodMonitor produced zero targets while
+    # looking perfectly healthy: `kubectl get podmonitor` showed it, and
+    # Prometheus reported 0 active / 44 dropped for
+    # podMonitor/llm/mcp-gateway/0. No metric named mcp* or vmcp* ever existed.
+    #
+    # The metrics were there the whole time - the pod answers /metrics on 8080
+    # with a 200, it is just not a declared port. targetPort addresses it by
+    # number and does not need one.
+    - targetPort: 8080
       path: /metrics
       interval: 15s
