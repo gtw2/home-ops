@@ -182,13 +182,22 @@ spec:
       operator: Exists
       effect: NoSchedule
   contextSize: 262144
-  # 2, not the reference's 1. The reference serves one caller; Open WebUI does
-  # not. A single tool-using turn is already two model round-trips (decide to
-  # call, then answer from the result) and Open WebUI fires auxiliary task
-  # requests - title, tags, follow-ups - alongside the chat. With one slot all
-  # of that serialises: measured 5.51s alone, and two concurrent requests
-  # returning at 5.17s and 10.59s, i.e. the second waited for the first.
-  parallelSlots: 2
+  # 1, and this is a HARD LIMIT on this node, not the reference's preference.
+  #
+  # 2 slots is what Open WebUI wants - a tool turn is two model round-trips and
+  # it fires title/tag/follow-up tasks alongside the chat, so with one slot
+  # they serialise (measured: 5.51s alone, two concurrent at 5.17s and 10.59s).
+  # But 2 slots OOMKills the pod on HOST memory, exit 137, during model load
+  # and before llama-server ever starts. Tried at --cache-ram 12228 and again
+  # at 4096; the cache size is not the driver, so it is per-slot load-time
+  # host state.
+  #
+  # There is no room to pay for it: node allocatable is 28.64GiB after the
+  # 96GiB VRAM carve-out and this pod already requests 26Gi. Getting a second
+  # slot means lowering contextSize (halving KV and per-slot state) or
+  # shrinking the carve-out to free system RAM - both real changes, neither a
+  # flag. Do not just set this to 2 again.
+  parallelSlots: 1
   flashAttention: true
   jinja: true
   # f16 is REQUIRED by the image above, not preferred. Its QSA path asserts:
@@ -295,24 +304,12 @@ spec:
     - none
     - --lazy-mode
     - on-direct
-    # Required with an explicit parallelSlots. llama.cpp enables a unified KV
-    # buffer only "if number of slots is auto", so naming a slot count turns it
-    # off and each sequence would get its own KV - halving usable context per
-    # slot or doubling KV VRAM. With it, both slots share one buffer at the
-    # full 262144.
-    - --kv-unified
     # No auto-fit probe; every size here is stated explicitly.
     - -fit
     - "off"
-    # 4GiB host-side prompt cache, not the reference's 12GiB. With
-    # parallelSlots 2 the reference's figure OOMKilled the pod (exit 137)
-    # before the weights finished loading: llama.cpp saves idle slot state
-    # into this cache per slot ("save idle slots to the prompt cache on new
-    # task"), so it does not stay a flat 12GiB when a second slot exists. The
-    # node cannot absorb it either - allocatable is 28.64GiB and this pod
-    # already requests 26Gi. See resources.memory.
+    # 12GiB host-side prompt cache. See resources.memory.
     - --cache-ram
-    - "4096"
+    - "12228"
     - --temp
     - "1.0"
     - --top-p
