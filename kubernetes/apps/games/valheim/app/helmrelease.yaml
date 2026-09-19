@@ -62,7 +62,7 @@ spec:
                 hex:shudnal-ConfigurationManager-1.1.21
                 hex:Smoothbrain-Groups-1.2.11
                 hex:Smoothbrain-Guilds-1.1.14
-                Smoothbrain-PackHorse-1.0.5
+                hex:Smoothbrain-PackHorse-1.0.5
                 hex:Smoothbrain-Sailing-1.1.9
                 hex:Smoothbrain-TargetPortal-1.2.6
                 MSchmoecker-MultiUserChest-0.6.2
