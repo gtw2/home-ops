@@ -166,7 +166,7 @@ spec:
     # idleTimeoutSeconds stays at 300 rather than the reference's 86400: the
     # timeout bounds how long a rollout waits for the current pod to go idle,
     # so a large value reintroduces that deadlock for up to a day.
-    waitForIdle: true
+    waitForIdle: false
     idleTimeoutSeconds: 300
   replicas: 1
   priority: high
@@ -304,9 +304,15 @@ spec:
     # No auto-fit probe; every size here is stated explicitly.
     - -fit
     - "off"
-    # 12GiB host-side prompt cache. See resources.memory.
+    # 4GiB host-side prompt cache, not the reference's 12GiB. With
+    # parallelSlots 2 the reference's figure OOMKilled the pod (exit 137)
+    # before the weights finished loading: llama.cpp saves idle slot state
+    # into this cache per slot ("save idle slots to the prompt cache on new
+    # task"), so it does not stay a flat 12GiB when a second slot exists. The
+    # node cannot absorb it either - allocatable is 28.64GiB and this pod
+    # already requests 26Gi. See resources.memory.
     - --cache-ram
-    - "12228"
+    - "4096"
     - --temp
     - "1.0"
     - --top-p
