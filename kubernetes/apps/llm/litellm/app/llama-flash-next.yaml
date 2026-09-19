@@ -193,10 +193,14 @@ spec:
   # host state.
   #
   # There is no room to pay for it: node allocatable is 28.64GiB after the
-  # 96GiB VRAM carve-out and this pod already requests 26Gi. Getting a second
-  # slot means lowering contextSize (halving KV and per-slot state) or
-  # shrinking the carve-out to free system RAM - both real changes, neither a
-  # flag. Do not just set this to 2 again.
+  # 96GiB VRAM carve-out and this pod already requests 26Gi. A second slot
+  # needs contextSize lowered (halving KV and per-slot state) or the carve-out
+  # shrunk to free system RAM - both real changes, neither a flag.
+  #
+  # DECIDED 2026-09-19: stay at one slot and accept the serialisation. Neither
+  # price was worth paying. So this is a settled trade, not an open blocker -
+  # if concurrency becomes the priority later, reopen it by choosing one of
+  # those two, and do not just set this to 2 again, which OOMKills.
   parallelSlots: 1
   flashAttention: true
   jinja: true
