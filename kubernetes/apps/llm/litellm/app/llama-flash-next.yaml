@@ -182,7 +182,13 @@ spec:
       operator: Exists
       effect: NoSchedule
   contextSize: 262144
-  parallelSlots: 1
+  # 2, not the reference's 1. The reference serves one caller; Open WebUI does
+  # not. A single tool-using turn is already two model round-trips (decide to
+  # call, then answer from the result) and Open WebUI fires auxiliary task
+  # requests - title, tags, follow-ups - alongside the chat. With one slot all
+  # of that serialises: measured 5.51s alone, and two concurrent requests
+  # returning at 5.17s and 10.59s, i.e. the second waited for the first.
+  parallelSlots: 2
   flashAttention: true
   jinja: true
   # f16 is REQUIRED by the image above, not preferred. Its QSA path asserts:
@@ -289,6 +295,12 @@ spec:
     - none
     - --lazy-mode
     - on-direct
+    # Required with an explicit parallelSlots. llama.cpp enables a unified KV
+    # buffer only "if number of slots is auto", so naming a slot count turns it
+    # off and each sequence would get its own KV - halving usable context per
+    # slot or doubling KV VRAM. With it, both slots share one buffer at the
+    # full 262144.
+    - --kv-unified
     # No auto-fit probe; every size here is stated explicitly.
     - -fit
     - "off"
@@ -322,9 +334,12 @@ spec:
     #                            make_cpu_buft_list(), while the loader's
     #                            upload buffers come from
     #                            ggml_backend_dev_host_buffer_type() directly.
-    #   --cont-batching, --kv-unified, --cache-prompt, --threads,
-    #   --threads-batch          dropped with parallelSlots 1 and the reference
-    #                            arg set; re-add only with numbers.
+    #   --cont-batching          on by default in this build, so the explicit
+    #                            flag was redundant rather than load-bearing.
+    #   --cache-prompt, --threads, --threads-batch
+    #                            dropped with the reference arg set; re-add
+    #                            only with numbers. (--kv-unified came back -
+    #                            see parallelSlots.)
     #
     # Speculative decoding other than MTP stays off. ngram-cache loads fine and
     # needs no draft weights, but halved generation on this workload - 10.5-15.7
