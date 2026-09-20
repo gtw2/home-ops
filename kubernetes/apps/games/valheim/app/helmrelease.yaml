@@ -48,30 +48,31 @@ spec:
               # NoAFKRaids. Baked into the world on creation; an admin can
               # change them live with `setworldmodifier` from the F5 console.
               MODIFIERS: "deathpenalty=casual,raids=less"
-              MODS: |
-                Advize-PlantEasily-2.2.0
-                Advize-PlantEverything-1.21.2
-                Digitalroot-Eternal_Fire-1.0.20
-                hex:Azumatt-AzuAutoStore-3.1.6
-                hex:Azumatt-AzuContainerSizes-1.1.8
-                hex:Azumatt-AzuCraftyBoxes-1.8.22
-                hex:Azumatt-AzuExtendedPlayerInventory-2.5.1
-                hex:Azumatt-Build_Camera_Custom_Hammers_Edition-1.3.3
-                hex:Azumatt-Hooked-1.1.1
-                hex:Azumatt-Unshamed-1.0.6
-                hex:shudnal-ConfigurationManager-1.1.21
-                hex:Smoothbrain-Groups-1.2.11
-                hex:Smoothbrain-Guilds-1.1.14
-                hex:Smoothbrain-PackHorse-1.0.5
-                hex:Smoothbrain-Sailing-1.1.9
-                hex:Smoothbrain-TargetPortal-1.2.6
-                MSchmoecker-MultiUserChest-0.6.2
-                TastyChickenLegs-TreesReborn-1.1.3
-                TastyChickenLegs-LongerDays-1.1.4
-                ValheimModding-Jotunn-2.30.1
-                hex:shudnal-ConditionalConfigSync-1.0.8
-                hex:ValheimModding-JsonDotNET-13.0.4
-                ValheimModding-YamlDotNet-16.3.1
+              GALE_SYNC_CODE: 4L1AIU
+              # MODS: |
+              #   Advize-PlantEasily-2.2.0
+              #   Advize-PlantEverything-1.21.2
+              #   Digitalroot-Eternal_Fire-1.0.20
+              #   hex:Azumatt-AzuAutoStore-3.1.6
+              #   hex:Azumatt-AzuContainerSizes-1.1.8
+              #   hex:Azumatt-AzuCraftyBoxes-1.8.22
+              #   hex:Azumatt-AzuExtendedPlayerInventory-2.5.1
+              #   hex:Azumatt-Build_Camera_Custom_Hammers_Edition-1.3.3
+              #   hex:Azumatt-Hooked-1.1.1
+              #   hex:Azumatt-Unshamed-1.0.6
+              #   hex:shudnal-ConfigurationManager-1.1.21
+              #   hex:Smoothbrain-Groups-1.2.11
+              #   hex:Smoothbrain-Guilds-1.1.14
+              #   hex:Smoothbrain-PackHorse-1.0.5
+              #   hex:Smoothbrain-Sailing-1.1.9
+              #   hex:Smoothbrain-TargetPortal-1.2.6
+              #   MSchmoecker-MultiUserChest-0.6.2
+              #   TastyChickenLegs-TreesReborn-1.1.3
+              #   TastyChickenLegs-LongerDays-1.1.4
+              #   ValheimModding-Jotunn-2.30.1
+              #   hex:shudnal-ConditionalConfigSync-1.0.8
+              #   hex:ValheimModding-JsonDotNET-13.0.4
+              #   ValheimModding-YamlDotNet-16.3.1
               #   Numenos-InfinityTools-1.0.0
               HTTP_PORT: &port 80
             envFrom:
