@@ -55,6 +55,11 @@ spec:
         type: LoadBalancer
         annotations:
           io.cilium/lb-ipam-ips: 10.10.40.149
+          warden.dev/enabled: "true"
+          warden.dev/game: "windrose"          # no query port exposed — Kubernetes-only state
+          warden.dev/control: "true"
+          warden.dev/channels: "steam-servers"
+          warden.dev/address: "windrose.${SECRET_GAMING_DOMAIN}:7779"
           # Split horizon: unifi-dns answers the LAN with the LoadBalancer
           # address; cloudflare-dns has no service source, so the public
           # record keeps pointing at the towonel edge.
