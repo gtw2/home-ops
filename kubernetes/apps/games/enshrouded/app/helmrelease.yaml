@@ -56,6 +56,7 @@ spec:
           warden.dev/query-port: "15637"       # A2S
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
+          warden.dev/password-env: "JOIN_ENSHROUDED"   # join password, spoilered on the panel
           # The game port on the LoadBalancer. Swap for a public hostname if
           # this ever gets a DNS record, as palworld has.
           warden.dev/address: "enshrouded.${SECRET_GAMING_DOMAIN}:15636"

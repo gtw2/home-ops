@@ -59,6 +59,7 @@ spec:
           warden.dev/query-port: "27015"       # A2S — confirmed answering, no EOS needed
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
+          warden.dev/password-env: "JOIN_ICARUS"   # join password, spoilered on the panel
           # The game port on the LoadBalancer. Swap for a public hostname if
           # this ever gets a DNS record, as palworld has.
           warden.dev/address: "icarus.${SECRET_GAMING_DOMAIN}:17777"

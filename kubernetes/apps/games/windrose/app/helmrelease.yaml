@@ -59,6 +59,7 @@ spec:
           warden.dev/game: "windrose"          # no query port exposed — Kubernetes-only state
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
+          warden.dev/password-env: "JOIN_WINDROSE"   # join password, spoilered on the panel
           warden.dev/address: "windrose.${SECRET_GAMING_DOMAIN}:7779"
           # Split horizon: unifi-dns answers the LAN with the LoadBalancer
           # address; cloudflare-dns has no service source, so the public

@@ -147,6 +147,7 @@ spec:
           warden.dev/query-auth-env: "QUERYAUTH_PALWORLD"
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
+          warden.dev/password-env: "JOIN_PALWORLD"   # join password, spoilered on the panel
           # What the panel shows players. Without it the panel would show the
           # internal query address (the REST port on a ClusterIP name), which
           # is accurate and useless to someone trying to connect.

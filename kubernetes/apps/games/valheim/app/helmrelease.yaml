@@ -95,6 +95,7 @@ spec:
           warden.dev/query-port: "2457"        # steam2 / A2S
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
+          warden.dev/password-env: "JOIN_VALHEIM"   # join password, spoilered on the panel
           warden.dev/address: "valheim.${SECRET_GAMING_DOMAIN}:2456"
           external-dns.alpha.kubernetes.io/hostname: valheim.${SECRET_GAMING_DOMAIN}
           towonel.io/tunnel: enable
