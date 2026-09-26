@@ -83,7 +83,10 @@ exclude:
       - '*.Stfolder'
       - syncthing
       - '*:Zone.Identifier'
-filesystem: { }
+filesystem:
+  structure:
+    default: "{platform}/roms/{game}"
+    firmware: "{platform}/bios"
 system:
   platforms:
     bbc: bbcmicro
