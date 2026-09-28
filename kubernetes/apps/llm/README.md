@@ -10,7 +10,8 @@ llmkube/            # operator: Model + InferenceService CRDs, shared model cach
                     # priority classes, the AMD DRA ResourceClaimTemplate
 litellm-operator/   # operator: LiteLLMProxy / LiteLLMModel / LiteLLMVirtualKey CRDs
 litellm/app/        # the proxy, its database, and the models it serves
-  llama-strix.yaml    #   Model + InferenceService (llama.cpp on the Framework)
+  qwen3.8-flash-next.yaml  # Model + InferenceService, the active model
+  qwen3.6-35b-a3b.yaml     # the alternative; kustomization.yaml picks one
   models/             #   LiteLLMModel: how the proxy addresses that backend
   virtualkey.yaml     #   per-consumer API key, pushed to 1Password
 toolhive/           # MCP tooling: the operator, the servers, and the gateway
@@ -41,7 +42,7 @@ requests the `gpu.amd.com` DeviceClass published by the ROCm
 2. **Authentik application** for litellm: redirect URI
    `https://litellm.${SECRET_DOMAIN}/sso/callback`, and a `litellm_role`
    property mapping (`internal_user` / `proxy_admin`).
-3. **The GGUF filename** in `litellm/app/llama-strix.yaml` was verified against
+3. **The GGUF filename** in `litellm/app/qwen3.6-35b-a3b.yaml` was verified against
    the repo on 2026-09-07 (~16.5GiB). Re-check it if this sits unapplied for a
    while — unsloth renames quant files between uploads, and a wrong name fails
    at download time, not at apply time.

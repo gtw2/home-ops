@@ -22,10 +22,13 @@ resources:
   # operation; the weights of both models stay cached on the node, so going back
   # costs one reconcile and no re-download.
   #
-  #   ./llama-flash-next.yaml  Qwen3.8-Flash-Next  UD-Q3_K_XL  ~83.8GiB weights
-  #   ./llama-strix.yaml       Qwen3.6-35B-A3B     UD-Q4_K_XL  ~22.9GiB weights
-  - ./llama-flash-next.yaml
-  # - ./llama-strix.yaml
+  #   ./qwen3.8-flash-next.yaml  Qwen3.8-Flash-Next  IQ4_NL      ~93.4GiB weights
+  #   ./qwen3.6-35b-a3b.yaml     Qwen3.6-35B-A3B     UD-Q4_K_XL  ~22.9GiB weights
+  #
+  # Files are named for the model they serve, not the service name, so the
+  # line below says what is actually running.
+  - ./qwen3.8-flash-next.yaml
+  # - ./qwen3.6-35b-a3b.yaml
   # LiteLLMModel: how the proxy addresses that pod
   - ./models
   # Grafana dashboards: one ConfigMap and one CR per dashboard, so they can be
