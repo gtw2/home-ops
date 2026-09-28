@@ -76,3 +76,50 @@ spec:
               memory: 256Mi
             limits:
               memory: 1Gi
+        # Keeps the optimizer's tool index warm. The index is built in memory
+        # by the FIRST session after the pod starts, and at 513 tools that
+        # build takes 3-4 minutes - so after every restart the first
+        # open-webui attempts hung in initialize and failed with "Failed to
+        # connect to MCP server 'mcp-gateway'" long before it finished.
+        # Concurrent first sessions each build their own copy too, so retrying
+        # made it slower (a second build overlapped the first and took 252s).
+        #
+        # There is no eager-build option on the CRD, so this opens a session
+        # itself: once as soon as the pod is up, then every 5 minutes so an
+        # index dropped by a backend change is rebuilt before a user needs it.
+        # Against a warm index this is a ~0.5s round trip.
+        #
+        # busybox wget cannot send DELETE, so each probe leaves one idle
+        # session behind for the gateway's session TTL to expire. The 660s
+        # timeout clears the 600s embeddingServiceTimeout.
+        - name: warmup
+          image: public.ecr.aws/docker/library/busybox:1.38
+          command:
+            - sh
+            - -c
+            - |
+              body='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"warmup","version":"1"}}}'
+              until wget -q -O /dev/null http://127.0.0.1:4483/readyz; do sleep 5; done
+              while true; do
+                start=$(date +%s)
+                if wget -q -O /dev/null -T 660 \
+                    --header 'Content-Type: application/json' \
+                    --header 'Accept: application/json, text/event-stream' \
+                    --post-data "$body" http://127.0.0.1:4483/mcp; then
+                  echo "warm: initialize took $(( $(date +%s) - start ))s"
+                else
+                  echo "warm: initialize FAILED after $(( $(date +%s) - start ))s"
+                fi
+                sleep 300
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 1m
+              memory: 4Mi
+            limits:
+              memory: 16Mi
