@@ -53,6 +53,18 @@ spec:
               # framework.internal:11434, retired when that host joined the
               # cluster.
               ENABLE_OLLAMA_API: false
+              # Context compaction: once a chat's history passes the threshold,
+              # the older messages are summarised by the chat model and the
+              # newest 40% (the retention default) are kept verbatim.
+              #
+              # The threshold is independent of the model's context size, and
+              # it is compared against an ESTIMATE - characters / 4 - which
+              # undercounts code, JSON tool output and non-English text. So it
+              # sits well under llama-strix-chat's 229376-token input limit
+              # (262144 context less 32768 reserved for output) rather than
+              # near it: 160000 leaves ~43% for the estimate to be wrong by.
+              ENABLE_CONTEXT_COMPACTION: true
+              CONTEXT_COMPACTION_TOKEN_THRESHOLD: 160000
               # Open-webui settings
               ENABLE_RAG_WEB_SEARCH: true
               ENABLE_SEARCH_QUERY: true
