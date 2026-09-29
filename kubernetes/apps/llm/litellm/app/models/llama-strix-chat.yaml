@@ -19,6 +19,11 @@ spec:
       top_p: 0.8
   info:
     mode: chat
-    maxInputTokens: 131072
+    # llama.cpp's context holds prompt AND generation, so input is the served
+    # contextSize (262144, one slot) less maxOutputTokens. Clients like Open
+    # WebUI read this as the context window. Change it with contextSize in
+    # qwen3.8-flash-next.yaml; it sat at 131072 from the scaffold long after
+    # the server moved to 262144.
+    maxInputTokens: 229376
     maxOutputTokens: 32768
     supportsFunctionCalling: true
