@@ -8,7 +8,7 @@ spec:
   # database, so the LiteLLMModel CRs stay the source of truth and a database
   # restore cannot resurrect a model that was deleted from git.
   applyMode: file
-  image: ghcr.io/berriai/litellm-database:v1.103.0@sha256:f4f114b1996c5923c4d62a7bbdcecb2ccf9df17bdebce76050f609be97f75f5c
+  image: ghcr.io/berriai/litellm-database:v1.103.2@sha256:bf6d8e366f41dfe44bffad59d996f4753710e0529e5ff648c2305829835c2ab7
   replicas: 2
   service:
     port: 4000
