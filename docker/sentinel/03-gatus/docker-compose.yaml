@@ -4,8 +4,7 @@ name: gatus
 services:
   gatus:
     container_name: gatus
-    # renovate: datasource=docker depName=ghcr.io/twin/gatus
-    image: v5.37.0
+    image: ghcr.io/twin/gatus:v5.37.0
     restart: unless-stopped
     deploy:
       resources:
