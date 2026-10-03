@@ -11,7 +11,7 @@ _.file = ["{{config_root}}/.secrets.env"]
 TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
 
 [tools]
-"python" = "3.14.7"
+"python" = "3.14.8"
 "uv" = "latest"
 "pipx:makejinja" = "2.9.1"
 "pipx:ansible-core" = "2.21.4"
