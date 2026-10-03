@@ -79,14 +79,10 @@ spec:
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
           warden.dev/password-env: "JOIN_DRAGONWILDS"   # join password, spoilered on the panel
-          # The towonel edge IP, not the hostname: the in-game Direct tab only
-          # accepts IP:port. Keep in sync with network/towonel/dns if the VPS
-          # ever moves.
+          # The towonel edge IP. There is deliberately no DNS name for this
+          # server: the in-game Direct tab only accepts IP:port. Keep in sync
+          # with network/towonel/dns if the VPS ever moves.
           warden.dev/address: "40.160.90.34:7777"
-          # Split horizon: unifi-dns answers the LAN with the LoadBalancer
-          # address; cloudflare-dns has no service source, so the public
-          # record keeps pointing at the towonel edge.
-          external-dns.alpha.kubernetes.io/hostname: dragonwilds.${SECRET_GAMING_DOMAIN}
           # Remote players must use the in-game Direct tab with the edge
           # address. The Worlds list advertises whatever public IP the server
           # reports to EOS, which is the home WAN (egress does not go through
