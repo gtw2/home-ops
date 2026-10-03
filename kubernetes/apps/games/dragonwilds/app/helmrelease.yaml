@@ -12,6 +12,10 @@ spec:
   values:
     defaultPodOptions:
       securityContext:
+        # The official image runs as steam (1000:1000) and owns its own paths.
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile: { type: RuntimeDefault }
@@ -21,19 +25,34 @@ spec:
           reloader.stakater.com/auto: "true"
         containers:
           app:
+            # Jagex's own image (github.com/runescape/rsdw-dedicated). It
+            # templates DedicatedServer.ini from RSDW_* on every start and runs
+            # SteamCMD app_update first, so a restart is an update.
             image:
-              repository: andyaltsys/dragonwilds-dedicated-server
-              tag: v0.3.5@sha256:7be58525bf0a55f1039c66f35291d1af31bb058d6f04d0bbcb055565b3a005e7
+              repository: ghcr.io/runescape/rsdw-dedicated
+              tag: 2.0.0@sha256:c35701edb05619fd28bfb37856b6a323c10bc8aa6466fb57b3e1b232936294dc
             env:
               TZ: ${TIMEZONE}
-              SERVER_PORT: &gameport 7778
-              ENABLE_AUTO_UPDATE: "true"
-              UPDATE_TIME: "3600"
-              BACKUP_DAILY: "true"
-              BACKUP_TIME: "3:00 AM"
-              BACKUP_AFTER_UPDATE: "true"
-              BACKUP_RETENTION_DAYS: "30"
-              ENABLE_DISCORD_NOTIF: "false"
+              # Defaults on purpose. Before upstream PR #17 the game ignored
+              # -Port and always bound 7777/8888, and the public Worlds list
+              # still advertises 7777 - any other number is asking for trouble.
+              # The beacon (world create/edit) is game port + 1111.
+              RSDW_PORT: &gameport 7777
+              RSDW_BEACON_PORT: &beaconport 8888
+              RSDW_SERVER_NAME: BustedRNG
+              # Case-sensitive, max 16 chars; this is what players search for,
+              # and the .sav filename under Saved/SaveGames.
+              RSDW_WORLD_NAME: ConfettiCannon
+              # Exit when Steam has a newer build and let Kubernetes restart
+              # the container - SteamCMD updates on start.
+              RSDW_AUTO_STOP_ON_UPDATE: "true"
+            # RSDW_OWNER_ID, RSDW_ADMIN_PASSWORD and RSDW_PASSWORD. All three
+            # must be set explicitly - the image randomises the passwords on
+            # every start otherwise, and an empty RSDW_PASSWORD means no
+            # password, not "unset".
+            envFrom:
+              - secretRef:
+                  name: dragonwilds-secret
             probes:
               liveness:
                 enabled: false
@@ -42,6 +61,7 @@ spec:
               startup:
                 enabled: false
             resources:
+              # 2Gi + 1Gi per player, six players max.
               requests:
                 cpu: 500m
                 memory: 4Gi
@@ -58,17 +78,38 @@ spec:
           warden.dev/display: "RuneScape: Dragonwilds"   # else derived from the key, without the space
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
-          # The game port on the LoadBalancer. Swap for a public hostname if
-          # this ever gets a DNS record, as palworld has.
-          warden.dev/address: "10.10.40.148:7778"
+          warden.dev/password-env: "JOIN_DRAGONWILDS"   # join password, spoilered on the panel
+          warden.dev/address: "dragonwilds.${SECRET_GAMING_DOMAIN}:7777"
+          # Split horizon: unifi-dns answers the LAN with the LoadBalancer
+          # address; cloudflare-dns has no service source, so the public
+          # record keeps pointing at the towonel edge.
+          external-dns.alpha.kubernetes.io/hostname: dragonwilds.${SECRET_GAMING_DOMAIN}
+          # Remote players must use the in-game Direct tab with the edge
+          # address. The Worlds list advertises whatever public IP the server
+          # reports to EOS, which is the home WAN (egress does not go through
+          # the tunnel), so joining from the list will fail with "connection
+          # lost" for anyone outside the LAN.
+          towonel.io/tunnel: enable
+          towonel.io/tunnel-ref: network/home-ops
+          towonel.io/dw-game.udp: "true"
+          towonel.io/dw-game.public-port: "7777"
+          towonel.io/dw-beacon.udp: "true"
+          towonel.io/dw-beacon.public-port: "8888"
         ports:
-          gameport:
+          dw-game:
             enabled: true
             port: *gameport
+            protocol: UDP
+          dw-beacon:
+            enabled: true
+            port: *beaconport
             protocol: UDP
     persistence:
       data:
         enabled: true
         existingClaim: *app
         globalMounts:
-          - path: /home/ubuntu/Steam
+          # subPath leaves the old andyaltsys /home/ubuntu/Steam tree at the
+          # volume root untouched; nothing in it is worth keeping.
+          - path: /home/steam/rsdw-dedicated
+            subPath: rsdw-dedicated

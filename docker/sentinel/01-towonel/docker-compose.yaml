@@ -4,8 +4,7 @@ name: towonel
 services:
   towonel-hub:
     container_name: towonel-hub
-    # renovate: datasource=docker depName=codeberg.org/towonel/towonel-node
-    image: 1.11.1
+    image: codeberg.org/towonel/towonel-node:1.11.1
     restart: unless-stopped
     user: "10001:10001"
     # Domain-bearing values only. SECRET_DOMAIN is sops-encrypted in this repo,
@@ -53,6 +52,8 @@ services:
       - "27015:27015/udp" # icarus steam query - UDP, distinct from factorio's TCP
       - "7779:7779/udp"   # windrose game
       - "7779:7779/tcp"   # windrose game, same port on both protocols
+      - "7777:7777/udp"   # dragonwilds game
+      - "8888:8888/udp"   # dragonwilds world-settings beacon
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8443/v1/health"]
       interval: 30s
