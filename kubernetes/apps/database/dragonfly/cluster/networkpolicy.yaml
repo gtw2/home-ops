@@ -1,8 +1,42 @@
+# Base ingress policy for dragonfly. dragonfly-operator v1.6.x generated an
+# equivalent policy itself; v1.7.0 removed that feature, so it is owned here.
+# Selecting the pods isolates them for ingress: 6379 is open within the
+# database namespace, and the admin/metrics port 9999 to the operator and peers.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dragonfly-base
+  namespace: database
+spec:
+  podSelector:
+    matchLabels:
+      app: dragonfly
+      app.kubernetes.io/name: dragonfly
+      app.kubernetes.io/part-of: dragonfly
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector: {}
+    ports:
+    - port: 6379
+      protocol: TCP
+  - from:
+    - podSelector:
+        matchLabels:
+          control-plane: controller-manager
+    - podSelector:
+        matchLabels:
+          app: dragonfly
+          app.kubernetes.io/name: dragonfly
+          app.kubernetes.io/part-of: dragonfly
+    ports:
+    - port: 9999
+      protocol: TCP
+---
 # Allow cross-namespace clients to reach dragonfly (port 6379).
-# Starting with dragonfly-operator v1.6.x, the operator generates a
-# NetworkPolicy that restricts 6379 to the database namespace only
-# (podSelector: {} with no namespaceSelector). NetworkPolicies are
-# additive, so this policy re-opens 6379 to the consuming namespaces.
+# dragonfly-base restricts 6379 to the database namespace; NetworkPolicies
+# are additive, so this policy opens it to the consuming namespaces.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -32,9 +66,8 @@ spec:
     - port: 6379
       protocol: TCP
 ---
-# Allow Prometheus to scrape dragonfly metrics (port 9999)
-# The dragonfly-operator creates a NetworkPolicy that restricts
-# port 9999 to only the operator pod. This policy adds Prometheus access.
+# Allow Prometheus to scrape dragonfly metrics (port 9999).
+# dragonfly-base restricts 9999 to the operator and peers; this adds Prometheus.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
