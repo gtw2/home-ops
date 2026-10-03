@@ -5,7 +5,7 @@ services:
   caddy:
     container_name: caddy-l4
     # renovate: datasource=docker depName=ghcr.io/bjw-s-labs/caddy-l4
-    image: ghcr.io/bjw-s-labs/caddy-l4:2.11.4
+    image: ghcr.io/bjw-s-labs/caddy-l4:2.11.6
     restart: unless-stopped
     env_file:
       - /opt/sentinel/env
