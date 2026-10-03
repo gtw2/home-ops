@@ -23,6 +23,11 @@ spec:
   chartRef:
     kind: OCIRepository
     name: gha-runner-scale-set
+  # On upgrade, the ARC controller deletes any AutoscalingRunnerSet whose version
+  # label doesn't match its own, expecting the scale-set chart to recreate it.
+  # Drift detection lets Flux put it back if that races with the Helm upgrade.
+  driftDetection:
+    mode: enabled
   install:
     remediation:
       retries: -1
