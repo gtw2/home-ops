@@ -38,6 +38,15 @@
       },
     },
     {
+      description: "Dragonfly Operator Group — chart, image and raw CRD manifest must move together",
+      groupName: "Dragonfly Operator",
+      matchDatasources: ["docker", "github-releases"],
+      matchPackageNames: ["/dragonflydb\\/(dragonfly-)?operator/"],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       description: "External Secrets Operator Group",
       groupName: "External Secrets Operator",
       matchDatasources: ["docker"],
