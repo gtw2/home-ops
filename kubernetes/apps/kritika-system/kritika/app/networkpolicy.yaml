@@ -33,9 +33,22 @@ spec:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: llm
             app: toolhive-embed
+        - matchLabels: &envoyExternal
+            k8s:io.kubernetes.pod.namespace: network
+            gateway.envoyproxy.io/owning-gateway-name: envoy-external
     # kritika serve creates and watches the runner Jobs through the API server.
     - fromEntities:
         - kube-apiserver
+  egress:
+    # OIDC discovery and token exchange: sso.${SECRET_DOMAIN} resolves to the
+    # envoy-external LoadBalancer IP in-cluster, and Cilium checks egress
+    # against the translated backend port (10443), not the 443 the chart allows.
+    - toEndpoints:
+        - matchLabels: *envoyExternal
+      toPorts:
+        - ports:
+            - port: "10443"
+              protocol: TCP
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
 # The same for runner pods, which the chart denies all ingress: their replies
