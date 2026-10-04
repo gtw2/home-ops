@@ -1,15 +1,23 @@
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
-# Supplements the chart's policies; Cilium allows the union of every policy
-# that selects a pod, so the chart's egress limits still hold.
+# Supplements the chart's policies. Cilium allows the union of every policy
+# that selects a pod, so each rule here widens what the chart allows; keep them
+# narrow (named peers, and ports where the direction allows it).
 #
-# Why: on this cluster's netkit datapath, a reply to a connection made through
-# a Service reaches the pod's ingress policy with its source already rewritten
-# to the Service IP. That misses the connection Cilium recorded against the
-# backend pod, so the reply is dropped as "Policy denied" (seen for Postgres's
-# SYN-ACK and for kube-dns answers). Allowing ingress from each peer the pod
-# talks to lets those replies through. The reference deployment
-# (onedr0p/home-ops) runs veth and needs none of this.
+# Ingress, for replies: on this cluster's netkit datapath, a reply to a
+# connection made through a Service reaches the pod's ingress policy with its
+# source already rewritten to the Service IP. That misses the connection Cilium
+# recorded against the backend pod, so the reply is dropped as "Policy denied"
+# (seen for Postgres's SYN-ACK and for kube-dns answers). Allowing ingress from
+# each peer the pod talks to lets those replies through.
+#
+# Egress, for one extra destination: kritika serve reaches Authentik through
+# envoy-external (see the rule below), which the chart's egress ports miss.
+#
+# The reference deployment (onedr0p/home-ops) runs veth and needs none of this.
+#
+# Pods are selected by component as well as name: runner pods also carry
+# app.kubernetes.io/name=kritika, and must not pick up the serve pods' rules.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -19,6 +27,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: kritika
       app.kubernetes.io/instance: kritika
+      app.kubernetes.io/component: server
   ingress:
     - fromEndpoints:
         - matchLabels:
@@ -71,3 +80,4 @@ spec:
         - matchLabels:
             app.kubernetes.io/name: kritika
             app.kubernetes.io/instance: kritika
+            app.kubernetes.io/component: server
