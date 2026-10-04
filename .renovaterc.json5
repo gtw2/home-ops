@@ -43,4 +43,29 @@
   kustomize: {
     managerFilePatterns: ["/^kustomization\\.ya?ml(?:\\.j2)?$/"],
   },
+  customManagers: [
+    {
+      // CNPG Clusters use `imageName:`, which the kubernetes manager does not match.
+      customType: "regex",
+      description: "Process CloudNativePG Cluster images",
+      managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+      matchStrings: [
+        "imageName: (?<depName>[^\\s:@]+):(?<currentValue>[^\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?",
+      ],
+      datasourceTemplate: "docker",
+    },
+  ],
+  packageRules: [
+    {
+      // A major bump triggers an offline pg_upgrade and needs a new barman serverName,
+      // so major upgrades are done by hand.
+      description: "Disable Postgres major updates for CNPG Clusters",
+      matchPackageNames: [
+        "ghcr.io/cloudnative-pg/postgresql",
+        "ghcr.io/tensorchord/cloudnative-vectorchord",
+      ],
+      matchUpdateTypes: ["major"],
+      enabled: false,
+    },
+  ],
 }
