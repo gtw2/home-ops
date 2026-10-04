@@ -12,7 +12,6 @@
     ":automergePr",
     ":configMigration",
     ":dependencyDashboard",
-    ":disableRateLimiting",
     "github>home-operations/renovate-config:annotated.json5",
     "github>home-operations/renovate-config:groups.json5",
     "github>home-operations/renovate-config:labels.json5",
@@ -23,7 +22,13 @@
     "local>gtw2/home-ops//.renovate/grafanDashboards.json5",
   ],
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
-  schedule: ["every weekend"],
+  // No schedule: updates open as they are released, rather than all at once on
+  // the weekend. Every PR is reviewed by kritika on the local model, which has
+  // one slot, so a weekend batch queued its reviews for hours. Instead cap new
+  // PRs per hour so reviews keep pace; leave concurrent PRs unlimited so open
+  // ones never hold back new updates.
+  prHourlyLimit: 2,
+  prConcurrentLimit: 0,
   ignorePaths: ["**/*.sops.*"],
   // The shared presets do not set framework manager file patterns, and Renovate's
   // defaults do not match this repo's kubernetes/** layout — keep these explicit or
