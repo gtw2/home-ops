@@ -67,6 +67,14 @@ jobs:
           RENOVATE_INTERNAL_CHECKS_FILTER: strict
           RENOVATE_PLATFORM: github
           RENOVATE_PLATFORM_COMMIT: true
+          # Authenticate to ghcr.io with the job's own token (packages: read,
+          # above). Anonymously, ghcr.io throttles the shared runner IPs: paging
+          # immich-machine-learning's ~208k tags hit 429s and its lookup failed
+          # with "no-result". Public images only need a valid token.
+          RENOVATE_HOST_RULES: >-
+            [{"matchHost": "ghcr.io", "hostType": "docker",
+              "username": "${{ github.actor }}",
+              "password": "${{ secrets.GITHUB_TOKEN }}"}]
         with:
           token: "${{ steps.app-token.outputs.token }}"
           renovate-version: "${{ inputs.version || 'latest' }}"
