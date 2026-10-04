@@ -1,0 +1,66 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/postgresql.cnpg.io/cluster_v1.json
+# Follows kritika's CloudNativePG guide: https://kritika.home-operations.com/database/
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: kritika-postgres
+spec:
+  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm@sha256:2257decb7de100886c14262e646a6dc10b70057005dbc7cae4b6693282727e2b
+  enableSuperuserAccess: false
+  primaryUpdateStrategy: unsupervised
+  # Update the standby first, then switch over to it, rather than restart the
+  # primary in place. This rejects an update that changes the image and the
+  # Postgres parameters at once: apply them one at a time.
+  primaryUpdateMethod: switchover
+  affinity:
+    # A node-local storage class with both instances on one node would take
+    # both down with that node.
+    podAntiAffinityType: required
+  storage:
+    size: 10Gi
+    storageClass: openebs-hostpath
+  postgresql:
+    extensions:
+      # VectorChord mounted as an image volume extension. Move the tag together
+      # with the vchord version in database.yaml.
+      - name: vchord
+        image:
+          reference: ghcr.io/tensorchord/vchord-scratch:pg18-v1.1.1@sha256:bdea43bed2a414e21bbf71767bf6f0739747ac480b267b51772dc214ac28dcb3
+        # The image keeps Debian's paths rather than CNPG's default
+        # /extensions/vchord/lib and /extensions/vchord/share.
+        dynamic_library_path:
+          - /usr/lib/postgresql/18/lib/
+        extension_control_path:
+          - /usr/share/postgresql/18/
+    shared_preload_libraries:
+      - vchord
+    # A commit waits for the standby while it is healthy, so a failover loses
+    # nothing; with the standby down, writes go on without it.
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: preferred
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: kritika-garage
+        # Note: serverName version needs to be incremented
+        # when recovering from an existing cnpg cluster
+        serverName: kritika-postgres-v1
+  bootstrap:
+    initdb:
+      database: kritika
+      # The owner role. It must not be a superuser; the Database resource
+      # creates the extensions as superuser on its behalf.
+      owner: kritika
+      secret:
+        name: kritika-postgres-credentials
