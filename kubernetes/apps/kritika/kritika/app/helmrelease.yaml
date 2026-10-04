@@ -1,0 +1,116 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/home-operations/kritika/main/charts/kritika/values.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kritika
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: kritika
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    # A changed Secret does not roll the pods on its own.
+    deploymentAnnotations:
+      reloader.stakater.com/auto: "true"
+    config:
+      # The one public URL: the dashboard, and GitHub's webhook at /hooks/github.
+      webUrl: https://kritika.${SECRET_DOMAIN}
+      authAdminPassword:
+        valueFrom:
+          secretKeyRef: { name: kritika-secret, key: ADMIN_PASSWORD }
+      authOidcName: Authentik
+      authOidcIssuer: https://sso.${SECRET_DOMAIN}/application/o/kritika/
+      # Not a secret, and the chart takes it only as a string: set the same
+      # Client ID on the Authentik provider.
+      authOidcClientId: kritika
+      authOidcClientSecret:
+        valueFrom:
+          secretKeyRef: { name: kritika-secret, key: OIDC_CLIENT_SECRET }
+      authOidcScopes: openid,email,profile
+      authOidcRolesClaim: groups
+      # Fails closed: anyone outside the group is refused.
+      authOidcRoleMappingExpr: '"authentik Admins" in roles ? "admin" : ""'
+    configFile:
+      apps:
+        github:
+          accounts: [gtw2]
+          clientId: { env: GITHUB_APP_CLIENT_ID }
+          privateKey: { env: GITHUB_APP_PRIVATE_KEY }
+          webhookSecret: { env: GITHUB_APP_WEBHOOK_SECRET }
+      providers:
+        # The Qwen model on the Framework, through LiteLLM. Local, so it reports
+        # no cost; tokens still count against the limits.
+        litellm:
+          type: openai
+          baseUrl: http://litellm.llm.svc.cluster.local:4000/v1
+          apiKey: { env: LITELLM_API_KEY }
+          # One slot behind the proxy: a busy server answers 5xx/429, which a
+          # retry outlasts.
+          retries: 2
+        embedder:
+          type: openai
+          baseUrl: http://toolhive-embed.llm.svc.cluster.local:8080/v1
+          apiKey: { env: EMBEDDER_API_KEY }
+      embedding:
+        model: embedder/toolhive-embed
+        # Qwen3-Embedding-0.6B
+        dims: 1024
+        # toolhive-embed is llama.cpp with a 32768-token context shared by 16
+        # slots; kritika's defaults (64 inputs, 200k characters) can overrun it.
+        maxBatch: 8
+        maxBatchChars: 60000
+        # A small embedder scores nearly everything above the 0.5 default.
+        similarFloor: 0.7
+      defaults:
+        models:
+          review: litellm/llama-strix-chat
+    envFrom:
+      - secretRef:
+          name: kritika-secret
+    database:
+      owner:
+        existingSecret: kritika-postgres-credentials
+      app:
+        existingSecret: kritika-postgres-app
+      runner:
+        existingSecret: kritika-postgres-runner
+    runner:
+      # Without these, runner pods are BestEffort with no memory limit.
+      resources:
+        requests: { cpu: 10m, memory: 128Mi }
+        limits: { memory: 1Gi }
+    networkPolicy:
+      enabled: true
+      type: cilium
+      # 443 for GitHub; 4000 for LiteLLM and 8080 for toolhive-embed, which
+      # kritika serve calls on the runners' behalf. Runner pods only ever reach
+      # DNS, Postgres and the gateway.
+      egressPorts: [443, 4000, 8080]
+    httpRoute:
+      enabled: true
+      parentRefs:
+        - name: envoy-external
+          namespace: network
+      hostnames:
+        - kritika.${SECRET_DOMAIN}
+    monitoring:
+      serviceMonitor:
+        enabled: true
+      prometheusRule:
+        enabled: true
+      dashboards:
+        enabled: true
+        grafanaOperator:
+          enabled: true
+          folder: LLM
+          matchLabels:
+            grafana.internal/instance: grafana

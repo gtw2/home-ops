@@ -1,0 +1,60 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app kritika-database
+  namespace: &namespace kritika
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    - name: cloudnative-pg
+      namespace: database
+    - name: cloudnative-pg-plugin-barman-cloud
+      namespace: database
+    - name: external-secrets-stores
+      namespace: external-secrets
+  path: ./kubernetes/apps/kritika/kritika/db
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  wait: true
+  interval: 30m
+  retryInterval: 1m
+  timeout: 10m
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app kritika
+  namespace: &namespace kritika
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    # The vchord and vector extensions must exist before kritika's first start.
+    - name: kritika-database
+      namespace: *namespace
+    # The LiteLLM virtual key is minted there and pushed to 1Password.
+    - name: litellm
+      namespace: llm
+    - name: external-secrets-stores
+      namespace: external-secrets
+  path: ./kubernetes/apps/kritika/kritika/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  wait: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m

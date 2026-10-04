@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/postgresql.cnpg.io/databaserole_v1.json
+# kritika's migrations grant these roles what they need.
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: kritika-app
+spec:
+  cluster:
+    name: kritika-postgres
+  name: kritika_app
+  login: true
+  passwordSecret:
+    name: kritika-postgres-app
+  # Deleting this resource leaves the role, so a running kritika keeps its
+  # connections.
+  databaseRoleReclaimPolicy: retain
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/postgresql.cnpg.io/databaserole_v1.json
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: kritika-runner
+spec:
+  cluster:
+    name: kritika-postgres
+  name: kritika_runner
+  login: true
+  passwordSecret:
+    name: kritika-postgres-runner
+  databaseRoleReclaimPolicy: retain

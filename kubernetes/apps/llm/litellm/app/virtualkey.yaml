@@ -34,3 +34,38 @@ spec:
   # No PushSecret for this one, unlike open-webui: memini runs in this namespace
   # and reads the minted Secret directly with a secretKeyRef, so the key never
   # needs to travel through 1Password.
+---
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMVirtualKey
+metadata:
+  name: kritika
+spec:
+  proxyRef: litellm
+  keyAlias: kritika
+  secretName: litellm-key-kritika
+  secretKey: api-key
+  # Scoped: kritika is an automated consumer that only ever asks for the review
+  # model. Embeddings go straight to toolhive-embed, as memini's do.
+  models:
+    - llama-strix-chat
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/external-secrets.io/pushsecret_v1alpha1.json
+apiVersion: external-secrets.io/v1alpha1
+kind: PushSecret
+metadata:
+  name: kritika
+spec:
+  # kritika lives in its own namespace, so the minted key goes back to
+  # 1Password and kritika's ExternalSecret pulls it from there.
+  secretStoreRefs:
+    - name: onepassword-connect
+      kind: ClusterSecretStore
+  selector:
+    secret:
+      name: litellm-key-kritika
+  data:
+    - match:
+        secretKey: api-key
+        remoteRef:
+          remoteKey: litellm
+          property: LITELLM_KRITIKA_API_KEY
