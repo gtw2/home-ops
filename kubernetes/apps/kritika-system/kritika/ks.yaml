@@ -4,7 +4,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app kritika-database
-  namespace: &namespace kritika
+  namespace: &namespace kritika-system
 spec:
   targetNamespace: *namespace
   commonMetadata:
@@ -17,7 +17,7 @@ spec:
       namespace: database
     - name: external-secrets-stores
       namespace: external-secrets
-  path: ./kubernetes/apps/kritika/kritika/db
+  path: ./kubernetes/apps/kritika-system/kritika/db
   prune: true
   sourceRef:
     kind: GitRepository
@@ -33,7 +33,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app kritika
-  namespace: &namespace kritika
+  namespace: &namespace kritika-system
 spec:
   targetNamespace: *namespace
   commonMetadata:
@@ -48,7 +48,7 @@ spec:
       namespace: llm
     - name: external-secrets-stores
       namespace: external-secrets
-  path: ./kubernetes/apps/kritika/kritika/app
+  path: ./kubernetes/apps/kritika-system/kritika/app
   prune: true
   sourceRef:
     kind: GitRepository
