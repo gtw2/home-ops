@@ -72,6 +72,21 @@ spec:
         similarFloor: 0.7
       review:
         model: litellm/llama-strix-chat
+      agent:
+        # For the renovate-review skill: upstream release notes through gh,
+        # and jq/yq/rg to read this repository. Runner egress is left at its
+        # default, github.com and api.github.com, which is all gh needs; curl
+        # is left out since nothing else is reachable.
+        commands: [gh, jq, yq, rg]
+      trigger:
+        # Konflate posts its rendered diff within a minute or so of a push;
+        # wait for it so the review can read it.
+        settle: 2m
+        exclude:
+          # Renovate merges these itself (.renovate/autoMerge.json5), so a
+          # review would only hold the local model's single slot.
+          - name: automerge
+            expr: 'pr.body.contains("**Automerge**: Enabled.")'
     envFrom:
       - secretRef:
           name: kritika-secret
