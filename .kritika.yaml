@@ -1,0 +1,8 @@
+---
+# yaml-language-server: $schema=https://kritika.home-operations.com/kritika.schema.json
+skills:
+  scope:
+    # Offered only to Renovate PRs, so other reviews don't spend the local
+    # model's single slot reading it.
+    renovate-review:
+      when: [{ expr: pr.headRef.startsWith("renovate/") }]
