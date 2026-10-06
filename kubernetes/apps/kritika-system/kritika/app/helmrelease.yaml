@@ -70,9 +70,8 @@ spec:
         maxBatchChars: 60000
         # A small embedder scores nearly everything above the 0.5 default.
         similarFloor: 0.7
-      defaults:
-        models:
-          review: litellm/llama-strix-chat
+      review:
+        model: litellm/llama-strix-chat
     envFrom:
       - secretRef:
           name: kritika-secret
