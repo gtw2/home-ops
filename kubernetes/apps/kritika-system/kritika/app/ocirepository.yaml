@@ -12,5 +12,5 @@ spec:
   ref:
     # Pre-1.0 and moving fast: config and schema change between releases, so
     # read the changelog before merging a bump.
-    tag: 0.0.34
+    tag: 0.0.36
   url: oci://ghcr.io/home-operations/charts/kritika
