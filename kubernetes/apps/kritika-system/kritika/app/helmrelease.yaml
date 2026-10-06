@@ -74,13 +74,37 @@ spec:
         model: litellm/llama-strix-chat
       agent:
         # For the renovate-review skill: upstream release notes through gh,
-        # and jq/yq/rg to read this repository. Runner egress is left at its
-        # default, github.com and api.github.com, which is all gh needs; curl
-        # is left out since nothing else is reachable.
-        commands: [gh, jq, yq, rg]
+        # rendering through flate (runner.tools), and jq/yq/rg to read this
+        # repository. No curl: egress below is only what flate fetches.
+        commands: [gh, flate, jq, yq, rg]
+      egress:
+        # Where flate fetches this repository's chart sources, beyond the
+        # github.com and api.github.com the app allows. Exact hosts rather than
+        # "*": a PR's head could otherwise point a source anywhere. Each
+        # registry's token realm is on its own host. Re-check when a source
+        # moves to a new registry.
+        allow:
+          # OCI charts: ghcr.io redirects blobs to pkg-containers, quay.io to
+          # cdnNN.quay.io, gsoci.azurecr.io (silence-operator) to Azure blob
+          # storage, whose account name varies by replica.
+          - ghcr.io
+          - pkg-containers.githubusercontent.com
+          - quay.io
+          - "*.quay.io"
+          - mirror.gcr.io
+          - gsoci.azurecr.io
+          - "*.blob.core.windows.net"
+          - registry.erwanleboucher.dev
+          # HelmRepository indexes; external-dns and metrics-server tarballs
+          # are GitHub release assets.
+          - kubernetes-sigs.github.io
+          - rocm.github.io
+          - release-assets.githubusercontent.com
+          # dragonfly-operator's CRD, a remote kustomize resource.
+          - raw.githubusercontent.com
       trigger:
-        # Konflate posts its rendered diff within a minute or so of a push;
-        # wait for it so the review can read it.
+        # Konflate posts its image check and blast radius within a minute or
+        # so of a push; wait for it so the review can read it.
         settle: 2m
         exclude:
           # Renovate merges these itself (.renovate/autoMerge.json5), so a
@@ -98,10 +122,16 @@ spec:
       runner:
         existingSecret: kritika-postgres-runner
     runner:
-      # Without these, runner pods are BestEffort with no memory limit.
+      # Without these, runner pods are BestEffort with no memory limit. A
+      # runner's flate cache always starts cold, and a cold one-namespace
+      # render of this tree peaked at ~1.7GiB (kritika, cilium; flate 0.6.5).
       resources:
-        requests: { cpu: 10m, memory: 128Mi }
-        limits: { memory: 1Gi }
+        requests: { cpu: 10m, memory: 512Mi }
+        limits: { memory: 3Gi }
+      # Statically linked; /flate in the image, the default path and command.
+      tools:
+        - name: flate
+          image: ghcr.io/home-operations/flate:0.6.5@sha256:e0e2d2de97539b3141977e8bb3bbb50ea5c5afe89477950e5fa972c9862478da
     networkPolicy:
       enabled: true
       type: cilium
