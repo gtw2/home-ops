@@ -1,9 +1,6 @@
 ---
 # yaml-language-server: $schema=https://kritika.home-operations.com/kritika.schema.json
 review:
-  # Nits go in the summary rather than inline, so the inline threads are the
-  # findings that need a decision.
-  feedback: standard
   # A review with nothing blocking or important approves, so a clean PR
   # shows up as approved; a later review that finds something withdraws it.
   approve: true
