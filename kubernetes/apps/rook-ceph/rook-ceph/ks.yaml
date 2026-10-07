@@ -23,6 +23,9 @@ metadata:
 spec:
   dependsOn:
     - name: rook-ceph
+    # Rook's upgrade order since 1.20: rook-ceph, then ceph-csi-drivers, then
+    # rook-ceph-cluster.
+    - name: ceph-csi-drivers
     - name: kopiur
       namespace: kopiur-system
   healthChecks:
