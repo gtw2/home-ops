@@ -30,6 +30,10 @@ spec:
               UP_UNIFI_DEFAULT_URL: https://10.10.40.1
               UP_PROMETHEUS_HTTP_LISTEN: 0.0.0.0:80
               UP_INFLUXDB_DISABLE: true
+              # The speed-test history (aggregated-dashboard, 24h) took 46s of a
+              # ~2.5min poll on UniFi Network 10.6.106, and nothing here reads
+              # unpoller_speedtest_*.
+              UP_UNIFI_DEFAULT_SAVE_SPEEDTEST: false
             envFrom:
               - secretRef:
                   name: unpoller-secret
@@ -46,6 +50,19 @@ spec:
                   timeoutSeconds: 1
                   failureThreshold: 3
               readiness: *probes
+              # The scrape cache runs one full controller poll before the HTTP
+              # listener opens, so /health refuses until it finishes: ~2.5min on
+              # 2026-10-07, past the ~30s liveness allows. This gives it 5min.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  failureThreshold: 30
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
