@@ -10,6 +10,14 @@ spec:
     name: rook-ceph
   interval: 1h
   values:
+    # No CSI images here on purpose. From Rook 1.21 the chart leaves
+    # rook-csi-operator-image-set-configmap empty, and ceph-csi-operator runs
+    # its own built-in defaults (internal/controller/defaults.go): a set it
+    # releases and tests together, which per-image Renovate bumps would split.
+    # The cost is that they move with the operator without a line in the diff,
+    # so check them on each operator bump. ceph-csi-operator v1.1.0 (Rook
+    # 1.21.0): cephcsi v3.18.1, csiaddons sidecar v0.15.1, provisioner v6.3.0,
+    # attacher v4.13.0, resizer v2.2.1, snapshotter v8.6.0, registrar v2.18.0.
     csi:
       serviceMonitor:
         enabled: true
