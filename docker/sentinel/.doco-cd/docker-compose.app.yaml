@@ -22,12 +22,16 @@ services:
       TZ: America/New_York
       WEBHOOK_SECRET_FILE: /run/secrets/webhook_secret
     healthcheck:
-      test: ["CMD", "/doco-cd", "healthcheck"]
+      # The small /healthcheck binary (0.124+) rather than `/doco-cd
+      # healthcheck`, which pages most of the 101MiB main binary back in on
+      # every check. Images before 0.124 do not ship it: a rollback past
+      # 0.124 has to put the old command back.
+      test: ["CMD", "/healthcheck"]
       start_period: 15s
       interval: 30s
       timeout: 5s
       retries: 3
-    image: ghcr.io/kimdre/doco-cd:0.123
+    image: ghcr.io/kimdre/doco-cd:0.124
     restart: unless-stopped
     secrets:
       - api_secret
