@@ -39,9 +39,13 @@ spec:
           pluginConfig:
             - name: DefaultEvictor
               args:
-                evictFailedBarePods: true
-                evictLocalStoragePods: true
-                evictSystemCriticalPods: true
+                # The same three evictions the deprecated evict* booleans
+                # enabled, in the podProtections form that replaces them.
+                podProtections:
+                  defaultDisabled:
+                    - FailedBarePods
+                    - PodsWithLocalStorage
+                    - SystemCriticalPods
             - name: RemoveFailedPods
               args:
                 reasons:
