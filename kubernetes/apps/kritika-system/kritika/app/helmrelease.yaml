@@ -77,6 +77,10 @@ spec:
         # rendering through flate (runner.tools), and jq/yq/rg to read this
         # repository. No curl: egress below is only what flate fetches.
         commands: [gh, flate, jq, yq, rg]
+        # The 20m default cut reviews off mid-run on the local model: every
+        # step succeeded, they just added up (PRs #1676 and #1677). The runner
+        # deadline follows this plus 5m on its own.
+        timeout: 45m
       egress:
         # Where flate fetches this repository's chart sources, beyond the
         # github.com and api.github.com the app allows. Exact hosts rather than
