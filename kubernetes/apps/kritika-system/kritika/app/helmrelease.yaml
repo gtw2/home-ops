@@ -72,6 +72,18 @@ spec:
         similarFloor: 0.7
       review:
         model: litellm/llama-strix-chat
+      limits:
+        # Model calls at once, per model. The default 2 does not exist on a
+        # one-slot server: two reviews' conversations took turns on it, each
+        # step evicting the other's context (148 such requests in 72h of
+        # llama-strix logs, 2026-10-07). From 0.0.45 a large review's parts
+        # also run in these slots, so every split review would interleave the
+        # same way, and a step queued behind another's 16384-token generation
+        # (~7.5m at 36 tok/s) can pass the 5m mark kritika treats as a
+        # timeout. At 1 the parts run one after another, which is all the
+        # slot allows anyway. It also caps index embedding at one slot, which
+        # a review's similar-code lookup can wait behind.
+        concurrency: 1
       agent:
         # For the renovate-review skill: upstream release notes through gh,
         # rendering through flate (runner.tools), and jq/yq/rg to read this
