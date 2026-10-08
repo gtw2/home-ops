@@ -1,0 +1,130 @@
+---
+# The RTX 3090 in the workstation as an opportunistic fast tier for the
+# cluster's LiteLLM proxy. Not reconciled by anything: started and stopped by
+# hand (or by a guard that stops it while a game holds the GPU), so a merge
+# here changes nothing until `docker compose up -d` is run on the workstation.
+#
+# Reached on 10.10.40.30, the 10G NIC's static address on the server segment,
+# reserved out of Cilium's LB pool (kube-system/cilium/app/networking.yaml).
+# That segment has no router firewall between it and the cluster, so this
+# listens on that address only, and the API key is the gate.
+#
+# One-time setup on the workstation:
+#   pacman -S nvidia-container-toolkit
+#   nvidia-ctk runtime configure --runtime=docker && systemctl restart docker
+#   install -d /var/lib/llama-desk/models /etc/llama-desk
+#   openssl rand -hex 32 > /etc/llama-desk/api-keys; chmod 600 /etc/llama-desk/api-keys
+#   curl -fL -o /var/lib/llama-desk/models/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf \
+#     https://huggingface.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF/resolve/5bc3e238d916f48a861bac2f8a1990a0e9b7e98d/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+#
+# The URL pins the repo revision (2026-05-20): unsloth renames quant files
+# between uploads, and main would 404 the next time this is set up.
+name: llama-desk
+
+services:
+  llama-server:
+    container_name: llama-desk
+    # cuda13: driver 610 supports it, and CUDA 13 still builds sm_86 (Ampere).
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13-b11459@sha256:695214dcb4d4062014335702caee98836bbf92c5974b78331c70e152176cbf08
+    # unless-stopped, not always: a container the GPU guard stopped for a game
+    # must stay stopped across a docker restart.
+    restart: unless-stopped
+    # Host networking so the bind address below is the real one. A published
+    # port would go through Docker's own iptables chains and bypass ufw.
+    network_mode: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    secrets:
+      - api_keys
+    volumes:
+      - /var/lib/llama-desk/models:/models:ro
+    # The image's own check curls localhost:8080, which nothing listens on
+    # once the server binds to 10.10.40.30.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://10.10.40.30:8080/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 2m
+    command:
+      - --host
+      - 10.10.40.30
+      - --port
+      - "8080"
+      - --api-key-file
+      - /run/secrets/api_keys
+      - --no-webui
+      - --metrics
+      - --alias
+      - llama-desk
+      # WEIGHTS: UD-IQ4_XS, 16.96GiB including the MTP layers. Chosen to fit,
+      # not measured against neighbours: the desktop session holds ~2.4GiB of
+      # the 24GiB, leaving ~21.5GiB for weights, KV and compute buffers.
+      # UD-Q4_K_XL (21.28GiB, what the in-cluster qwen3.6 manifest serves) does
+      # not fit. If this OOMs, UD-Q3_K_XL (16.04GiB) or --n-cpu-moe N, which
+      # moves N layers of experts into system RAM, are the two ways down.
+      #
+      # No mmproj: vision costs another 0.84GiB and the fast tier serves text.
+      - --model
+      - /models/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+      - --n-gpu-layers
+      - "99"
+      # 131072 shared by both slots (--kv-unified), so one long agent context
+      # and a short task request can coexist. Unmeasured starting point; the
+      # LiteLLM model's maxInputTokens must follow this.
+      - --ctx-size
+      - "131072"
+      - --parallel
+      - "2"
+      - --kv-unified
+      - --flash-attn
+      - "on"
+      - --jinja
+      - --cache-type-k
+      - q8_0
+      - --cache-type-v
+      - q8_0
+      # Host-side prompt cache. The workstation has ~125GiB of RAM, so this is
+      # bounded by what the desktop can spare, not by the node budget that
+      # limits llama-strix.
+      - --cache-ram
+      - "8192"
+      # MTP and sampling are copied from the in-cluster qwen3.6-35b-a3b.yaml,
+      # the same model on a different backend. Not re-measured on CUDA.
+      - --spec-type
+      - draft-mtp
+      - --spec-draft-p-min
+      - "0.75"
+      - --spec-draft-n-max
+      - "3"
+      - --spec-draft-type-k
+      - q8_0
+      - --spec-draft-type-v
+      - q8_0
+      - --temp
+      - "0.6"
+      - --top-p
+      - "0.95"
+      - --top-k
+      - "20"
+      - --min-p
+      - "0"
+      - --presence-penalty
+      - "0"
+      - --repeat-penalty
+      - "1"
+      - --chat-template-kwargs
+      - '{"preserve_thinking":true}'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+secrets:
+  api_keys:
+    file: /etc/llama-desk/api-keys
