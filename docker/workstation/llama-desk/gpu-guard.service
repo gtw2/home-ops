@@ -1,0 +1,22 @@
+# Stops llama-desk while a game wants the RTX 3090 (see gpu-guard).
+#
+#   sudo install -m 755 gpu-guard /usr/local/bin/gpu-guard
+#   sudo install -m 644 gpu-guard.service /etc/systemd/system/
+#   sudo systemctl enable --now gpu-guard
+#
+# Environment= overrides GPU_GUARD_EXTRA, _GRACE and _INTERVAL; the defaults
+# and why are in the script.
+[Unit]
+Description=Stop llama-desk while a game wants the RTX 3090
+Requires=docker.service
+After=docker.service
+
+[Service]
+ExecStart=/usr/local/bin/gpu-guard run
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
