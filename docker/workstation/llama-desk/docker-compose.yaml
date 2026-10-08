@@ -1,8 +1,9 @@
 ---
 # The RTX 3090 in the workstation as an opportunistic fast tier for the
-# cluster's LiteLLM proxy. Not reconciled by anything: started and stopped by
-# hand (or by a guard that stops it while a game holds the GPU), so a merge
-# here changes nothing until `docker compose up -d` is run on the workstation.
+# cluster's LiteLLM proxy. Not reconciled by anything: brought up by hand, and
+# stopped and started again around games by gpu-guard (beside this file), so a
+# merge here changes nothing until `docker compose up -d` is run on the
+# workstation.
 #
 # Reached on 10.10.40.30, the 10G NIC's static address on the server segment,
 # reserved out of Cilium's LB pool (kube-system/cilium/app/networking.yaml).

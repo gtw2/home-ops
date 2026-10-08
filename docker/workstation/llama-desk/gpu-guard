@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# gpu-guard: keeps llama-desk (docker-compose.yaml beside this) off the RTX
+# 3090 while the desktop wants it, and puts it back once the desktop is done.
+#
+#   gpu-guard run      the loop; what gpu-guard.service runs
+#   gpu-guard off      stop llama-desk and keep it stopped until `on`
+#   gpu-guard on       let it run again (now, unless a game is running)
+#   gpu-guard status   what the guard sees
+#
+# Runs as root, because the docker socket is root's on this machine.
+#
+# The guard only starts a container that it stopped itself. A `docker stop`
+# or `docker compose down` by hand stays down, and `restart: unless-stopped`
+# in the compose file keeps a guard-stopped container stopped across a
+# reboot. The marker saying the guard did it lives under /var/lib, not /run,
+# so after that reboot the guard still knows to start it again.
+#
+# Losing the server mid-request is fine: HAProxy in the cluster notices within
+# about 4-10s and LiteLLM's fallback sends the retry to llama-strix.
+set -euo pipefail
+
+CONTAINER=${GPU_GUARD_CONTAINER:-llama-desk}
+# Steam starts every game, native or Proton, under its reaper:
+# `reaper SteamLaunch AppId=<id> -- <game>`. The Steam client alone, idle in
+# the tray, runs no reaper. Matched by process name first and arguments
+# second: a pattern matched against every command line also matches any
+# shell or editor that merely has the text in its arguments.
+#
+# GPU_GUARD_EXTRA adds other programs, as an extended regex of process names
+# matched whole, e.g. 'blender|resolve'.
+EXTRA=${GPU_GUARD_EXTRA:-}
+INTERVAL=${GPU_GUARD_INTERVAL:-5}
+# How long the GPU must stay free before llama-desk comes back. A game that
+# restarts itself, or a launcher that exits before the game starts, would
+# otherwise bounce an 18GB model load into the middle of it.
+GRACE=${GPU_GUARD_GRACE:-60}
+STATE_DIR=${GPU_GUARD_STATE_DIR:-/var/lib/llama-desk}
+HOLD=$STATE_DIR/hold
+STOPPED=$STATE_DIR/guard-stopped
+
+log() { printf '%s\n' "$*"; }
+
+running() {
+    [[ $(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null) == true ]]
+}
+
+# Prints why the desktop wants the GPU, and fails when it does not.
+wanted() {
+    local match
+    if [[ -e $HOLD ]]; then
+        echo "held by gpu-guard off"
+        return 0
+    fi
+    match=$(pgrep -a -x reaper | grep -m1 -E 'SteamLaunch AppId=[0-9]+' || true)
+    if [[ -z $match && -n $EXTRA ]]; then
+        match=$(pgrep -a -x -- "$EXTRA" | head -n1 || true)
+    fi
+    [[ -n $match ]] || return 1
+    echo "${match:0:200}"
+}
+
+stop_llm() {
+    if docker stop -t 10 "$CONTAINER" >/dev/null; then
+        touch "$STOPPED"
+    else
+        log "could not stop $CONTAINER"
+    fi
+}
+
+start_llm() {
+    if docker start "$CONTAINER" >/dev/null; then
+        rm -f "$STOPPED"
+    else
+        # Gone, most likely by `docker compose down`: nothing to start until
+        # it is brought up by hand, so stop trying.
+        log "could not start $CONTAINER; leaving it to docker compose up"
+        rm -f "$STOPPED"
+    fi
+}
+
+run() {
+    local reason free_since=0
+    mkdir -p "$STATE_DIR"
+    log "watching for Steam games${EXTRA:+ and: $EXTRA} (every ${INTERVAL}s, ${GRACE}s grace)"
+    while :; do
+        if reason=$(wanted); then
+            free_since=0
+            if running; then
+                log "GPU wanted ($reason): stopping $CONTAINER"
+                stop_llm
+            fi
+        elif [[ -e $STOPPED ]]; then
+            if running; then
+                # Brought back by hand meanwhile: the marker is stale.
+                rm -f "$STOPPED"
+            elif ((free_since == 0)); then
+                free_since=$SECONDS
+            elif ((SECONDS - free_since >= GRACE)); then
+                log "GPU free for ${GRACE}s: starting $CONTAINER"
+                start_llm
+                free_since=0
+            fi
+        fi
+        sleep "$INTERVAL"
+    done
+}
+
+off() {
+    mkdir -p "$STATE_DIR"
+    touch "$HOLD"
+    if running; then
+        stop_llm
+    fi
+    log "$CONTAINER held off until: gpu-guard on"
+}
+
+on() {
+    local reason
+    rm -f "$HOLD"
+    if reason=$(wanted); then
+        log "hold lifted, but the GPU is in use ($reason); the guard starts $CONTAINER ${GRACE}s after it is free"
+    elif [[ -e $STOPPED ]]; then
+        start_llm
+        log "$CONTAINER started"
+    else
+        log "hold lifted; $CONTAINER was not stopped by the guard, so it is left as it is"
+    fi
+}
+
+status() {
+    local reason
+    if running; then echo "$CONTAINER: running"; else echo "$CONTAINER: stopped"; fi
+    if reason=$(wanted); then echo "GPU wanted: $reason"; else echo "GPU free"; fi
+    [[ -e $HOLD ]] && echo "hold: on (gpu-guard on to lift)"
+    [[ -e $STOPPED ]] && echo "stopped by the guard: yes, it starts it again"
+    return 0
+}
+
+case ${1:-} in
+    run | off | on | status) "$1" ;;
+    *)
+        echo "usage: gpu-guard run|off|on|status" >&2
+        exit 2
+        ;;
+esac
