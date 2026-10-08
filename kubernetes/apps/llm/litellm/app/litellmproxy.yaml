@@ -91,6 +91,17 @@ spec:
       - llama-fast: [llama-strix-chat]
     context_window_fallbacks:
       - llama-fast: [llama-strix-chat]
+    # No retries before that fallback. llama-fast has one deployment, and
+    # LiteLLM never cools down a group's only deployment, so with the global
+    # num_retries every request retried the dead 3090 before falling back:
+    # 5.6-8.1s against 0.8s straight to llama-strix-chat (measured
+    # 2026-10-08). DefaultRetries covers every error type, not just
+    # HAProxy's 503 (ServiceUnavailableError): a connection gpu-guard cuts
+    # mid-request is an APIConnectionError, which no named field matches.
+    # The fallback itself runs as llama-strix-chat and keeps num_retries.
+    model_group_retry_policy:
+      llama-fast:
+        DefaultRetries: 0
   litellmSettings:
     success_callback:
       - prometheus
