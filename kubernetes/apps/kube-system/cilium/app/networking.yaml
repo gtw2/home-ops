@@ -5,9 +5,17 @@ kind: CiliumLoadBalancerIPPool
 metadata:
   name: pool
 spec:
-  allowFirstLastIPs: "No"
+  # Ranges, not the whole /24: the pool shares its subnet with real hosts, and a
+  # Service handed a host's address advertises it over BGP and steals its
+  # traffic from anywhere off-segment. .1 is the gateway; .21-.39 is reserved
+  # for static host addresses - .21-.25 the Talos nodes, .30 the workstation's
+  # 10G NIC (docker/workstation/llama-desk). .20 stays poolable on purpose:
+  # it is both the Talos VIP and the kube-api Service below.
   blocks:
-    - cidr: "10.10.40.0/24"
+    - start: "10.10.40.2"
+      stop: "10.10.40.20"
+    - start: "10.10.40.40"
+      stop: "10.10.40.254"
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cilium.io/ciliumbgpadvertisement_v2.json
 apiVersion: cilium.io/v2
