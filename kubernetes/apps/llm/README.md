@@ -14,6 +14,7 @@ litellm/app/        # the proxy, its database, and the models it serves
   qwen3.6-35b-a3b.yaml     # the alternative; kustomization.yaml picks one
   models/             #   LiteLLMModel: how the proxy addresses that backend
   virtualkey.yaml     #   per-consumer API key, pushed to 1Password
+llama-desk/         # HAProxy in front of the workstation 3090 (llama-fast)
 toolhive/           # MCP tooling: the operator, the servers, and the gateway
   crds/ app/          #   operator install, split so CRDs land first
   config/             #   MCPGroup, embedding model, VirtualMCPServer, route
@@ -67,6 +68,25 @@ every pod start, so `llama-strix` overrides it with `modelCache.claimName`
 pointing at a 500Gi `openebs-hostpath` claim on the Framework's own NVMe
 (`nvme1n1p1`, 4.1TB). openebs-hostpath provisions fine on the tainted node: the
 localpv helper pod copies the target node's taints into its own tolerations.
+
+## The fast tier (llama-fast)
+
+`llama-fast` is Qwen3.6-35B-A3B on the workstation's RTX 3090, served by the
+Compose stack in `docker/workstation/llama-desk/` on `10.10.40.30`. It is up
+only while the desktop is not using the GPU, so it is a tier, not a
+dependency:
+
+`client -> litellm (llama-fast) -> llama-desk (HAProxy) -> workstation:8080`
+
+When the workstation is down, HAProxy answers 503 at once and LiteLLM's
+`fallbacks` send the request to `llama-strix-chat`, as do
+`context_window_fallbacks` for prompts over its 114688 input tokens. Open
+WebUI's task calls (`TASK_MODEL_EXTERNAL`) use it, which keeps those short
+calls off llama-strix's single slot whenever the 3090 is free. Whether the
+3090 is up is `haproxy_server_status` from the llama-desk ServiceMonitor.
+
+The API key is `LLAMA_DESK_API_KEY` on the 1Password `litellm` item; the
+workstation reads the same field into `/etc/llama-desk/api-keys`.
 
 ## Adding a model
 

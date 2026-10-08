@@ -53,6 +53,12 @@ spec:
               # framework.internal:11434, retired when that host joined the
               # cluster.
               ENABLE_OLLAMA_API: false
+              # Titles, tags, follow-ups and search queries go to the fast tier.
+              # On llama-strix's single slot each of these short calls swapped
+              # out the context of whatever long conversation held it. When the
+              # 3090 is busy, llama-fast falls back to llama-strix-chat, which is
+              # where these went before.
+              TASK_MODEL_EXTERNAL: llama-fast
               # Context compaction: once a chat's history passes the threshold,
               # the older messages are summarised by the chat model and the
               # newest 40% (the retention default) are kept verbatim.
