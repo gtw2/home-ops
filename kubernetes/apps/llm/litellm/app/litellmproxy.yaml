@@ -82,6 +82,15 @@ spec:
     routing_strategy: simple-shuffle
     cooldown_time: 30
     enable_pre_call_checks: true
+    # llama-fast is the workstation 3090, which is down whenever the desktop
+    # uses its GPU or sleeps. HAProxy (llm/llama-desk) answers 503 at once
+    # then, and the request goes to the Framework instead - the same place it
+    # went before llama-fast existed. context_window_fallbacks sends a prompt
+    # over llama-fast's 114688 input tokens there too.
+    fallbacks:
+      - llama-fast: [llama-strix-chat]
+    context_window_fallbacks:
+      - llama-fast: [llama-strix-chat]
   litellmSettings:
     success_callback:
       - prometheus

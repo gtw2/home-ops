@@ -1,0 +1,141 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+# The cluster's front for llama-server on the workstation's RTX 3090
+# (docker/workstation/llama-desk). That server comes and goes - stopped while a
+# game holds the GPU, unreachable while the desktop sleeps - so LiteLLM must
+# learn it is gone at once, not after a TCP timeout under its 1200s
+# request_timeout. HAProxy health-checks it and answers 503 the moment it is
+# down, which LiteLLM takes as a failure and falls back on (llama-fast ->
+# llama-strix-chat, litellm/app/litellmproxy.yaml).
+#
+# Why not a selectorless Service: no health, so a sleeping desktop is a
+# silent black hole. Why not a readiness probe pointed at the workstation:
+# the pod would sit NotReady for hours whenever the GPU is busy, and
+# KubePodNotReady would page for what is normal operation here.
+#
+# No API key here: HAProxy passes the Authorization header through, and the
+# key lives with its one user, the LiteLLM proxy.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app llama-desk
+spec:
+  interval: 15m
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controllers:
+      llama-desk:
+        replicas: 1
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: mirror.gcr.io/library/haproxy
+              tag: 3.4.6-alpine@sha256:7af8255207ee9964ccb4eec8ce4b7a40b777769665e3ae83897fb01b24d8a43a
+            args: ["-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+            probes:
+              # The proxy's own liveness, never the workstation's: a backend
+              # that is down is the expected state, not a broken pod.
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: &metrics 8404
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  failureThreshold: 3
+              readiness: *probe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: {drop: ["ALL"]}
+            resources:
+              requests:
+                cpu: 10m
+              limits:
+                memory: 128Mi
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+    service:
+      app:
+        controller: llama-desk
+        ports:
+          http:
+            port: 8080
+          metrics:
+            port: *metrics
+    # HAProxy's exporter, not llama-server's /metrics. The exporter is always
+    # up, and haproxy_server_status says whether the 3090 is. Scraping the
+    # workstation itself would fail whenever it is busy, and a single-target
+    # job at up == 0 fires TargetDown for what is normal operation here.
+    serviceMonitor:
+      app:
+        endpoints:
+          - port: metrics
+            path: /metrics
+    configMaps:
+      config:
+        data:
+          haproxy.cfg: |
+            global
+              log stdout format raw local0 info
+
+            defaults
+              mode http
+              log global
+              option httplog
+              option dontlognull
+              timeout connect 3s
+              # Matches LiteLLM's request_timeout (1200s). A non-streamed
+              # request sends nothing back until it is done, so anything
+              # shorter cuts off a long generation as idle.
+              timeout client 20m
+              timeout server 20m
+              timeout http-request 30s
+
+            frontend llm
+              bind :8080
+              default_backend workstation
+
+            frontend metrics
+              bind :8404
+              http-request use-service prometheus-exporter if { path /metrics }
+              http-request return status 200 content-type text/plain string ok if { path /healthz }
+
+            backend workstation
+              # llama-server answers /health with 503 while it loads the
+              # model, so a starting server stays down until it can serve.
+              # fall 2 at 2s: about 4-10s to notice it went away.
+              option httpchk
+              http-check send meth GET uri /health
+              http-check expect status 200
+              default-server inter 5s fastinter 2s downinter 5s fall 2 rise 2
+              # 10.10.40.30 is reserved out of Cilium's LB pool
+              # (kube-system/cilium/app/networking.yaml).
+              server workstation 10.10.40.30:8080 check
+    persistence:
+      config:
+        type: configMap
+        identifier: config
+        globalMounts:
+          - path: /usr/local/etc/haproxy/haproxy.cfg
+            subPath: haproxy.cfg
+            readOnly: true

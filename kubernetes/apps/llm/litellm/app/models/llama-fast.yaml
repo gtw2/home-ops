@@ -1,0 +1,32 @@
+---
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMModel
+metadata:
+  name: llama-fast
+spec:
+  # The fast tier: Qwen3.6-35B-A3B on the workstation's RTX 3090, when the
+  # desktop is not using it. Named for the role, not the box, so clients ask
+  # for "fast" and routerSettings decides where that lands: here when the
+  # 3090 is up, llama-strix-chat when it is not (litellm/app/litellmproxy.yaml).
+  modelName: llama-fast
+  proxyRef: litellm
+  params:
+    # llama-server serves one model and ignores the name; llama-desk is its
+    # --alias, so logs on both sides agree.
+    model: openai/llama-desk
+    apiBase: http://llama-desk.llm.svc.cluster.local:8080/v1
+    # Unlike llama-strix, this server is on the LAN rather than behind a
+    # ClusterIP, so it takes a key. The workstation reads the same 1Password
+    # field into /etc/llama-desk/api-keys.
+    apiKeyRef:
+      name: litellm
+      key: LLAMA_DESK_API_KEY
+  info:
+    mode: chat
+    # The server's --ctx-size 131072, less maxOutputTokens. That context is
+    # shared by two slots (--kv-unified), so this is the most one request can
+    # have, not a guarantee. Anything longer goes to llama-strix-chat through
+    # context_window_fallbacks.
+    maxInputTokens: 114688
+    maxOutputTokens: 16384
+    supportsFunctionCalling: true
