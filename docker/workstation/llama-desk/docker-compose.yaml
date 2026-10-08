@@ -14,9 +14,12 @@
 #   pacman -S nvidia-container-toolkit
 #   nvidia-ctk runtime configure --runtime=docker && systemctl restart docker
 #   install -d /var/lib/llama-desk/models /etc/llama-desk
-#   # The key LiteLLM sends (litellm/app/models/llama-fast.yaml), from the
-#   # LLAMA_DESK_API_KEY field of the litellm item in the homeops vault:
-#   op read op://homeops/litellm/LLAMA_DESK_API_KEY | sudo install -m 600 /dev/stdin /etc/llama-desk/api-keys
+#   # The key LiteLLM sends (litellm/app/models/llama-fast.yaml), as the
+#   # ExternalSecret synced it from the litellm item's LLAMA_DESK_API_KEY.
+#   # Not `op read`: inside this repo .mise.toml points op at a Connect
+#   # server on localhost:8080, which only a port-forward provides.
+#   kubectl -n llm get secret litellm -o jsonpath='{.data.LLAMA_DESK_API_KEY}' \
+#     | base64 -d | sudo install -m 600 /dev/stdin /etc/llama-desk/api-keys
 #   curl -fL -o /var/lib/llama-desk/models/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf \
 #     https://huggingface.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF/resolve/5bc3e238d916f48a861bac2f8a1990a0e9b7e98d/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
 #
