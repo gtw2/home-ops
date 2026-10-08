@@ -79,8 +79,14 @@ spec:
         commands: [gh, flate, jq, yq, rg]
         # The 20m default cut reviews off mid-run on the local model: every
         # step succeeded, they just added up (PRs #1676 and #1677). The runner
-        # deadline follows this plus 5m on its own.
+        # deadline follows this plus 5m on its own (true only while parts is 1;
+        # split, it is rounds of parts x timeout, capped at 2h35m).
         timeout: 45m
+        # 0.0.45 splits a diff over 64 KiB into up to 8 parts by default, each
+        # taking another slot of the review model. That model is one llama.cpp
+        # slot (parallelSlots: 1 in llm/litellm/app/qwen3.8-flash-next.yaml), so
+        # parts would queue behind each other and end the review incomplete.
+        parts: 1
       egress:
         # Where flate fetches this repository's chart sources, beyond the
         # github.com and api.github.com the app allows. Exact hosts rather than
