@@ -8,6 +8,11 @@ data:
     metadata_dir = "/mnt/meta"
     data_dir     = "/mnt/data"
     db_engine    = "lmdb"
+    # kopiur backs up the meta PVC from a crash-consistent CSI snapshot. With
+    # fsync off, LMDB can be corrupt after an unclean shutdown, which is what
+    # that snapshot looks like on restore; on, the hourly backup is usable
+    # directly instead of falling back to a snapshot up to 6h old.
+    metadata_fsync = true
     metadata_auto_snapshot_interval = "6h"
 
     replication_factor = 1
