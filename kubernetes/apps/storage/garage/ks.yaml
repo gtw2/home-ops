@@ -11,6 +11,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
+    - ../../../../components/kopiur/backup
     - ../../../../components/zeroscaler
   decryption:
     provider: sops
@@ -22,12 +23,19 @@ spec:
       namespace: rook-ceph
     - name: external-secrets-stores
       namespace: external-secrets
+    - name: kopiur
+      namespace: kopiur-system
   postBuild:
     substituteFrom:
       - name: cluster-secrets
         kind: Secret
     substitute:
-      APP: *app
+      # The kopiur component names everything ${APP}, and nothing else in app/
+      # uses it, so pointing APP at the existing meta PVC backs it up in place.
+      # The index is what makes the blocks on NFS readable: lose it with Ceph
+      # and every object in Garage (CNPG backups, oCIS data) is unrecoverable.
+      APP: garage-meta
+      ZEROSCALER_TARGET: *app
   prune: true
   sourceRef:
     kind: GitRepository
