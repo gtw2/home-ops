@@ -81,6 +81,11 @@ spec:
                   name: immich-configmap
             env:
               MPLCONFIGDIR: "/cache/matplotlib"
+              # v3.3 re-exports the same models in an optimized format; the ML speed
+              # and memory gains only apply to these. Outputs are numerically
+              # equivalent, so no jobs need re-running. Upstream makes v2 the
+              # default in a later release, after which this can be dropped.
+              MACHINE_LEARNING_MODEL_REVISION: v2
 
     service:
       server:
