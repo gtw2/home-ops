@@ -13,5 +13,5 @@ spec:
     # Pre-1.0 and moving fast: config and schema change between releases, so
     # read the changelog before merging a bump. 0.0.45 turned on split reviews
     # (agent.parts, default 8); the HelmRelease keeps them off with parts: 1.
-    tag: 0.0.55
+    tag: 0.0.57
   url: oci://ghcr.io/home-operations/charts/kritika
