@@ -15,6 +15,10 @@
 #   ZEROSCALER_KIND        - scale target kind (default Deployment)
 #   ZEROSCALER_JOB_NAME    - Probe jobName to watch (default nfs_probe)
 #   ZEROSCALER_METRIC_NAME - external metric name (default probe_success)
+#   ZEROSCALER_SCALE_DOWN_WINDOW - seconds the probe must stay down before the
+#                            workload is scaled away (default 0). Over 30 days
+#                            to 2026-10-12, 9 of the NAS probe's 10 failures
+#                            were a single 30s sample; one lasted 9 minutes.
 #
 # The job label is the whole contract: the HPA SUMS every series the external
 # metric returns, so exactly one target may carry a given jobName. A second
@@ -52,7 +56,7 @@ spec:
           value: 1
           periodSeconds: 15
       selectPolicy: Max
-      stabilizationWindowSeconds: 0
+      stabilizationWindowSeconds: ${ZEROSCALER_SCALE_DOWN_WINDOW:=0}
     scaleUp:
       policies:
         - type: Pods
