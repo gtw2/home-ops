@@ -10,6 +10,12 @@ spec:
     name: app-template
   interval: 30m
   maxHistory: 3
+  # Outlasts the startup probe's 25m. RomM runs its migrations before it
+  # listens, and upstream warns they can take 15-20 minutes on a large
+  # library. On the default 5m the upgrade would fail and the cluster-wide
+  # remediation would roll back with recreate, killing the migration and
+  # starting the old version against a half-migrated database.
+  timeout: 30m
   values:
     defaultPodOptions:
       securityContext:
@@ -73,10 +79,13 @@ spec:
               liveness: &probes
                 enabled: true
               readiness: *probes
+              # Port 8080 stays closed while `alembic upgrade head` runs, and a
+              # restart re-runs the migration from the start. 300 x 5s = 25m
+              # covers the 15-20 minutes upstream warns a migration can take.
               startup:
                 enabled: true
                 spec:
-                  failureThreshold: 30
+                  failureThreshold: 300
                   periodSeconds: 5
             resources:
               requests:
