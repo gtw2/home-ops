@@ -32,3 +32,7 @@ spec:
     substitute:
       APP: *app
       KOPIUR_CAPACITY: 8Gi
+      # A pod deleted during startup re-runs RomM's migrations from the
+      # beginning, and since 5.4.0 those can take 15-20 minutes. 300s outlasts
+      # every single-sample NAS probe blip but not a real outage.
+      ZEROSCALER_SCALE_DOWN_WINDOW: "300"
