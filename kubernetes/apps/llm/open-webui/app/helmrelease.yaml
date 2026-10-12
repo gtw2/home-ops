@@ -63,6 +63,13 @@ spec:
               # the older messages are summarised by the chat model and the
               # newest 40% (the retention default) are kept verbatim.
               #
+              # Since v0.12.0, with native function calling, it is also checked
+              # between tool-call rounds, not only before the reply starts, and
+              # a history holding tool results
+              # is judged on the full estimate rather than the last reported
+              # usage, so cluster-tool chats compact mid-reply instead of growing
+              # past the context.
+              #
               # The threshold is independent of the model's context size, and
               # it is compared against an ESTIMATE - characters / 4 - which
               # undercounts code, JSON tool output and non-English text. So it
