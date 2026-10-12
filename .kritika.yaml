@@ -10,3 +10,35 @@ skills:
     # model's single slot reading it.
     renovate-review:
       when: [{ expr: pr.headRef.startsWith("renovate/") }]
+# Since kritika 0.0.61 AGENTS.md is no longer loaded automatically. What a
+# review must enforce is restated here, because rules are read from the merge
+# base and a pull request cannot rewrite them; AGENTS.md is offered as
+# context (read from the head) for the layout only.
+rules:
+  - id: sops-secrets
+    rule: >-
+      Secrets come from 1Password through ExternalSecrets. Files matching
+      *.sops.yaml are SOPS-encrypted: never ask to decrypt, print or edit
+      them, and flag a literal secret committed to a manifest.
+  - id: flux-secret-substitution
+    rule: >-
+      ${SECRET_*} values are substituted by Flux from the cluster-secrets
+      Secret at apply time. They are not unexpanded variables or missing
+      literals.
+  - id: measured-comments
+    rule: >-
+      Comments in manifests record why a value was chosen, often from
+      measurements (memory, slots, timeouts). Flag a change to such a value,
+      or to the behaviour the comment relies on, that leaves the comment
+      describing the old one.
+  - id: pinned-images
+    rule: Container images are pinned by tag and digest.
+  - id: conventional-commits
+    rule: >-
+      Commits and PR titles follow Conventional Commits, such as
+      fix(container): ... or chore(renovate): ...
+context:
+  - path: AGENTS.md
+    description: >-
+      Repository layout: kubernetes/apps/<namespace>/<app> (ks.yaml and app/),
+      kubernetes/components, kubernetes/flux, talos, docker/sentinel, Taskfiles
