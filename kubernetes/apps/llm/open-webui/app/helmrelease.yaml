@@ -27,7 +27,7 @@ spec:
           app:
             image:
               repository: ghcr.io/open-webui/open-webui
-              tag: v0.11.4@sha256:9591b13f13843c7721c2b8eaf7382846c81b3ffe126526d1888d1fed50c6a33f
+              tag: v0.12.0@sha256:1565038903151ced924b5a3226f73f40f16963df4b910441f6391f10144afdaa
             env:
               # Most of open-webui's settings are PersistentConfig: env seeds
               # the database on FIRST launch and is ignored on every start
@@ -62,6 +62,13 @@ spec:
               # Context compaction: once a chat's history passes the threshold,
               # the older messages are summarised by the chat model and the
               # newest 40% (the retention default) are kept verbatim.
+              #
+              # Since v0.12.0, with native function calling, it is also checked
+              # between tool-call rounds, not only before the reply starts, and
+              # a history holding tool results
+              # is judged on the full estimate rather than the last reported
+              # usage, so cluster-tool chats compact mid-reply instead of growing
+              # past the context.
               #
               # The threshold is independent of the model's context size, and
               # it is compared against an ESTIMATE - characters / 4 - which
