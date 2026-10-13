@@ -6,6 +6,12 @@ metadata:
   name: kritika
 spec:
   interval: 1h
+  # The 5m default is too short under Recreate: the old pod's drain alone can
+  # take 200s (terminationGracePeriodSeconds), then the new digests pull and
+  # the leader runs migrations. A timeout triggers the rollback remediation,
+  # and rolling back across a queue change strands jobs in Postgres
+  # (upstream docs/database.md, "Queue upgrades and rollbacks").
+  timeout: 15m
   chartRef:
     kind: OCIRepository
     name: kritika
