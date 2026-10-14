@@ -261,16 +261,22 @@ spec:
   # (gfx1151 IS 11.5.1 and the image ships gfx1151 kernels) and is kept only so
   # this stays its config rather than an edit of it.
   #
-  # GGML_HIP_ENABLE_UNIFIED_MEMORY is the one to watch: llama.cpp#27797, the
-  # '//////' garbage on gfx1151, was pinned to exactly this variable. It did
-  # NOT reproduce - a six-segment chat came back clean, longest run of '/' in
-  # 926 characters was one - but re-check output after any change here rather
-  # than assuming.
+  # GGML_HIP_ENABLE_UNIFIED_MEMORY=1 was here too, and removed: nothing reads
+  # it. This image's /app/lib/libggml-hip.so knows only
+  # GGML_CUDA_ENABLE_UNIFIED_MEMORY, as does upstream (checked 2026-10-14).
+  # So llama.cpp#27797, the '//////' garbage on gfx1151 that was pinned to
+  # unified memory, not reproducing here - a six-segment chat came back clean,
+  # longest run of '/' in 926 characters was one - says nothing about unified
+  # memory; it was never on.
+  #
+  # Do not "fix" it with the CUDA name either. That moves the weights to
+  # hipMallocManaged, which is charged to this pod's memory cgroup (measured:
+  # managed and hipHostMalloc both count, hipMalloc does not), so ~90GiB of
+  # weights against the 26Gi limit OOMKills. If it is ever tried, check
+  # output for #27797 as well.
   env:
     - name: HSA_OVERRIDE_GFX_VERSION
       value: "11.5.1"
-    - name: GGML_HIP_ENABLE_UNIFIED_MEMORY
-      value: "1"
   resources:
     cpu: "500m"
     # llmkube maps this single value to BOTH request and limit.
