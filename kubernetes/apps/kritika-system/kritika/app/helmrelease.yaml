@@ -6,6 +6,12 @@ metadata:
   name: kritika
 spec:
   interval: 1h
+  # The 5m default is too short under Recreate: the old pod's drain alone can
+  # take 200s (terminationGracePeriodSeconds), then the new digests pull and
+  # the leader runs migrations. A timeout triggers the rollback remediation,
+  # and rolling back across a queue change strands jobs in Postgres
+  # (upstream docs/database.md, "Queue upgrades and rollbacks").
+  timeout: 15m
   chartRef:
     kind: OCIRepository
     name: kritika
@@ -18,6 +24,14 @@ spec:
       strategy: rollback
       retries: 3
   values:
+    # One replica, so a rolling update buys little, and it overlaps the old
+    # pod's workers with the new leader's migrations. Upstream says to stop
+    # older replicas first (docs/database.md, "Queue upgrades and rollbacks",
+    # 0.0.65). Webhooks missed in the gap are caught by the 10m PR poll.
+    # Helm merges maps, so rollingUpdate must be nulled.
+    strategy:
+      type: Recreate
+      rollingUpdate: null
     # A changed Secret does not roll the pods on its own.
     deploymentAnnotations:
       reloader.stakater.com/auto: "true"
@@ -173,6 +187,13 @@ spec:
         enabled: true
       prometheusRule:
         enabled: true
+        # The chart's 600s/15m fires on normal queueing. limits.concurrency is
+        # 1, and over 7 days to 2026-10-13 the median review took ~13m and 37
+        # of 82 took over 15m, so a batch of three Renovate PRs waits past it.
+        # One review can run 50m (agent.timeout plus the runner's 5m), so an
+        # hour's wait held for 30m means a stall, not a queue.
+        queueAgeSeconds: 3600
+        queueDelayFor: 30m
       dashboards:
         enabled: true
         grafanaOperator:
