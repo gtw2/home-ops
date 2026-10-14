@@ -9,26 +9,33 @@ resources:
   - ./litellmproxy.yaml
   - ./servicemonitor.yaml
   - ./virtualkey.yaml
-  # Model + InferenceService: the weights and the llama.cpp pod that serves them.
+  # Model + InferenceService: the weights and the pod that serves them.
   #
-  # Exactly ONE of the two may be active. Both define the name llama-strix, so
+  # Exactly ONE of these may be active. All define the name llama-strix, so
   # the LiteLLMModel, the virtual key and Open WebUI address whichever is live
   # without knowing which model is behind it.
   #
   # To change models, or to roll back, move the comment - do not revert the
-  # commit. Both manifests are meant to stay in the tree: a revert would also
+  # commit. The manifests are meant to stay in the tree: a revert would also
   # take the flash-next config and everything learned writing it, and we would
   # rebuild it from scratch the next time. Swapping the line is the whole
-  # operation; the weights of both models stay cached on the node, so going back
-  # costs one reconcile and no re-download.
+  # operation; the weights of every option stay cached on the node, so going
+  # back costs one reconcile and no re-download.
   #
-  #   ./qwen3.8-flash-next.yaml  Qwen3.8-Flash-Next  IQ4_NL      ~93.4GiB weights
-  #   ./qwen3.6-35b-a3b.yaml     Qwen3.6-35B-A3B     UD-Q4_K_XL  ~22.9GiB weights
+  #   ./qwen3.8-flash-next.yaml       Flash-Next       llama.cpp fork  IQ4_NL      ~93.4GiB
+  #   ./qwen3.8-flash-next-gufo.yaml  Flash-Next       gufo            UD-Q4_K_XL  ~103.6GiB
+  #   ./qwen3.6-35b-a3b.yaml          Qwen3.6-35B-A3B  llama.cpp       UD-Q4_K_XL  ~22.9GiB
+  #
+  # The gufo option needs the BIOS carve-out at its minimum and the prestage
+  # Job below completed before its line is uncommented; its header says why.
   #
   # Files are named for the model they serve, not the service name, so the
   # line below says what is actually running.
   - ./qwen3.8-flash-next.yaml
+  # - ./qwen3.8-flash-next-gufo.yaml
   # - ./qwen3.6-35b-a3b.yaml
+  # Downloads the gufo option's weights; safe beside whichever is live.
+  - ./qwen3.8-flash-next-gufo-prestage.yaml
   # LiteLLMModel: how the proxy addresses that pod
   - ./models
   # Grafana dashboards: one ConfigMap and one CR per dashboard, so they can be
