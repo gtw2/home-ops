@@ -10,9 +10,8 @@ llmkube/            # operator: Model + InferenceService CRDs, shared model cach
                     # priority classes, the AMD DRA ResourceClaimTemplate
 litellm-operator/   # operator: LiteLLMProxy / LiteLLMModel / LiteLLMVirtualKey CRDs
 litellm/app/        # the proxy, its database, and the models it serves
-  qwen3.8-flash-next.yaml  # Model + InferenceService, the active model
-  qwen3.8-flash-next-gufo.yaml  # the same model on gufo; needs no BIOS carve-out
-  qwen3.8-flash-next-gufo-prestage.yaml  # downloads the gufo option's weights
+  qwen3.8-flash-next-gufo.yaml  # Model + InferenceService, the active model (gufo)
+  qwen3.8-flash-next.yaml  # the same model on the llama.cpp fork
   qwen3.6-35b-a3b.yaml     # the alternative; kustomization.yaml picks one
   models/             #   LiteLLMModel: how the proxy addresses that backend
   virtualkey.yaml     #   per-consumer API key, pushed to 1Password
