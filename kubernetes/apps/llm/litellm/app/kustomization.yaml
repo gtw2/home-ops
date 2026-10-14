@@ -31,8 +31,8 @@ resources:
   #
   # Files are named for the model they serve, not the service name, so the
   # line below says what is actually running.
-  - ./qwen3.8-flash-next.yaml
-  # - ./qwen3.8-flash-next-gufo.yaml
+  # - ./qwen3.8-flash-next.yaml
+  - ./qwen3.8-flash-next-gufo.yaml
   # - ./qwen3.6-35b-a3b.yaml
   # Downloads the gufo option's weights; safe beside whichever is live.
   - ./qwen3.8-flash-next-gufo-prestage.yaml
