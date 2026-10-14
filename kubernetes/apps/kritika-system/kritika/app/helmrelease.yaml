@@ -67,8 +67,9 @@ spec:
           type: openai
           baseUrl: http://litellm.llm.svc.cluster.local:4000/v1
           apiKey: { env: LITELLM_API_KEY }
-          # One slot behind the proxy: a busy server answers 5xx/429, which a
-          # retry outlasts.
+          # Few slots behind the proxy (gufo's 2 sessions, shared with every
+          # other client): a busy server answers 5xx/429, which a retry
+          # outlasts.
           retries: 2
         embedder:
           type: openai
@@ -109,9 +110,11 @@ spec:
         # split, it is rounds of parts x timeout, capped at 2h35m).
         timeout: 45m
         # 0.0.45 splits a diff over 64 KiB into up to 8 parts by default, each
-        # taking another slot of the review model. That model is one llama.cpp
-        # slot (parallelSlots: 1 in llm/litellm/app/qwen3.8-flash-next.yaml), so
-        # parts would queue behind each other and end the review incomplete.
+        # taking another slot of the review model. That model was one llama.cpp
+        # slot when this was set, so parts queued behind each other and ended
+        # the review incomplete. It now serves 2 gufo sessions
+        # (llm/litellm/app/qwen3.8-flash-next-gufo.yaml), but those are shared
+        # with Open WebUI and the agents, so parts above 1 would take both.
         parts: 1
       egress:
         # Where flate fetches this repository's chart sources, beyond the

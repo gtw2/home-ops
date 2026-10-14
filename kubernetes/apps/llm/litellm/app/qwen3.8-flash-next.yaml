@@ -13,10 +13,17 @@
 #     linear, constant-state), so the KV cache at the full 262144 context is
 #     ~6.0GiB at f16 rather than the tens of GiB a dense 48-layer model needs.
 #
-# Measured budget as configured: 88.2GiB resident of the 96GiB BIOS VRAM
-# carve-out, leaving 7.8GiB. (UD-Q3_K_XL sat at 81.9GiB.) That is well under the file size because --lazy-mode keeps
+# Measured budget as configured: 88.2GiB resident on the GPU. (UD-Q3_K_XL sat
+# at 81.9GiB.) That is well under the file size because --lazy-mode keeps
 # per_layer_token_embd.weight - [160, 320001536], the ~51B n-gram/PLE table
 # that dominates the file - off the GPU and reads its rows on demand.
+#
+# Since 2026-10-14 the BIOS carve-out is 512MiB, not 96GiB (docs/talos.md), so
+# that 88.2GiB is GTT drawn from the ~124GiB system pool rather than dedicated
+# VRAM: 88.9GiB gtt_used after the first load. Measured the same day, the move
+# cost nothing - 38.0-38.9 tok/s generation against 39.66 on the carve-out -
+# and the weights stay off this pod's memory limit, since hipMalloc'd GTT is
+# not charged to its cgroup (pod at 2.7GiB right after load).
 apiVersion: inference.llmkube.dev/v1alpha1
 kind: Model
 metadata:
@@ -46,8 +53,9 @@ spec:
   # generation gain: a higher-fidelity quant agrees with the MTP draft head
   # more often, so more drafted tokens survive verification, which compounds.
   #
-  # Cost is VRAM headroom: 7.8GiB left of the carve-out against 14.1GiB
-  # before. Raising contextSize or moving off f16 KV needs that checked first.
+  # Cost was VRAM headroom: 7.8GiB left of the 96GiB carve-out against 14.1GiB
+  # before. Without the carve-out the extra 6.3GiB comes out of the shared
+  # pool instead, which the node had 25.6GiB of after this loaded.
   source: hf://bartowski/Qwen3.8-Flash-Next-GGUF
   files:
     - Qwen3.8-Flash-Next-IQ4_NL/Qwen3.8-Flash-Next-IQ4_NL-00001-of-00003.gguf
@@ -192,15 +200,18 @@ spec:
   # at 4096; the cache size is not the driver, so it is per-slot load-time
   # host state.
   #
-  # There is no room to pay for it: node allocatable is 28.64GiB after the
-  # 96GiB VRAM carve-out and this pod already requests 26Gi. A second slot
-  # needs contextSize lowered (halving KV and per-slot state) or the carve-out
-  # shrunk to free system RAM - both real changes, neither a flag.
+  # There was no room to pay for it: node allocatable was 28.64GiB after the
+  # 96GiB VRAM carve-out and this pod already requested 26Gi. A second slot
+  # needed contextSize lowered (halving KV and per-slot state) or the
+  # carve-out shrunk to free system RAM.
   #
-  # DECIDED 2026-09-19: stay at one slot and accept the serialisation. Neither
-  # price was worth paying. So this is a settled trade, not an open blocker -
-  # if concurrency becomes the priority later, reopen it by choosing one of
-  # those two, and do not just set this to 2 again, which OOMKills.
+  # DECIDED 2026-09-19: stay at one slot and accept the serialisation.
+  #
+  # REOPENED 2026-10-14, untested: the carve-out was shrunk to 512MiB for
+  # qwen3.8-flash-next-gufo.yaml, which serves 2 sessions. That is the second
+  # of the two prices above, already paid, so a second slot here may now
+  # load. Test it with resources.memory raised alongside, not by flipping
+  # this to 2 at 26Gi; the OOMKill was against this pod's own limit.
   parallelSlots: 1
   flashAttention: true
   jinja: true
@@ -281,10 +292,11 @@ spec:
     cpu: "500m"
     # llmkube maps this single value to BOTH request and limit.
     #
-    # 26Gi, not the reference's 30Gi, and not a preference: this node's
-    # allocatable is 30029128Ki = 28.64GiB once the 96GiB BIOS VRAM carve-out
-    # is taken, with ~1.4GiB already requested, so 30Gi is unschedulable and
-    # the pod sits Pending on "Insufficient memory".
+    # 26Gi, not the reference's 30Gi, chosen when this node's allocatable was
+    # 30029128Ki = 28.64GiB under the 96GiB BIOS VRAM carve-out, with ~1.4GiB
+    # already requested, so 30Gi was unschedulable. With the carve-out at
+    # 512MiB allocatable is 128554120Ki (122.6GiB), so this is no longer a
+    # scheduling limit - but kubelet counts the ~89GiB of GTT weights as free.
     #
     # Weights do not live here - --load-mode none streams them through four
     # pinned 64MiB buffers straight to the iGPU. What this has to cover is

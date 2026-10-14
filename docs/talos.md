@@ -137,16 +137,25 @@ Notes on the profile:
   the cluster's point of view — Talos retries the patch every ~15s forever and
   `kubectl get node` simply never shows them. `node.kubernetes.io/*` is allowed,
   which is why the Intel nodes' `node.kubernetes.io/gpu` works.
-- **Memory split is a BIOS decision, not a kernel-arg one.** As shipped, the
-  BIOS carves out 96GiB as dedicated VRAM, leaving the OS ~31GiB — so
-  `MemTotal` reads 31GiB, not 128. The `ttm.pages_limit=32505856` (124GiB) and
-  `ttm.page_pool_size` args size *GTT*, which borrows from system RAM, so they
-  cannot reach their nominal values with only 31GiB present. The alternative is
-  setting BIOS UMA to its minimum and letting GTT allocate dynamically from a
-  ~127GiB system pool. The current split works and gives the GPU plenty; it is
-  just less flexible, and 31GiB is tight enough to make the `OOMConfig` above
-  matter more, not less. `amdgpu.gttsize` also now warns as deprecated in favour
-  of `ttm.pages_limit`.
+- **Memory split is a BIOS decision, not a kernel-arg one.** The BIOS setting
+  is **Advanced → iGPU Memory Configuration → Custom → 512MiB** (since
+  2026-10-14), and it is not in this repo, so a BIOS reset or board swap
+  silently undoes it. Enter setup with F2 from a cold power-on;
+  `talosctl reboot` is too quick to catch. With it, `mem_info_vram_total`
+  reads 0.5GiB, `mem_info_gtt_total` 124GiB and node allocatable 122.6GiB, and
+  the GPU allocates GTT dynamically from the ~124GiB system pool up to
+  `ttm.pages_limit=32505856` (124GiB).
+
+  It shipped as a 96GiB carve-out, which left the OS ~31GiB and capped GTT at
+  that too. `qwen3.8-flash-next-gufo.yaml` cannot fit under that (its weights
+  exceed 96GiB) and the llama.cpp option could not afford a second slot.
+
+  The cost: kubelet counts GTT as free memory, because hipMalloc'd GTT is not
+  charged to any cgroup, so allocatable overstates what is left by however
+  much the model holds (~89-95GiB). The `llm-workload` taint keeps other pods
+  off, and the `OOMConfig` below sees GTT pressure where kubelet does not.
+  `amdgpu.gttsize` also now warns as deprecated in favour of
+  `ttm.pages_limit`.
 - **The `OOMConfig` is not optional.** amdgpu GTT pins system RAM the kernel
   OOM-killer cannot reclaim, so a runaway GPU pod deadlocks the node while Talos
   stays healthy — which means the hardware watchdog never fires. The userspace

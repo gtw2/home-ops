@@ -31,9 +31,13 @@ metadata:
 # (home-operations/drm-exporter) rather than working around here.
 #
 # Keeping it regardless: utilisation and clocks are still more than the nothing
-# that existed before, and this costs 64Mi. But VRAM headroom - the number that
-# actually matters on a 96GiB carve-out, and which read 93.1GiB the moment this
-# was checked - is still only visible by exec'ing into a pod and catting sysfs.
+# that existed before, and this costs 64Mi.
+#
+# The above was written against the 96GiB carve-out. Since 2026-10-14 it is
+# 512MiB and the model lives in GTT, which the exporter does report:
+# drm_memory_total_bytes{pool="smem"} 133143986176 (124GiB) and
+# drm_memory_used_bytes{pool="smem"} 103276523520 with gufo loaded. So GPU
+# memory headroom is now in Prometheus after all.
 spec:
   chartRef:
     kind: OCIRepository

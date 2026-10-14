@@ -26,16 +26,14 @@ resources:
   #   ./qwen3.8-flash-next-gufo.yaml  Flash-Next       gufo            UD-Q4_K_XL  ~103.6GiB
   #   ./qwen3.6-35b-a3b.yaml          Qwen3.6-35B-A3B  llama.cpp       UD-Q4_K_XL  ~22.9GiB
   #
-  # The gufo option needs the BIOS carve-out at its minimum and the prestage
-  # Job below completed before its line is uncommented; its header says why.
+  # The gufo option needs the BIOS carve-out at its minimum (docs/talos.md);
+  # its header says why, and how its weights got onto the node.
   #
   # Files are named for the model they serve, not the service name, so the
   # line below says what is actually running.
   # - ./qwen3.8-flash-next.yaml
   - ./qwen3.8-flash-next-gufo.yaml
   # - ./qwen3.6-35b-a3b.yaml
-  # Downloads the gufo option's weights; safe beside whichever is live.
-  - ./qwen3.8-flash-next-gufo-prestage.yaml
   # LiteLLMModel: how the proxy addresses that pod
   - ./models
   # Grafana dashboards: one ConfigMap and one CR per dashboard, so they can be

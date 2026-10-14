@@ -23,8 +23,9 @@
 #                   them here. The amd-gpu-dra-driver does scheduling, not
 #                   telemetry. Worth revisiting behind an AMD device metrics
 #                   exporter, at which point this becomes the most useful
-#                   dashboard of the set - VRAM headroom is currently 7.8GiB
-#                   of 96 and is invisible to Prometheus.
+#                   dashboard of the set. GPU memory itself is no longer
+#                   invisible: since the carve-out went to 512MiB, drm-exporter
+#                   reports it as drm_memory_*_bytes{pool="smem"}.
 #   llm-nvidia-node, vllm
 #                   no NVIDIA hardware and no vLLM deployment.
 #   litellm-economics, litellm-selfhosted
