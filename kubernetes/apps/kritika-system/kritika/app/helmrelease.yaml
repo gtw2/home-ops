@@ -38,22 +38,21 @@ spec:
     config:
       # The one public URL: the dashboard, and GitHub's webhook at /hooks/github.
       webUrl: https://kritika.${SECRET_DOMAIN}
-      authAdminPassword:
-        valueFrom:
-          secretKeyRef: { name: kritika-secret, key: ADMIN_PASSWORD }
-      authOidcName: Authentik
-      authOidcIssuer: https://sso.${SECRET_DOMAIN}/application/o/kritika/
-      # Not a secret, and the chart takes it only as a string: set the same
-      # Client ID on the Authentik provider.
-      authOidcClientId: kritika
-      authOidcClientSecret:
-        valueFrom:
-          secretKeyRef: { name: kritika-secret, key: OIDC_CLIENT_SECRET }
-      authOidcScopes: openid,email,profile
-      authOidcRolesClaim: groups
-      # Fails closed: anyone outside the group is refused.
-      authOidcRoleMappingExpr: '"authentik Admins" in roles ? "admin" : ""'
-    configFile:
+      # Both secret references resolve from kritika-secret through envFrom.
+      auth:
+        admin:
+          password: { env: ADMIN_PASSWORD }
+        oidc:
+          name: Authentik
+          issuer: https://sso.${SECRET_DOMAIN}/application/o/kritika/
+          # Not a secret, so inline: set the same Client ID on the Authentik
+          # provider.
+          clientId: kritika
+          clientSecret: { env: OIDC_CLIENT_SECRET }
+          scopes: [openid, email, profile]
+          rolesClaim: groups
+          # Fails closed: anyone outside the group is refused.
+          roleMappingExpr: '"authentik Admins" in roles ? "admin" : ""'
       apps:
         github:
           accounts: [gtw2]

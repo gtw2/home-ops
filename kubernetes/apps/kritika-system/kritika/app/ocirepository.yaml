@@ -13,5 +13,7 @@ spec:
     # Pre-1.0 and moving fast: config and schema change between releases, so
     # read the changelog before merging a bump. 0.0.45 turned on split reviews
     # (agent.parts, default 8); the HelmRelease keeps them off with parts: 1.
+    # 0.0.68 dropped configFile and the flat auth* keys: the whole application
+    # YAML now sits under config, with auth nested as config.auth.
     tag: 0.0.69
   url: oci://ghcr.io/home-operations/charts/kritika
