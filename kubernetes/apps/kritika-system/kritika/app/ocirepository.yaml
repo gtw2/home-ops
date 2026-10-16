@@ -14,6 +14,9 @@ spec:
     # read the changelog before merging a bump. 0.0.45 turned on split reviews
     # (agent.parts, default 8); the HelmRelease keeps them off with parts: 1.
     # 0.0.68 dropped configFile and the flat auth* keys: the whole application
-    # YAML now sits under config, with auth nested as config.auth.
-    tag: 0.0.69
+    # YAML now sits under config, with auth nested as config.auth. 0.0.70
+    # removed agent.commands and trigger.settle, and unknown config keys fail
+    # startup; 0.0.73 removed runner.tools, so flate comes from the merge
+    # base's .kritika/mise.toml and mise.lock.
+    tag: 0.0.75
   url: oci://ghcr.io/home-operations/charts/kritika
