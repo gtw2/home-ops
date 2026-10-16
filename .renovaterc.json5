@@ -59,6 +59,17 @@
       ],
       datasourceTemplate: "docker",
     },
+    {
+      // The shared annotated preset needs `key: value` or `key=value` on the
+      // line after the annotation, so a bare remote resource URL such as
+      // dragonfly-operator's CRD is never matched and its group moves without it.
+      customType: "regex",
+      description: "Process annotated remote resource URLs",
+      managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+      matchStrings: [
+        "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s*-\\s+https://\\S+?/(?<currentValue>v?\\d+\\.\\d+\\.\\d+[^/\\s]*)/",
+      ],
+    },
   ],
   packageRules: [
     {
