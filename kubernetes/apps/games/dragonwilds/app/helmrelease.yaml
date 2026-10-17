@@ -23,14 +23,28 @@ spec:
       dragonwilds:
         annotations:
           reloader.stakater.com/auto: "true"
+        initContainers:
+          # SteamCMD's anonymous appinfo can lag a new Steam build by hours, so
+          # the entrypoint's app_update reports "already up to date" and a
+          # restart does nothing. Force a refresh into the shared appcache
+          # first; the entrypoint's own retry (drop steamapps/) then handles the
+          # Access Denied on the old manifest. Non-fatal so a Steam outage
+          # doesn't keep the server down.
+          refresh-appinfo:
+            image: &image
+              repository: ghcr.io/runescape/rsdw-dedicated
+              tag: 2.0.1@sha256:e8b0a5f59eb03082f43e74f8fd6a9019ba8e37773fcde60e1fc7859eb24b9211
+            command: ["bash", "-c"]
+            args:
+              - >-
+                bash "$STEAMCMDDIR/steamcmd.sh" +login anonymous +app_info_update 1 +quit
+                || echo "Warning: appinfo refresh failed; continuing with cached appinfo."
         containers:
           app:
             # Jagex's own image (github.com/runescape/rsdw-dedicated). It
             # templates DedicatedServer.ini from RSDW_* on every start and runs
             # SteamCMD app_update first, so a restart is an update.
-            image:
-              repository: ghcr.io/runescape/rsdw-dedicated
-              tag: 2.0.1@sha256:e8b0a5f59eb03082f43e74f8fd6a9019ba8e37773fcde60e1fc7859eb24b9211
+            image: *image
             env:
               TZ: ${TIMEZONE}
               # Defaults on purpose. Before upstream PR #17 the game ignored
@@ -112,3 +126,11 @@ spec:
           # volume root untouched; nothing in it is worth keeping.
           - path: /home/steam/rsdw-dedicated
             subPath: rsdw-dedicated
+      appcache:
+        type: emptyDir
+        advancedMounts:
+          dragonwilds:
+            refresh-appinfo:
+              - path: /home/steam/Steam/appcache
+            app:
+              - path: /home/steam/Steam/appcache
