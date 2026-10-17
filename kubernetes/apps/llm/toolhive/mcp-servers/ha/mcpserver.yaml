@@ -9,9 +9,6 @@ spec:
   transport: streamable-http
   proxyMode: streamable-http
   proxyPort: 8080
-  permissionProfile:
-    type: builtin
-    name: network
   env:
     # The in-cluster Service, not the public hostname: this keeps the token off
     # the internet path entirely. 8123 is the API port; the Service also
