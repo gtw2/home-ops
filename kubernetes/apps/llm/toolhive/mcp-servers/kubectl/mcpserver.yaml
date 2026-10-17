@@ -11,11 +11,6 @@ spec:
   proxyPort: 8080
   mcpPort: 8000
   serviceAccount: kubectl-mcp-readonly
-  # Explicit rather than relying on the operator default: this server's whole
-  # job is reaching the API server.
-  permissionProfile:
-    type: builtin
-    name: network
   resources:
     requests:
       cpu: 100m

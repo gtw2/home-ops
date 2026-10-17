@@ -15,9 +15,6 @@ spec:
   transport: stdio
   proxyMode: streamable-http
   proxyPort: 8080
-  permissionProfile:
-    type: builtin
-    name: network
   env:
     - name: HOME
       value: /tmp
@@ -30,8 +27,7 @@ spec:
       value: http://radarr.downloads.svc.cluster.local
     - name: PROWLARR_URL
       value: http://prowlarr.downloads.svc.cluster.local
-  # One Secret per entry: spec.secrets is a list-map keyed on "name", so
-  # repeating a Secret name here fails the apply outright.
+  # One Secret per *arr, matching the 1Password items (see externalsecret.yaml).
   secrets:
     - name: toolhive-sonarr
       key: SONARR_API_KEY

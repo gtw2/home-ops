@@ -114,5 +114,14 @@
         commitMessageTopic: "{{{groupName}}} group",
       },
     },
+    {
+      description: "ToolHive Operator Group — the operator and CRD charts are cut from one release, and the CRDs must not lag the operator",
+      groupName: "ToolHive Operator",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/stacklok\\/toolhive\\/toolhive-operator(-crds)?$/"],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
   ],
 }

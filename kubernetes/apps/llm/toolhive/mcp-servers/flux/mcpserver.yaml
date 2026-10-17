@@ -14,9 +14,6 @@ spec:
   proxyPort: 8080
   mcpPort: 8000
   serviceAccount: flux-mcp
-  permissionProfile:
-    type: builtin
-    name: network
   resources:
     requests:
       cpu: 100m
