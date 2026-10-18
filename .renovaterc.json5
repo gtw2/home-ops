@@ -60,6 +60,17 @@
       datasourceTemplate: "docker",
     },
     {
+      // The FluxInstance's manifests bundle is a tag inside an OCI URL, which no
+      // manager parses. depName matches the Flux Operator group.
+      customType: "regex",
+      description: "Process the FluxInstance distribution artifact",
+      managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+      matchStrings: [
+        "artifact: oci://(?<depName>ghcr\\.io/controlplaneio-fluxcd/flux-operator-manifests):(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
+      ],
+      datasourceTemplate: "docker",
+    },
+    {
       // The shared annotated preset needs `key: value` or `key=value` on the
       // line after the annotation, so a bare remote resource URL such as
       // dragonfly-operator's CRD is never matched and its group moves without it.
