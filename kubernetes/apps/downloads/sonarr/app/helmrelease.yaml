@@ -6,6 +6,10 @@ metadata:
   name: sonarr
 spec:
   interval: 30m
+  # Outlasts the startup probe's 10m. Sonarr migrates its database before it
+  # listens; on the 5m default a long migration would fail the upgrade, and
+  # the rollback below would start the old image against a migrated schema.
+  timeout: 15m
   chartRef:
     kind: OCIRepository
     name: app-template
@@ -62,6 +66,19 @@ spec:
                   timeoutSeconds: 1
                   failureThreshold: 3
               readiness: *probes
+              # /ping is refused until SchemaBuilder.Initialize finishes
+              # (Startup.Configure), so a migration would otherwise spend the
+              # liveness budget of 30s and be killed and restarted. 60 x 10s.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /ping
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  failureThreshold: 60
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
