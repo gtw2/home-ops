@@ -39,7 +39,7 @@
 ## Auto-scaling behavior
 
 - mc-router scales a backend StatefulSet **0 → 1** when a client opens a TCP connection whose handshake hostname matches the Service's `externalServerName` annotation. (mc-router only supports StatefulSets — backends must use `controllers.<name>.type: statefulset` with `statefulset.serviceName` set equal to the controller name.)
-- After **60 minutes** of no active connections, mc-router scales it back to **0**.
+- After **60 minutes** without a player login, mc-router scales it back to **0**. Status pings (server-list refreshes, warden's polls) do not reset the timer since mc-router 1.48.0.
 - The 60m timeout is global — mc-router doesn't support per-service overrides. Tune in `router/helmrelease.yaml` (`--auto-scale-down-after`); today survival and creative share it.
 - First-connect cold start can be 60-120s (image pull + JVM + mod load). Velocity's `connection-timeout = 180000` covers this.
 - **Important:** `/server X` from inside Velocity to a *sleeping* backend will fail — Velocity dials the backend Service directly, bypassing mc-router. Players must connect via the public hostname (e.g. `vanilla.${CFG_GAMING_DOMAIN}`) to trip the scale-up first. Once awake, `/server X` between servers works normally.

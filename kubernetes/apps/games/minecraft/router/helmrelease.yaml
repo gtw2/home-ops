@@ -66,8 +66,7 @@ spec:
           app:
             image:
               repository: itzg/mc-router
-              # renovate: datasource=docker depName=itzg/mc-router
-              tag: 1.47.2
+              tag: 1.48.0@sha256:3a9ece070b97c8c55666810fc81cb209e1dd775fce792187e296626b786859cc
             args:
               - --in-kube-cluster
               - --kube-namespace=games
@@ -76,7 +75,10 @@ spec:
               - --default=minecraft-velocity.games.svc.cluster.local:25565
               # Scale-from-zero on StatefulSet when an annotated Service receives a connection
               - --auto-scale-up
-              # Scale-to-zero after the connection drains + idle period
+              # Scale-to-zero after the connection drains + idle period. Since
+              # 1.48.0 only player logins reset the idle timer: status pings
+              # (server-list refreshes, warden's 30s polls) no longer hold a
+              # backend awake (itzg/mc-router#625).
               - --auto-scale-down
               # Single global value (mc-router doesn't support per-service overrides).
               # 60m favors avoiding cold-start churn over pinning idle pods — first-connect
