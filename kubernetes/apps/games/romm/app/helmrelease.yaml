@@ -61,6 +61,13 @@ spec:
               SCHEDULED_RESCAN_CRON: "0 3 * * *"
               LAUNCHBOX_API_ENABLED: "true"
               ROMM_DB_DRIVER: postgresql
+              # Chunked web uploads stage 10MiB parts under resources/tmp on the
+              # 8Gi data PVC by default, and RomM only clears an abandoned one
+              # after a fixed 24h. Four parallel uploads stalled at ~1.8GiB each
+              # filled it on 2026-10-17. /tmp is the node-disk emptyDir (~500GB
+              # free); the cache already defaults to /tmp/romm/cache, and
+              # finished uploads assemble straight into the NFS library.
+              ROMM_TMP_PATH: /tmp/romm
               REDIS_HOST: dragonfly.database.svc.cluster.local
               REDIS_PORT: 6379
               REDIS_DB: 4
