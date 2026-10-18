@@ -162,9 +162,12 @@ spec:
       # Without these, runner pods are BestEffort with no memory limit. A
       # runner's flate cache always starts cold, and a cold one-namespace
       # render of this tree peaked at ~1.7GiB (kritika, cilium; flate 0.6.5).
-      resources:
-        requests: { cpu: 10m, memory: 512Mi }
-        limits: { memory: 3Gi }
+      # Pod-level since 0.0.76, so they bound the run tool's commands too.
+      podTemplate:
+        spec:
+          resources:
+            requests: { cpu: 10m, memory: 512Mi }
+            limits: { memory: 3Gi }
     networkPolicy:
       enabled: true
       type: cilium

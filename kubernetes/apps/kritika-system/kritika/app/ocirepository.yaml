@@ -17,6 +17,7 @@ spec:
     # YAML now sits under config, with auth nested as config.auth. 0.0.70
     # removed agent.commands and trigger.settle, and unknown config keys fail
     # startup; 0.0.73 removed runner.tools, so flate comes from the merge
-    # base's .kritika/mise.toml and mise.lock.
-    tag: 0.0.75
+    # base's .kritika/mise.toml and mise.lock. 0.0.76 moved runner.resources
+    # to runner.podTemplate.spec.resources, and the old key is silently ignored.
+    tag: 0.0.77
   url: oci://ghcr.io/home-operations/charts/kritika
