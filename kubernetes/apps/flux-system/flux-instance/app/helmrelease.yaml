@@ -12,7 +12,11 @@ spec:
   values:
     instance:
       distribution:
-        artifact: oci://ghcr.io/controlplaneio-fluxcd/flux-operator-manifests:v0.38.1
+        # The chart's version "2.x" resolves to the newest Flux this bundle
+        # ships, so the bundle decides the version: v0.38.1 stopped at 2.7.5
+        # and left the cluster there. Kept at the operator's version, and moved
+        # with it by the Flux Operator Renovate group.
+        artifact: oci://ghcr.io/controlplaneio-fluxcd/flux-operator-manifests:v0.61.0
       cluster:
         networkPolicy: false
       components:
