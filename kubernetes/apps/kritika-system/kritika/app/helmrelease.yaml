@@ -87,17 +87,15 @@ spec:
       review:
         model: litellm/llama-strix-chat
       limits:
-        # Model calls at once, per model. The default 2 does not exist on a
-        # one-slot server: two reviews' conversations took turns on it, each
-        # step evicting the other's context (148 such requests in 72h of
-        # llama-strix logs, 2026-10-07). From 0.0.45 a large review's parts
-        # also run in these slots, so every split review would interleave the
-        # same way, and a step queued behind another's 16384-token generation
-        # (~7.5m at 36 tok/s) can pass the 5m mark kritika treats as a
-        # timeout. At 1 the parts run one after another, which is all the
-        # slot allows anyway. It also caps index embedding at one slot, which
-        # a review's similar-code lookup can wait behind.
-        concurrency: 1
+        # Model calls at once, per model: one per gufo session. llama-strix
+        # serves 2, each with the full 262144-token context reserved at load
+        # (load_completed sessions=2, 2026-10-17), so two reviews no longer
+        # evict each other's context as they did on the one-slot llama.cpp
+        # fork (148 such requests in 72h, 2026-10-07). Two at once run at
+        # ~25-42 tok/s each against ~37-42 alone (gufo file's table). The
+        # sessions are shared, so while two reviews run, Open WebUI and the
+        # agents queue in gufo (--max-pending) rather than fail.
+        concurrency: 2
       agent:
         # The run tool offers the runner image's curl, fd, gh, jq, rg and yq
         # plus flate from .kritika/mise.toml (0.0.70 removed agent.commands).
@@ -187,9 +185,9 @@ spec:
         enabled: true
       prometheusRule:
         enabled: true
-        # The chart's 600s/15m fires on normal queueing. limits.concurrency is
-        # 1, and over 7 days to 2026-10-13 the median review took ~13m and 37
-        # of 82 took over 15m, so a batch of three Renovate PRs waits past it.
+        # The chart's 600s/15m fires on normal queueing. With limits.concurrency
+        # at 1, over 7 days to 2026-10-13 the median review took ~13m and 37
+        # of 82 took over 15m, so a batch of three Renovate PRs waited past it.
         # One review can run 50m (agent.timeout plus the runner's 5m), so an
         # hour's wait held for 30m means a stall, not a queue.
         queueAgeSeconds: 3600
