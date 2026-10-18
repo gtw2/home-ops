@@ -6,6 +6,12 @@ metadata:
   name: sonarr
 spec:
   interval: 30m
+  # Sonarr migrates its database before it listens, so the startup probe's
+  # 10m is the ceiling on a migration. The Helm timeout and the Deployment's
+  # progress deadline (postRenderers, 600s by default) both outlast it: either
+  # firing first would fail the upgrade, and the rollback below would start
+  # the old image against a migrated schema.
+  timeout: 15m
   chartRef:
     kind: OCIRepository
     name: app-template
@@ -17,6 +23,17 @@ spec:
     remediation:
       strategy: rollback
       retries: 3
+  # app-template exposes no progressDeadlineSeconds.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: sonarr
+            patch: |
+              - op: add
+                path: /spec/progressDeadlineSeconds
+                value: 900
   dependsOn:
     - name: rook-ceph-cluster
       namespace: rook-ceph
@@ -37,7 +54,7 @@ spec:
           app:
             image:
               repository: ghcr.io/home-operations/sonarr
-              tag: 4.0.20.3012@sha256:1f19eb5e0f421418c1a956bbe01310a0141423afe28bd9a4b1dcb8629ff2bce2
+              tag: 5.0.0.2668@sha256:64fc190929b50091a8d6c3d6b5f4a3df7d3b8f98d076735f5cb223f7d77b0cc3
             env:
               SONARR__APP__INSTANCENAME: Sonarr
               SONARR__APP__THEME: dark
@@ -62,6 +79,19 @@ spec:
                   timeoutSeconds: 1
                   failureThreshold: 3
               readiness: *probes
+              # /ping is refused until SchemaBuilder.Initialize finishes
+              # (Startup.Configure), so a migration would otherwise spend the
+              # liveness budget of 30s and be killed and restarted. 60 x 10s.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /ping
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  failureThreshold: 60
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
