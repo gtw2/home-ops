@@ -6,9 +6,11 @@ metadata:
   name: sonarr
 spec:
   interval: 30m
-  # Outlasts the startup probe's 10m. Sonarr migrates its database before it
-  # listens; on the 5m default a long migration would fail the upgrade, and
-  # the rollback below would start the old image against a migrated schema.
+  # Sonarr migrates its database before it listens, so the startup probe's
+  # 10m is the ceiling on a migration. The Helm timeout and the Deployment's
+  # progress deadline (postRenderers, 600s by default) both outlast it: either
+  # firing first would fail the upgrade, and the rollback below would start
+  # the old image against a migrated schema.
   timeout: 15m
   chartRef:
     kind: OCIRepository
@@ -21,6 +23,17 @@ spec:
     remediation:
       strategy: rollback
       retries: 3
+  # app-template exposes no progressDeadlineSeconds.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: sonarr
+            patch: |
+              - op: add
+                path: /spec/progressDeadlineSeconds
+                value: 900
   dependsOn:
     - name: rook-ceph-cluster
       namespace: rook-ceph
