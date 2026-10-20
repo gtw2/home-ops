@@ -69,6 +69,19 @@ spec:
           parentRefs:
             - name: envoy-external
               namespace: network
+          # authentik 2026.8.4 (goauthentik/authentik#26353) takes the client IP
+          # from the leftmost X-Forwarded-For entry, and Envoy forwards the
+          # chain it received: through the tunnel that is the client's own
+          # header, then the real IP Cloudflare appended. Replace the chain
+          # with the client Envoy resolved under the ClientTrafficPolicy's
+          # trustedCIDRs (the rightmost untrusted entry; the socket peer for a
+          # direct LAN hit), so the IP in events and reputation can't be forged.
+          filters:
+            - type: RequestHeaderModifier
+              requestHeaderModifier:
+                set:
+                  - name: X-Forwarded-For
+                    value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
           annotations:
             gethomepage.dev/enabled: "true"
             gethomepage.dev/icon: authentik.png
