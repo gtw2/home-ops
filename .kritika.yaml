@@ -37,6 +37,15 @@ rules:
     rule: >-
       Commits and PR titles follow Conventional Commits, such as
       fix(container): ... or chore(renovate): ...
+# Tools the runners add to the -tools image's curl, fd, gh, jq, rg and yq.
+# Read from the merge base like the rules, so a change here applies from the
+# next PR on. No lock: kritika locks each tool against the release's API
+# digest before installing it (0.0.87).
+tools:
+  "github:home-operations/flate":
+    filter_bins: flate
+    # renovate: datasource=github-releases depName=home-operations/flate
+    version: "0.6.5"
 context:
   - path: AGENTS.md
     description: >-
