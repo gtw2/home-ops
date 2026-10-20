@@ -94,5 +94,16 @@
       matchUpdateTypes: ["major"],
       enabled: false,
     },
+    {
+      // pipx:ansible-core installs into this interpreter, and ansible-core 2.21
+      // declares Python 3.12-3.14 only; 3.15 support arrives in 2.22 (only rc1
+      // as of 2026-10-20). Drop this rule and bump both together once 2.22.0
+      // ships, then rebuild .venv and the pipx tools (mise install --force),
+      // which editing the pin alone does not do.
+      description: "Hold mise's Python below 3.15 until ansible-core supports it",
+      matchManagers: ["mise"],
+      matchPackageNames: ["python"],
+      allowedVersions: "<3.15",
+    },
   ],
 }
