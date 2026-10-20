@@ -167,15 +167,20 @@ spec:
     # create it: /cache is the group-writable gufo-cache the prestage Job
     # made, and /cache/continuation does not exist until gufo starts.
     #
-    # No --cache-ram-bytes: the default is half the host RAM still available
-    # after the model loads, capped by the container limit. It chose
-    # 12175706112 (11.3GiB) on the first start, with 23.2GiB available. Those
-    # pages are hipHostMalloc'd and charged to this pod; see resources.memory.
+    # --cache-ram-bytes pinned to the 12175706112 (11.3GiB) 0.15.0 chose by
+    # default on the first start, with 23.2GiB available: the default is half
+    # the host RAM still available after the model loads, capped by the
+    # container limit. 0.18.0 (gufo-org/gufo#637) counts the pod's reclaimable
+    # page cache as available, so the default now depends on what the load
+    # left cached. Those pages are hipHostMalloc'd and charged to this pod;
+    # see resources.memory, which was sized for this figure.
     # No --cache-disk-staging-bytes: Flash-Next ignores it.
     - --cache-disk
     - /cache/continuation
     - --cache-disk-bytes
     - "68719476736"
+    - --cache-ram-bytes
+    - "12175706112"
   # Required for runtime: generic - args name the model itself. The warning in
   # qwen3.8-flash-next.yaml against setting this applies to runtime: llamacpp
   # only, where it makes the operator pass --model "".
