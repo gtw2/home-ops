@@ -16,8 +16,9 @@ spec:
     # 0.0.68 dropped configFile and the flat auth* keys: the whole application
     # YAML now sits under config, with auth nested as config.auth. 0.0.70
     # removed agent.commands and trigger.settle, and unknown config keys fail
-    # startup; 0.0.73 removed runner.tools, so flate comes from the merge
-    # base's .kritika/mise.toml and mise.lock. 0.0.76 moved runner.resources
-    # to runner.podTemplate.spec.resources, and the old key is silently ignored.
-    tag: 0.0.86
+    # startup; 0.0.73 removed runner.tools. 0.0.76 moved runner.resources to
+    # runner.podTemplate.spec.resources, and the old key is silently ignored.
+    # 0.0.87 stopped reading the merge base's .kritika/mise.toml and
+    # mise.lock: flate now comes from the tools key of .kritika.yaml.
+    tag: 0.0.87
   url: oci://ghcr.io/home-operations/charts/kritika

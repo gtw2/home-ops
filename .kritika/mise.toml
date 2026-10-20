@@ -1,6 +1,0 @@
-# Tools kritika's runners add to the -tools image's curl, fd, gh, jq, rg and
-# yq for reviews of this repository. kritika reads this file and mise.lock
-# from the merge base, so a change here applies from the next PR on.
-# Regenerate the lock with: mise -C .kritika lock --platform linux-x64
-[tools]
-"github:home-operations/flate" = { version = "0.6.5", filter_bins = "flate" }
