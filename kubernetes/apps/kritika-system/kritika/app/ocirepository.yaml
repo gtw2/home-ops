@@ -19,5 +19,5 @@ spec:
     # startup; 0.0.73 removed runner.tools, so flate comes from the merge
     # base's .kritika/mise.toml and mise.lock. 0.0.76 moved runner.resources
     # to runner.podTemplate.spec.resources, and the old key is silently ignored.
-    tag: 0.0.85
+    tag: 0.0.86
   url: oci://ghcr.io/home-operations/charts/kritika
