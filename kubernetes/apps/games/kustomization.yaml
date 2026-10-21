@@ -15,6 +15,7 @@ resources:
   - ./minecraft/ks.yaml
   - ./palworld/ks.yaml
   - ./romm/ks.yaml
+  - ./satisfactory/ks.yaml
   # - ./sdtd/ks.yaml
   # - ./starrupture/ks.yaml
   - ./valheim/ks.yaml

@@ -1,0 +1,120 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app satisfactory
+spec:
+  interval: 15m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  values:
+    defaultPodOptions:
+      securityContext:
+        # Rootless: init.sh skips its usermod/chown/gosu path when not root, and
+        # only accepts a non-root uid that matches the image's steam user
+        # (1000:1000). /config is already 1000-owned in the image.
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+    controllers:
+      satisfactory:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            # SteamCMD app_update runs on every start, so a restart is an update.
+            image:
+              repository: docker.io/wolveix/satisfactory-server
+              tag: v1.9.11@sha256:ac252dba41653eb21c6feed94b577f98fa152f5792b1aeff2ce11fe364355137
+            env:
+              TZ: ${TIMEZONE}
+              # Not the 7777/8888 defaults: dragonwilds already holds 7777/udp
+              # on the towonel edge, and every public port there is a single
+              # listener shared by all games. The game port carries both the
+              # game (UDP) and the HTTPS API the Server Manager talks to (TCP),
+              # so it has to move as a pair.
+              #
+              # The messaging port can keep 8888 - dragonwilds' 8888 is UDP,
+              # this one is TCP. run.sh passes it as both -ReliablePort and
+              # -ExternalReliablePort, and clients learn it from the server, so
+              # only the game port is ever typed in.
+              SERVERGAMEPORT: &gameport 7778
+              SERVERMESSAGINGPORT: &msgport 8888
+              MAXPLAYERS: "8"
+            # No secret: the server name, admin password and join password are
+            # all set in-game when the server is first claimed through the
+            # Server Manager, and live in the save, not the environment.
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            resources:
+              # The image warns below 8GB available; late-game factories grow
+              # well past that.
+              requests:
+                cpu: 1000m
+                memory: 8Gi
+              limits:
+                memory: 16Gi
+    service:
+      app:
+        controller: *app
+        type: LoadBalancer
+        annotations:
+          io.cilium/lb-ipam-ips: 10.10.40.151
+          warden.dev/enabled: "true"
+          # warden has no satisfactory query mapping - opengsq's Satisfactory
+          # protocol needs an API token generated in-game - so this is
+          # Kubernetes-only state.
+          warden.dev/game: "satisfactory"
+          warden.dev/control: "true"
+          warden.dev/channels: "steam-servers"
+          warden.dev/address: "satisfactory.${SECRET_GAMING_DOMAIN}:7778"
+          # Split horizon: unifi-dns answers the LAN with the LoadBalancer
+          # address; cloudflare-dns has no service source, so the public
+          # record keeps pointing at the towonel edge.
+          external-dns.alpha.kubernetes.io/hostname: satisfactory.${SECRET_GAMING_DOMAIN}
+          # Same port on both protocols is intentional - the game is UDP and
+          # the HTTPS API is TCP on 7778, and the edge binds them as separate
+          # listeners.
+          towonel.io/tunnel: enable
+          towonel.io/tunnel-ref: network/home-ops
+          towonel.io/sf-game.udp: "true"
+          towonel.io/sf-game.public-port: "7778"
+          towonel.io/sf-api.tcp: "true"
+          towonel.io/sf-api.public-port: "7778"
+          towonel.io/sf-messaging.tcp: "true"
+          towonel.io/sf-messaging.public-port: "8888"
+        ports:
+          sf-game:
+            enabled: true
+            port: *gameport
+            protocol: UDP
+          sf-api:
+            enabled: true
+            port: *gameport
+            protocol: TCP
+          sf-messaging:
+            enabled: true
+            port: *msgport
+            protocol: TCP
+    persistence:
+      config:
+        enabled: true
+        existingClaim: *app
+        globalMounts:
+          - path: /config
+      # Root-owned in the image and only chowned on the root path of init.sh,
+      # so the rootless server could not write crash dumps there.
+      dumps:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp/dumps
