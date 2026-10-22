@@ -83,6 +83,12 @@ spec:
               ENABLE_SEARCH_QUERY: true
               RAG_WEB_SEARCH_ENGINE: searxng
               SEARXNG_QUERY_URL: http://searxng:8080/search?q=<query>
+              # The memini Memory filter's base_url valve defaults to this, and
+              # to http://localhost:8080 - open-webui itself - without it, where
+              # every recall and capture fails silently (fallback_on_error).
+              # A default only: a base_url already saved in the function's
+              # valves wins, and valves live in the database, not here.
+              MEMINI_BASE_URL: http://memini.llm.svc.cluster.local:8080
               # MCP tools from toolhive in the llm namespace. Talking to the
               # gateway Service directly keeps this in-cluster, so it bypasses
               # envoy and needs no API key - auth_type none is correct here,
