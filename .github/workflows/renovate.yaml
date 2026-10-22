@@ -9,7 +9,9 @@ on:
       - .renovaterc.json5
       - .renovate/**.json5
   schedule:
-    - cron: "0 * * * *"
+    # Off the top of the hour: GitHub delays and drops jobs scheduled at :00,
+    # which left hours between runs.
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       dryRun:

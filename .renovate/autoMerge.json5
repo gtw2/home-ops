@@ -3,6 +3,11 @@
   packageRules: [
     {
       description: "Auto-merge trusted container digests",
+      // Rebase only on conflict. With automerge, Renovate otherwise rebases every
+      // PR behind main, which restarts its checks, so it is pending at merge time
+      // and main has moved again by the next run. Nothing requires branches to be
+      // up to date, so a green PR can merge behind main.
+      rebaseWhen: "conflicted",
       matchDatasources: ["docker"],
       automerge: true,
       automergeType: "pr",
@@ -12,6 +17,8 @@
     },
     {
       description: "Auto-merge OCI Charts",
+      // Rebase only on conflict: see the digest rule above.
+      rebaseWhen: "conflicted",
       matchDatasources: ["docker"],
       automerge: true,
       automergeType: "pr",
