@@ -5,3 +5,18 @@ kind: Kustomization
 resources:
   - ./externalsecret.yaml
   - ./helmrelease.yaml
+configMapGenerator:
+  # The chart mounts each listed ConfigMap at
+  # /blueprints/mounted/cm-<name> in the worker, which discovers every *.yaml
+  # key there. Substitution stays ON: the blueprints use ${SECRET_DOMAIN}.
+  # Secrets go through !Env, never through this ConfigMap.
+  - name: authentik-blueprints
+    files:
+      - ./blueprints/access.yaml
+      - ./blueprints/friends.yaml
+      - ./blueprints/groups.yaml
+      - ./blueprints/litellm.yaml
+      - ./blueprints/open-webui.yaml
+generatorOptions:
+  # The chart takes the ConfigMap by name, so it must be stable.
+  disableNameSuffixHash: true

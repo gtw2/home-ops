@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# LiteLLM admin UI (litellm.${SECRET_DOMAIN}): OIDC provider, the litellm_role
+# scope it reads, and who may log in.
+#
+# The provider and application are adopted, and match the live ones
+# (inventory, 2026-10-22). The scope mapping is NEW: LiteLLMProxy has always
+# asked for litellm_role, and llm/README.md lists the mapping as a
+# prerequisite, but it was never created, so every SSO login got LiteLLM's
+# default role.
+#
+# Friends are not bound here. They get API keys from git
+# (llm/litellm/app/virtualkey.yaml) and never need the UI; the API is gated
+# by those keys, not by SSO.
+version: 1
+metadata:
+  name: litellm
+entries:
+  - model: authentik_core.group
+    id: admins
+    state: created
+    identifiers:
+      name: authentik Admins
+  - model: authentik_core.group
+    id: users
+    state: created
+    identifiers:
+      name: authentik Users
+
+  # Read by GENERIC_USER_ROLE_ATTRIBUTE in LiteLLMProxy. internal_user_viewer,
+  # not internal_user, for everyone else: viewers can see their usage but not
+  # mint keys, and keys are minted in git.
+  - model: authentik_providers_oauth2.scopemapping
+    id: scope-litellm-role
+    identifiers:
+      scope_name: litellm_role
+    attrs:
+      name: "LiteLLM: litellm_role"
+      description: LiteLLM proxy role
+      expression: |
+        if ak_is_group_member(request.user, name="authentik Admins"):
+            return {"litellm_role": "proxy_admin"}
+        return {"litellm_role": "internal_user_viewer"}
+
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider
+    identifiers:
+      client_id: !Env BLUEPRINT_LITELLM_CLIENT_ID
+    attrs:
+      name: LiteLLM OIDC Provider
+      client_type: confidential
+      client_secret: !Env BLUEPRINT_LITELLM_CLIENT_SECRET
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      sub_mode: hashed_user_id
+      issuer_mode: per_provider
+      # The live provider listed this URI twice; once is the same match.
+      redirect_uris:
+        - matching_mode: strict
+          url: https://litellm.${SECRET_DOMAIN}/sso/callback
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !KeyOf scope-litellm-role
+
+  # The slug is the one in LiteLLMProxy's PROXY_LOGOUT_URL.
+  - model: authentik_core.application
+    id: app
+    identifiers:
+      slug: litellm
+    attrs:
+      name: LiteLLM
+      provider: !KeyOf provider
+      meta_launch_url: https://litellm.${SECRET_DOMAIN}
+      policy_engine_mode: any
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf app
+      group: !KeyOf admins
+    attrs:
+      order: 0
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf app
+      group: !KeyOf users
+    attrs:
+      order: 10
