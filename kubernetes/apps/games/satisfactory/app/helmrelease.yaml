@@ -71,10 +71,14 @@ spec:
         annotations:
           io.cilium/lb-ipam-ips: 10.10.40.151
           warden.dev/enabled: "true"
-          # warden has no satisfactory query mapping - opengsq's Satisfactory
-          # protocol needs an API token generated in-game - so this is
-          # Kubernetes-only state.
+          # Online from the unauthenticated Lightweight Query (UDP) on the
+          # game port; the player count from the HTTPS API (TCP, same port)
+          # only once QUERYAUTH_SATISFACTORY holds a server.GenerateAPIToken
+          # token. Unset, the panel still reaches Online with the count as -.
+          # Needs warden 0.1.11; older releases treat it as Kubernetes-only.
           warden.dev/game: "satisfactory"
+          warden.dev/query-port: "7778"
+          warden.dev/query-auth-env: "QUERYAUTH_SATISFACTORY"
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
           warden.dev/address: "satisfactory.${SECRET_GAMING_DOMAIN}:7778"
