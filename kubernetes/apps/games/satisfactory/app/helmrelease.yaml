@@ -29,7 +29,7 @@ spec:
           app:
             # SteamCMD app_update runs on every start, so a restart is an update.
             image:
-              repository: docker.io/wolveix/satisfactory-server
+              repository: docker.io/robtme/satisfactory-server
               tag: v1.9.11@sha256:ac252dba41653eb21c6feed94b577f98fa152f5792b1aeff2ce11fe364355137
             env:
               TZ: ${TIMEZONE}
