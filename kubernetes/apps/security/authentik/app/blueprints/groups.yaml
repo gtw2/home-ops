@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# Every group that is not authentik's own. Membership is not here: users and
+# who belongs where live in the database, which is what a restore brings back.
+#
+# Left out because upstream blueprints already own them: authentik Admins
+# (system/bootstrap.yaml), authentik Agent-Users and authentik Read-only
+# (default/rbac-role-*.yaml).
+#
+# Other blueprints that bind a group re-declare it with state: created, so
+# they never depend on this file having applied first. That matters on a
+# rebuild, where the files apply in no particular order.
+version: 1
+metadata:
+  name: groups
+entries:
+  # The household. Both enrollment-invitation and the google source's
+  # enrollment put new users here, and access.yaml lets this group into every
+  # application, so this group has to stay household only.
+  - model: authentik_core.group
+    identifiers:
+      name: authentik Users
+    attrs:
+      is_superuser: false
+  - model: authentik_core.group
+    identifiers:
+      name: authentik Family
+    attrs:
+      is_superuser: false
+  # Not in authentik Users, on purpose: friends get Open WebUI and nothing
+  # else (open-webui.yaml, friends.yaml).
+  - model: authentik_core.group
+    identifiers:
+      name: friends
+    attrs:
+      is_superuser: false
+
+  # Read by the applications themselves, for roles inside the app.
+  - model: authentik_core.group
+    identifiers:
+      name: Grafana Admins
+    attrs:
+      is_superuser: false
+  - model: authentik_core.group
+    identifiers:
+      name: Grafana Editors
+    attrs:
+      is_superuser: false
+  - model: authentik_core.group
+    identifiers:
+      name: ocisAdmin
+    attrs:
+      is_superuser: false
+  - model: authentik_core.group
+    identifiers:
+      name: ocisSpaceAdmin
+    attrs:
+      is_superuser: false
+  - model: authentik_core.group
+    identifiers:
+      name: ocisUser
+    attrs:
+      is_superuser: false
+  - model: authentik_core.group
+    identifiers:
+      name: ocisGuest
+    attrs:
+      is_superuser: false
+  - model: authentik_core.group
+    identifiers:
+      name: rommAdmin
+    attrs:
+      is_superuser: false
+  - model: authentik_core.group
+    identifiers:
+      name: rommEditor
+    attrs:
+      is_superuser: false
+  - model: authentik_core.group
+    identifiers:
+      name: rommViewer
+    attrs:
+      is_superuser: false

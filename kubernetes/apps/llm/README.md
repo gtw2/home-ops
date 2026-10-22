@@ -43,7 +43,8 @@ requests the `gpu.amd.com` DeviceClass published by the ROCm
    needed until a gated one is added.
 2. **Authentik application** for litellm: redirect URI
    `https://litellm.${SECRET_DOMAIN}/sso/callback`, and a `litellm_role`
-   property mapping (`internal_user` / `proxy_admin`).
+   property mapping (`internal_user_viewer` / `proxy_admin`). All three are
+   owned by `security/authentik/app/blueprints/litellm.yaml`.
 3. **The GGUF filename** in `litellm/app/qwen3.6-35b-a3b.yaml` was verified against
    the repo on 2026-09-07 (~16.5GiB). Re-check it if this sits unapplied for a
    while — unsloth renames quant files between uploads, and a wrong name fails

@@ -43,6 +43,10 @@ spec:
     authentik:
       redis:
         host: dragonfly.database.svc.cluster.local
+    # Configuration as code: see blueprints/README.md.
+    blueprints:
+      configMaps:
+        - authentik-blueprints
     server:
       initContainers:
         - name: init-db

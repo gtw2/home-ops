@@ -1,0 +1,163 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# Invitation-only enrollment for friends.
+#
+# Adapted from upstream blueprints/example/flows-invitation-enrollment.yaml
+# (version/2026.8.4), cut down to the one flow this needs.
+#
+# Separate from the existing enrollment-invitation flow on purpose. That one
+# writes new users into authentik Users, the household group access.yaml lets
+# into every application. Invite friends through this flow, and household
+# through that one.
+#
+# Everything here is new, so nothing that exists today changes.
+#
+# An invitation is a credential, so none live in git. Create one under
+# Directory -> Invitations, flow friends-enrollment, single use, and send the
+# link it shows (https://sso.${SECRET_DOMAIN}/if/flow/friends-enrollment/?itoken=...).
+version: 1
+metadata:
+  name: friends
+entries:
+  # Declared in groups.yaml; state: created so this file never waits on it.
+  - model: authentik_core.group
+    id: group-friends
+    state: created
+    identifiers:
+      name: friends
+
+  - model: authentik_flows.flow
+    id: flow
+    identifiers:
+      slug: friends-enrollment
+    attrs:
+      name: Friends enrollment
+      title: Welcome! Set up your account
+      designation: enrollment
+      authentication: require_unauthenticated
+
+  # false: the flow refuses to start without a valid invitation, so the slug
+  # being guessable gives nobody an account.
+  - model: authentik_stages_invitation.invitationstage
+    id: stage-invitation
+    identifiers:
+      name: friends-enrollment-invitation
+    attrs:
+      continue_flow_without_invitation: false
+
+  - model: authentik_stages_prompt.prompt
+    id: field-username
+    identifiers:
+      name: friends-enrollment-field-username
+    attrs:
+      field_key: username
+      label: Username
+      type: username
+      required: true
+      placeholder: Username
+      placeholder_expression: false
+      order: 0
+  - model: authentik_stages_prompt.prompt
+    id: field-name
+    identifiers:
+      name: friends-enrollment-field-name
+    attrs:
+      field_key: name
+      label: Name
+      type: text
+      required: true
+      placeholder: Name
+      placeholder_expression: false
+      order: 1
+  # Open WebUI merges accounts by email (OAUTH_MERGE_ACCOUNTS_BY_EMAIL), so
+  # this has to be an address the friend actually owns, not a placeholder.
+  - model: authentik_stages_prompt.prompt
+    id: field-email
+    identifiers:
+      name: friends-enrollment-field-email
+    attrs:
+      field_key: email
+      label: Email
+      type: email
+      required: true
+      placeholder: Email
+      placeholder_expression: false
+      order: 2
+  - model: authentik_stages_prompt.prompt
+    id: field-password
+    identifiers:
+      name: friends-enrollment-field-password
+    attrs:
+      field_key: password
+      label: Password
+      type: password
+      required: true
+      placeholder: Password
+      placeholder_expression: false
+      order: 3
+  - model: authentik_stages_prompt.prompt
+    id: field-password-repeat
+    identifiers:
+      name: friends-enrollment-field-password-repeat
+    attrs:
+      field_key: password_repeat
+      label: Password (repeat)
+      type: password
+      required: true
+      placeholder: Password (repeat)
+      placeholder_expression: false
+      order: 4
+
+  - model: authentik_stages_prompt.promptstage
+    id: stage-prompt
+    identifiers:
+      name: friends-enrollment-prompt
+    attrs:
+      fields:
+        - !KeyOf field-username
+        - !KeyOf field-name
+        - !KeyOf field-email
+        - !KeyOf field-password
+        - !KeyOf field-password-repeat
+
+  # internal, not external: external users are kept out of the user
+  # interface, which is also where they would change their password or add
+  # MFA. Application access is what limits a friend, and that is the
+  # bindings' job, not the user type's. The path keeps them filterable.
+  - model: authentik_stages_user_write.userwritestage
+    id: stage-write
+    identifiers:
+      name: friends-enrollment-write
+    attrs:
+      user_creation_mode: always_create
+      user_type: internal
+      user_path_template: users/friends
+      create_users_group: !KeyOf group-friends
+
+  - model: authentik_stages_user_login.userloginstage
+    id: stage-login
+    identifiers:
+      name: friends-enrollment-login
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf stage-invitation
+      order: 0
+    attrs:
+      evaluate_on_plan: true
+      re_evaluate_policies: true
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf stage-prompt
+      order: 10
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf stage-write
+      order: 20
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf stage-login
+      order: 100

@@ -69,3 +69,52 @@ spec:
         remoteRef:
           remoteKey: litellm
           property: LITELLM_KRITIKA_API_KEY
+# Friends: one key each, copied from this template. Kept as a comment until
+# there is a first friend, since an inactive key is still a working credential.
+#
+# Scoped like kritika's, not open-webui's: a key outside the cluster should
+# name its models, so a new model is not handed out by default.
+#
+# maxParallelRequests 1 is the one limit that matters. gufo serves two
+# sessions (--sessions 2 in qwen3.8-flash-next-gufo.yaml); a friend's agent
+# loop could hold both, which would queue Open WebUI behind it. rpmLimit
+# bounds the tight retry loops agent clients fall into. No tpmLimit: an
+# agent's prompt alone can be tens of thousands of tokens, so any value that
+# lets one turn through says nothing about throughput.
+#
+# The key goes to 1Password beside kritika's, for handing over from there.
+# Delete the pair to revoke: the operator deletes the key from the proxy.
+#
+# ---
+# apiVersion: litellm.home-operations.com/v1alpha1
+# kind: LiteLLMVirtualKey
+# metadata:
+#   name: friend-<name>
+# spec:
+#   proxyRef: litellm
+#   keyAlias: friend-<name>
+#   secretName: litellm-key-friend-<name>
+#   secretKey: api-key
+#   models:
+#     - llama-fast
+#     - llama-strix-chat
+#   maxParallelRequests: 1
+#   rpmLimit: 30
+# ---
+# apiVersion: external-secrets.io/v1alpha1
+# kind: PushSecret
+# metadata:
+#   name: friend-<name>
+# spec:
+#   secretStoreRefs:
+#     - name: onepassword-connect
+#       kind: ClusterSecretStore
+#   selector:
+#     secret:
+#       name: litellm-key-friend-<name>
+#   data:
+#     - match:
+#         secretKey: api-key
+#         remoteRef:
+#           remoteKey: litellm
+#           property: LITELLM_FRIEND_<NAME>_API_KEY

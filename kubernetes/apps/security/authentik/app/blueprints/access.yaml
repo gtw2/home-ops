@@ -1,0 +1,98 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+# Who may log in to the applications that have no blueprint of their own yet.
+#
+# Until this, no application had a single policy binding (inventory,
+# 2026-10-22), so every active user could log in everywhere. That was harmless
+# while every user was household. It stops being harmless the moment friends
+# exist. These bindings keep it exactly as it was for every account there is
+# today: each one is in authentik Admins or authentik Users. Anyone in neither
+# group, which means friends, is refused.
+#
+# When an application gets its own blueprint, move its bindings there (see
+# open-webui.yaml) and drop it from this list.
+#
+# On a rebuild without the database, applications that are still hand-made
+# do not exist yet, so a !Find below comes back empty and this file fails
+# until they are recreated. The household is unaffected: with no bindings an
+# application is open, which is how it was before.
+version: 1
+metadata:
+  name: access
+entries:
+  - model: authentik_core.group
+    id: admins
+    state: created
+    identifiers:
+      name: authentik Admins
+  - model: authentik_core.group
+    id: users
+    state: created
+    identifiers:
+      name: authentik Users
+
+  # policy_engine_mode is "any" on every application here (the default), so
+  # either binding lets a user in.
+  - &admins
+    model: authentik_policies.policybinding
+    identifiers:
+      target: !Find [authentik_core.application, [slug, grafana]]
+      group: !KeyOf admins
+    attrs:
+      order: 0
+  - &users
+    model: authentik_policies.policybinding
+    identifiers:
+      target: !Find [authentik_core.application, [slug, grafana]]
+      group: !KeyOf users
+    attrs:
+      order: 10
+
+  - <<: *admins
+    identifiers: {target: !Find [authentik_core.application, [slug, immich]], group: !KeyOf admins}
+  - <<: *users
+    identifiers: {target: !Find [authentik_core.application, [slug, immich]], group: !KeyOf users}
+
+  - <<: *admins
+    identifiers: {target: !Find [authentik_core.application, [slug, kritika]], group: !KeyOf admins}
+  - <<: *users
+    identifiers: {target: !Find [authentik_core.application, [slug, kritika]], group: !KeyOf users}
+
+  - <<: *admins
+    identifiers: {target: !Find [authentik_core.application, [slug, nextcloud]], group: !KeyOf admins}
+  - <<: *users
+    identifiers: {target: !Find [authentik_core.application, [slug, nextcloud]], group: !KeyOf users}
+
+  - <<: *admins
+    identifiers: {target: !Find [authentik_core.application, [slug, ocis-android]], group: !KeyOf admins}
+  - <<: *users
+    identifiers: {target: !Find [authentik_core.application, [slug, ocis-android]], group: !KeyOf users}
+
+  - <<: *admins
+    identifiers: {target: !Find [authentik_core.application, [slug, ocis-desktop]], group: !KeyOf admins}
+  - <<: *users
+    identifiers: {target: !Find [authentik_core.application, [slug, ocis-desktop]], group: !KeyOf users}
+
+  - <<: *admins
+    identifiers: {target: !Find [authentik_core.application, [slug, ocis-ios]], group: !KeyOf admins}
+  - <<: *users
+    identifiers: {target: !Find [authentik_core.application, [slug, ocis-ios]], group: !KeyOf users}
+
+  - <<: *admins
+    identifiers: {target: !Find [authentik_core.application, [slug, ocis-web]], group: !KeyOf admins}
+  - <<: *users
+    identifiers: {target: !Find [authentik_core.application, [slug, ocis-web]], group: !KeyOf users}
+
+  - <<: *admins
+    identifiers: {target: !Find [authentik_core.application, [slug, romm]], group: !KeyOf admins}
+  - <<: *users
+    identifiers: {target: !Find [authentik_core.application, [slug, romm]], group: !KeyOf users}
+
+  - <<: *admins
+    identifiers: {target: !Find [authentik_core.application, [slug, scrob]], group: !KeyOf admins}
+  - <<: *users
+    identifiers: {target: !Find [authentik_core.application, [slug, scrob]], group: !KeyOf users}
+
+  - <<: *admins
+    identifiers: {target: !Find [authentik_core.application, [slug, sparky]], group: !KeyOf admins}
+  - <<: *users
+    identifiers: {target: !Find [authentik_core.application, [slug, sparky]], group: !KeyOf users}
