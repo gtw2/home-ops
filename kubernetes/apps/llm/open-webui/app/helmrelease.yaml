@@ -88,6 +88,9 @@ spec:
               # every recall and capture fails silently (fallback_on_error).
               # A default only: a base_url already saved in the function's
               # valves wins, and valves live in the database, not here.
+              # The timeout_ms valve defaults to 30000, under memini's 45s
+              # MEMINI_RERANK_TIMEOUT: set ~55000 in the function's settings, as
+              # MEMINI_TIMEOUT_MS is, or a slow rerank returns no memory at all.
               MEMINI_BASE_URL: http://memini.llm.svc.cluster.local:8080
               # MCP tools from toolhive in the llm namespace. Talking to the
               # gateway Service directly keeps this in-cluster, so it bypasses
