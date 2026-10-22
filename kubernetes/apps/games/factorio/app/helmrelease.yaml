@@ -43,7 +43,8 @@ spec:
           io.cilium/lb-ipam-ips: 10.10.40.146
           warden.dev/enabled: "true"
           # Factorio speaks no A2S; warden shows lifecycle from Kubernetes
-          # with no player count. The 27015 queryport is unused by any protocol.
+          # with no player count. 27015/tcp is RCON, the admin console, not a
+          # status query.
           warden.dev/game: "factorio"
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
@@ -60,8 +61,10 @@ spec:
           towonel.io/tunnel-ref: network/home-ops
           towonel.io/factorio-game.udp: "true"
           towonel.io/factorio-game.public-port: "34197"
-          towonel.io/factorio-query.tcp: "true"
-          towonel.io/factorio-query.public-port: "27015"
+          # factorio-query is deliberately not tunnelled: it is RCON, and on
+          # the edge it was the admin console open to the internet behind
+          # only the image's generated password. Nothing remote needs it -
+          # the image's own `rcon` works from kubectl exec.
         ports:
           factorio-game:
             enabled: true
