@@ -52,6 +52,6 @@ data:
     # Channels: a server with no `warden.dev/channel-ids` lands in
     # WARDEN_CONTROL_CHANNEL_ID. To post one to several channels, or to a
     # game-specific channel, list the ids in that annotation — but note the
-    # annotation lives in git, so use a `${VAR}` substituted from the SOPS
+    # annotation lives in git, so use a `$${VAR}` substituted from the SOPS
     # `cluster-secrets` Secret rather than writing an id in plaintext.
     servers: []

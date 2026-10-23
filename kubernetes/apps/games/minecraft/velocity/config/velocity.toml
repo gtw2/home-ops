@@ -78,7 +78,7 @@ enable-player-address-logging = true
 #
 # Caveat: /server X from inside Velocity only works if the backing StatefulSet
 # is already at replicas: 1. Waking a sleeping backend requires the player to
-# connect via the public hostname (e.g. vanilla.${CFG_GAMING_DOMAIN}) so the
+# connect via the public hostname (e.g. vanilla.$${CFG_GAMING_DOMAIN}) so the
 # handshake reaches mc-router and trips its scale-up.
 Hub = "minecraft-lobby:25565"
 Vanilla = "minecraft-vanilla.games.svc.cluster.local:25565"
