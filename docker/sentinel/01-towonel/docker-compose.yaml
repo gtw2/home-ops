@@ -47,9 +47,8 @@ services:
       - "15636:15636/udp" # enshrouded game
       - "15637:15637/udp" # enshrouded A2S query
       - "34197:34197/udp" # factorio game
-      - "27015:27015/tcp" # factorio query - TCP, distinct from icarus's UDP 27015
       - "17777:17777/udp" # icarus game
-      - "27015:27015/udp" # icarus steam query - UDP, distinct from factorio's TCP
+      - "27015:27015/udp" # icarus steam query
       - "7779:7779/udp"   # windrose game
       - "7779:7779/tcp"   # windrose game, same port on both protocols
       - "7777:7777/udp"   # dragonwilds game
