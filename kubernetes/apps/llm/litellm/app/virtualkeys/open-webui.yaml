@@ -1,0 +1,17 @@
+---
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMVirtualKey
+metadata:
+  name: open-webui
+spec:
+  proxyRef: litellm
+  keyAlias: Open WebUI
+  # The operator mints the key through the proxy admin API and writes it here.
+  secretName: litellm-key-open-webui
+  secretKey: api-key
+  # No models list: open-webui is the general chat UI and should pick up new
+  # models as they are added, without re-minting the key each time. Scope a
+  # key to specific models when it belongs to one automated consumer.
+  #
+  # No PushSecret: open-webui moved into this namespace, so it reads this
+  # Secret directly and the key no longer needs to travel through 1Password.

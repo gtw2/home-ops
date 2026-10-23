@@ -8,7 +8,8 @@ resources:
   - ./job.yaml
   - ./litellmproxy.yaml
   - ./servicemonitor.yaml
-  - ./virtualkey.yaml
+  # LiteLLMVirtualKey: one file per consumer
+  - ./virtualkeys
   # Model + InferenceService: the weights and the pod that serves them.
   #
   # Exactly ONE of these may be active. All define the name llama-strix, so
