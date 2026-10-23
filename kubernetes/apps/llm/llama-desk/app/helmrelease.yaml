@@ -42,7 +42,7 @@ spec:
           app:
             image:
               repository: mirror.gcr.io/library/haproxy
-              tag: 3.4.7-alpine@sha256:251da69821897ec8c4819f12b1babbc4b71f562943addc9b9eb14bb6ece40dc6
+              tag: 3.4.7-alpine@sha256:3c8c1df0ae3bea8834b3890fa6fa3b1653b4d6d9c44aecefba46428bfcfde2c0
             args: ["-f", "/usr/local/etc/haproxy/haproxy.cfg"]
             probes:
               # The proxy's own liveness, never the workstation's: a backend
