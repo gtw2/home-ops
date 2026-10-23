@@ -14,7 +14,7 @@ litellm/app/        # the proxy, its database, and the models it serves
   qwen3.8-flash-next.yaml  # the same model on the llama.cpp fork
   qwen3.6-35b-a3b.yaml     # the alternative; kustomization.yaml picks one
   models/             #   LiteLLMModel: how the proxy addresses that backend
-  virtualkey.yaml     #   per-consumer API key, pushed to 1Password
+  virtualkeys/        #   one API key per consumer; out-of-namespace ones pushed to 1Password
 llama-desk/         # HAProxy in front of the workstation 3090 (llama-fast)
 toolhive/           # MCP tooling: the operator, the servers, and the gateway
   crds/ app/          #   operator install, split so CRDs land first
@@ -236,11 +236,6 @@ served but deprecated, and `v1beta1` is the storage version for every kind here.
 
 ## Known follow-ups
 
-- **open-webui** now talks to this proxy from `home-automation`
-  (`OPENAI_API_BASE_URL`, key from `virtualkey.yaml` via 1Password). It has to
-  reconcile *after* the virtual key exists in 1Password, or its ExternalSecret
-  has nothing to template. Moving the app into this namespace would mean
-  migrating its PVC and Kopiur backup, so it stays where it is.
 - The operator-generated HTTPRoute takes no annotations, so litellm has no
   homepage or gatus entry yet — both would need a hand-written route or a
   homepage config entry.
