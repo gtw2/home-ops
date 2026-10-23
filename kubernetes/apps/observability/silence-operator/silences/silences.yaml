@@ -21,6 +21,21 @@ spec:
     - name: device
       value: /dev/nvme.*
       matchType: "=~"
+---
+apiVersion: observability.giantswarm.io/v1alpha2
+kind: Silence
+metadata:
+  name: framework-memory-high-utilization
+spec:
+  # The active llama-strix model keeps ~95GiB of weights in GTT, system RAM
+  # mapped for the iGPU (llm/litellm/app/qwen3.8-flash-next-gufo.yaml).
+  # node-exporter counts it as used, so the node sits at ~92% by design while
+  # it is loaded. Real pressure on this node shows up as OOM kills, not here.
+  matchers:
+    - name: alertname
+      value: NodeMemoryHighUtilization
+    - name: kubernetes_node
+      value: framework
 # ---
 # # yaml-language-server: $schema=https://kube-schemas.pages.dev/observability.giantswarm.io/silence_v1alpha2.json
 # apiVersion: observability.giantswarm.io/v1alpha2
