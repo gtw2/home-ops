@@ -34,7 +34,7 @@ spec:
           app:
             image:
               repository: ghcr.io/ellite/scrob
-              tag: 2.31.1@sha256:ebb29f5db1d2cbe52c25694c4f4b71b96ed2f7c2375bcccdb3619bc664151e80
+              tag: 2.33.0@sha256:5e098e161367605c7e6213123e5cb1c10bcd46c905c7b10276c29c01e424db40
             env:
               TZ: ${TIMEZONE}
               SERVER_URL: https://scrob.${SECRET_DOMAIN}
