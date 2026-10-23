@@ -81,6 +81,7 @@ spec:
           warden.dev/query-auth-env: "QUERYAUTH_SATISFACTORY"
           warden.dev/control: "true"
           warden.dev/channels: "steam-servers"
+          warden.dev/password-env: "JOIN_SATISFACTORY"   # join password, spoilered on the panel
           warden.dev/address: "satisfactory.${SECRET_GAMING_DOMAIN}:7778"
           # Split horizon: unifi-dns answers the LAN with the LoadBalancer
           # address; cloudflare-dns has no service source, so the public
