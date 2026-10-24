@@ -27,7 +27,7 @@
   // one slot, so a weekend batch queued its reviews for hours. Instead cap new
   // PRs per hour so reviews keep pace; leave concurrent PRs unlimited so open
   // ones never hold back new updates.
-  prHourlyLimit: 2,
+  prHourlyLimit: 6,
   prConcurrentLimit: 0,
   ignorePaths: ["**/*.sops.*"],
   // The shared presets do not set framework manager file patterns, and Renovate's
