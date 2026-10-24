@@ -40,12 +40,13 @@ spec:
         annotations:
           reloader.stakater.com/auto: "true"
         initContainers:
-          # itzg/minecraft-server TYPE=NANOLIMBO writes a default /data/settings.yml
-          # only if one doesn't exist, then unconditionally runs mc-image-helper patch
-          # against it (needs write access). We render the real settings.yml — with the
-          # forwarding secret injected — via ExternalSecret, mount it read-only at
-          # /config, and copy it into the emptyDir-backed /data before the main
-          # container starts. itzg then sees a pre-existing file and skips its default.
+          # NanoLimbo reads settings.yml from its working directory, /data. We render
+          # the real settings.yml — with the forwarding secret injected — via
+          # ExternalSecret, mount it read-only at /config, and copy it into the
+          # emptyDir-backed /data before the main container starts. Under
+          # TYPE=NANOLIMBO (see the env below for why it is off) itzg also writes a
+          # default only if the file is missing, then patches it in place, which
+          # needs the copy to be writable.
           copy-settings:
             image:
               repository: public.ecr.aws/docker/library/busybox
@@ -75,7 +76,17 @@ spec:
             env:
               EULA: "true"
               TZ: "${TIMEZONE}"
-              TYPE: NANOLIMBO
+              # TYPE=NANOLIMBO downloads the jar with mc-image-helper, which since
+              # 2026-10-23 rejects github.com's responses: their headers (~10.7KB,
+              # 9.2KB of it CSP) exceed its 10240-byte limit, and the emptyDir makes
+              # every restart re-download (itzg/mc-image-helper#913). CUSTOM fetches
+              # the same BoomEaro/NanoLimbo jar with curl instead. FAMILY=LIMBO is
+              # what NANOLIMBO sets; the bind.port patch it would also apply is
+              # already 25565 in settings.yml. Pinned by hand, so go back to
+              # TYPE=NANOLIMBO once #913 is fixed.
+              TYPE: CUSTOM
+              FAMILY: LIMBO
+              CUSTOM_SERVER: https://github.com/BoomEaro/NanoLimbo/releases/download/1.14.0/NanoLimbo.jar
               SERVER_PORT: "25565"
             securityContext:
               allowPrivilegeEscalation: false
