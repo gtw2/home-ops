@@ -52,5 +52,17 @@ spec:
               value: in-cluster
             - name: PYTHONUNBUFFERED
               value: "1"
+          # The 2.0.0 image's WORKDIR and HOME, /home/mcp, is mode 0700 and
+          # owned by its UID 10001, but toolhive runs the pod as 1000. Startup
+          # then dies in pydantic-settings with "Permission denied: '.env'"
+          # just checking for a dotenv in the cwd. An emptyDir here is owned
+          # via fsGroup and also gives helm a writable ~/.cache and ~/.config
+          # on the read-only root.
+          volumeMounts:
+            - name: home
+              mountPath: /home/mcp
+      volumes:
+        - name: home
+          emptyDir: {}
   groupRef:
     name: mcp-tools
