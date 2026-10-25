@@ -100,9 +100,13 @@
       // as of 2026-10-20). Drop this rule and bump both together once 2.22.0
       // ships, then rebuild .venv and the pipx tools (mise install --force),
       // which editing the pin alone does not do.
+      //
+      // matchDepNames, not matchPackageNames: the mise manager looks python up
+      // as packageName "python/cpython", so matching "python" there held
+      // nothing and #1739 still proposed 3.15.
       description: "Hold mise's Python below 3.15 until ansible-core supports it",
       matchManagers: ["mise"],
-      matchPackageNames: ["python"],
+      matchDepNames: ["python"],
       allowedVersions: "<3.15",
     },
   ],
