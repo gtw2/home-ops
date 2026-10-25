@@ -41,6 +41,10 @@ spec:
       # budget: the index is built once and cached, so sessions after the first
       # return in about a second regardless. Sized for room to add backends
       # rather than to just clear today's corpus.
+      #
+      # These counts predate kubectl-mcp-server 2.0.0, which cut that backend
+      # from 275 tools to the 57 its --toolsets enable, so the corpus is now
+      # smaller than measured and 600s is headroom rather than a clearance.
       embeddingServiceTimeout: 600s
       # The knob that matters at 22 tok/s: how many tool definitions get spent
       # from the context budget on every turn. 8 is the CRD default.
