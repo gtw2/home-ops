@@ -32,7 +32,22 @@ spec:
             # Belt to the RBAC's braces. The ServiceAccount has no write verbs
             # at all, so a bypass of this flag still cannot mutate anything.
             - --read-only
+            # 2.0.0 registers only core+helm unless told otherwise, and tools
+            # outside the enabled toolsets do not exist at all. These add the
+            # read tools for what this cluster runs: cert-manager and cilium,
+            # plus the generic diagnostics/security/cost/crds sets. gitops is
+            # left out because flux-mcp already covers Flux. Measured with
+            # --read-only: 57 tools, against 275 from 1.24.0. An unknown name
+            # stops startup.
+            - --toolsets
+            - default,diagnostics,security,cost,crds,certs,cilium
           env:
+            # 2.0.0 exits 2 rather than bind a non-loopback address without
+            # OAuth. 127.0.0.1 is not an option: the toolhive proxy is its own
+            # pod. The server stays anonymous by design; access control is the
+            # gateway's envoy x-api-key policy and the read-only ServiceAccount.
+            - name: MCP_ALLOW_UNAUTHENTICATED
+              value: "true"
             - name: MCP_K8S_PROVIDER
               value: in-cluster
             - name: PYTHONUNBUFFERED
