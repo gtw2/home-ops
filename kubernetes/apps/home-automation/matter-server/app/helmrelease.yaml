@@ -40,29 +40,33 @@ spec:
         # Information Option, but the pod's accept_ra_rt_info_max_plen is 0, so
         # the kernel discards the option and Thread traffic falls through to the
         # default route and is dropped. Commissioning a Thread device hangs with
-        # no error; Wi-Fi Matter devices are unaffected.
+        # no error and paired ones fail CASE and drop out of Home Assistant;
+        # Wi-Fi Matter devices are unaffected.
         #
         # The sysctl is the right fix and cannot be set here: /proc/sys is
         # read-only inside the container under hostUsers: false, and a node-level
         # value does not propagate into the pod netns. Setting it through the
-        # kubelet needs allowedUnsafeSysctls on every node, so this installs the
-        # route directly instead.
+        # kubelet needs allowedUnsafeSysctls on every node.
         #
-        # Both addresses are therefore pinned and will need updating if the
-        # Thread network re-forms with a new prefix or the border router is
-        # replaced. Symptom is the same silent commissioning hang; compare
-        # `ip -6 route get <device addr>` against the border router's link-local.
-        # Reuses the app image purely for its iproute2 - nothing extra to pull.
+        # A route pinned at pod start broke when the border router was replaced,
+        # so this sidecar does the kernel's job instead: it listens for RAs on
+        # net1 and installs each RIO up to /64 via the advertising router, with
+        # the advertised lifetime. If Thread nodes drop out, its log shows which
+        # router the mesh prefix was last installed through.
+        # Reuses the app image for its python3 and iproute2 - nothing extra to
+        # pull.
         initContainers:
-          thread-route:
+          thread-routes:
             image: *image
-            command:
-              - sh
-              - -c
-              - ip -6 route replace fda4:a6bf:6c9e::/64 via fe80::1846:86e:1fa:347f dev net1
+            command: ["python3", "-I", "/scripts/thread-routes.py", "net1"]
+            resources:
+              limits:
+                # ~16Mi RSS measured
+                memory: 32Mi
+            restartPolicy: Always
             securityContext:
               capabilities:
-                add: ["NET_ADMIN"]
+                add: ["NET_ADMIN", "NET_RAW"]
     defaultPodOptions:
       annotations:
         k8s.v1.cni.cncf.io/networks: |
@@ -100,3 +104,11 @@ spec:
         existingClaim: "{{ .Release.Name }}"
       tmp:
         type: emptyDir
+      scripts:
+        type: configMap
+        name: matter-server-scripts
+        advancedMounts:
+          matter-server:
+            thread-routes:
+              - path: /scripts
+                readOnly: true
