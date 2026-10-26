@@ -97,14 +97,21 @@ spec:
         # agents queue in gufo (--max-pending) rather than fail.
         concurrency: 2
       agent:
-        # The run tool offers the runner image's curl, fd, gh, jq, rg and yq
-        # plus flate from the tools key of .kritika.yaml (0.0.70 removed
-        # agent.commands; 0.0.87 removed .kritika/mise.toml).
-        # curl can no longer be withheld, so egress below is what bounds it.
+        # The run tool offers the runner image's curl, find, gh, grep and jq
+        # plus the tools key of .kritika.yaml: flate, and fd, rg and yq since
+        # 0.0.103 dropped them from the image (0.0.70 removed agent.commands;
+        # 0.0.87 removed .kritika/mise.toml). 0.0.103 also stopped refusing
+        # a command's arguments and the image now has bash, so egress below
+        # is the only bound on what curl reaches.
         # The 20m default cut reviews off mid-run on the local model: every
         # step succeeded, they just added up (PRs #1676 and #1677). The runner
         # deadline follows this plus 5m on its own (true only while parts is 1;
         # split, it is rounds of parts x timeout, capped at 2h35m).
+        # Measured under the pre-0.0.103 budgets. 0.0.103 raised the defaults
+        # this deployment inherits: agent.tokens 4M -> 6M, agent.prompt 24k ->
+        # 64k, the confidence prompt 48k -> 96k. Larger opening prompts mean
+        # more prefill per step on the local model; re-check against the
+        # first reviews after the bump.
         timeout: 45m
         # 0.0.45 splits a diff over 64 KiB into up to 8 parts by default, each
         # taking another slot of the review model. That model was one llama.cpp
@@ -132,12 +139,18 @@ spec:
           - "*.blob.core.windows.net"
           - registry.erwanleboucher.dev
           # HelmRepository indexes; external-dns and metrics-server tarballs
-          # are GitHub release assets.
+          # are GitHub release assets, as are the .kritika.yaml tools.
           - kubernetes-sigs.github.io
           - rocm.github.io
           - release-assets.githubusercontent.com
           # dragonfly-operator's CRD, a remote kustomize resource.
           - raw.githubusercontent.com
+          # The Sigstore TUF root mise verifies an aqua tool's cosign bundle
+          # against: yq's recipe has one, and without this host its install
+          # fails with "TUF repository load failed". fd and rg verify by
+          # checksum alone. Rekor and Fulcio are not contacted (installed
+          # fine with both blocked).
+          - tuf-repo-cdn.sigstore.dev
       trigger:
         # 0.0.70 removed the settle delay: a review now starts as soon as the
         # slot is free, so Konflate's image check and blast radius (posted a
