@@ -7,6 +7,7 @@ advertising router, with the advertised lifetime. A border router that changes
 address or is replaced is picked up from its next RA.
 """
 
+import errno
 import ipaddress
 import select
 import socket
@@ -44,6 +45,21 @@ def open_socket(ifindex):
     return s
 
 
+def solicit(s, ifindex):
+    # The interface's link-local address is tentative until DAD finishes, and
+    # sending from it fails with EADDRNOTAVAIL until then. Routers advertise
+    # unsolicited as well, so giving up only delays the first route.
+    for _ in range(10):
+        try:
+            s.sendto(struct.pack("!BBHI", ND_ROUTER_SOLICIT, 0, 0, 0), ("ff02::2", 0, 0, ifindex))
+            return
+        except OSError as e:
+            if e.errno != errno.EADDRNOTAVAIL:
+                raise
+            time.sleep(1)
+    log(f"no usable address on {IFACE} to solicit from; waiting for unsolicited RAs")
+
+
 def route_infos(ra):
     """Yield (network, lifetime) for each well-formed RIO in an RA body."""
     opts, i = ra[16:], 0
@@ -74,7 +90,7 @@ def ip_route(*args):
 def main():
     ifindex = socket.if_nametoindex(IFACE)
     s = open_socket(ifindex)
-    s.sendto(struct.pack("!BBHI", ND_ROUTER_SOLICIT, 0, 0, 0), ("ff02::2", 0, 0, ifindex))
+    solicit(s, ifindex)
     log(f"listening for Route Information Options on {IFACE}")
 
     # network -> (router, deadline); only used to log changes, not refreshes.
