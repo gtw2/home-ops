@@ -20,5 +20,8 @@ spec:
     # runner.podTemplate.spec.resources, and the old key is silently ignored.
     # 0.0.87 stopped reading the merge base's .kritika/mise.toml and
     # mise.lock: flate now comes from the tools key of .kritika.yaml.
-    tag: 0.0.105
+    # 0.0.107 removed mise from the runner: that tools key takes only
+    # aqua:<owner>/<repo> packages pinned to a release's tag, and any other
+    # key fails the file.
+    tag: 0.0.107
   url: oci://ghcr.io/home-operations/charts/kritika
