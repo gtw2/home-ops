@@ -80,6 +80,15 @@ spec:
               memory: 256Mi
             limits:
               memory: 1Gi
+          # The optimizer's tool index is an in-memory SQLite database, but
+          # SQLite still spills large sorts to a temp file. With a read-only
+          # root and no writable /tmp, any find_tool search broad enough to
+          # spill - keywords like "kubectl" or "get", or none at all - failed
+          # with "FTS5 query failed: disk I/O error (6410)", which is
+          # SQLITE_IOERR_GETTEMPPATH. Narrow searches never noticed.
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
         # Keeps the optimizer's tool index warm. The index is built in memory
         # by the FIRST session after the pod starts, and at 513 tools that
         # build takes 3-4 minutes - so after every restart the first
@@ -127,3 +136,6 @@ spec:
               memory: 4Mi
             limits:
               memory: 16Mi
+      volumes:
+        - name: tmp
+          emptyDir: {}
