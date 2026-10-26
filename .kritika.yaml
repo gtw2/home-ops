@@ -37,7 +37,7 @@ rules:
     rule: >-
       Commits and PR titles follow Conventional Commits, such as
       fix(container): ... or chore(renovate): ...
-# Tools the runners add to the -tools image's curl, fd, gh, jq, rg and yq.
+# Tools the runners add to the -tools image's curl, find, gh, grep and jq.
 # Read from the merge base like the rules, so a change here applies from the
 # next PR on. No lock: kritika locks each tool against the release's API
 # digest before installing it (0.0.87).
@@ -46,6 +46,15 @@ tools:
     filter_bins: flate
     # renovate: datasource=github-releases depName=home-operations/flate
     version: "0.6.5"
+  # 0.0.103 rebuilt the -tools image on Red Hat Hardened Images without fd,
+  # rg and yq, which the renovate-review skill tells reviews to use. These
+  # are the versions that image last shipped.
+  # renovate: datasource=github-releases depName=sharkdp/fd
+  fd: "10.5.0"
+  # renovate: datasource=github-releases depName=BurntSushi/ripgrep
+  rg: "15.2.0"
+  # renovate: datasource=github-releases depName=mikefarah/yq
+  yq: "4.54.1"
 context:
   - path: AGENTS.md
     description: >-
