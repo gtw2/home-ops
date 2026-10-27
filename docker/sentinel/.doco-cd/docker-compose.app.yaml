@@ -31,7 +31,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-    image: ghcr.io/kimdre/doco-cd:0.130
+    image: ghcr.io/kimdre/doco-cd:0.131
     restart: unless-stopped
     secrets:
       - api_secret
