@@ -99,7 +99,7 @@ spec:
   # --context above the native 262144, so it is not set here.
   # on framework: gufo 0.15.0 (89d6185), uid 1000 in groups video and render,
   # memlock 8MiB, and every flag below listed by `gufo serve llm --help`.
-  image: ghcr.io/gufo-org/toolboxes/gufo-runtime:0.24.0@sha256:5de5c16cf212b67739fe5096ee2b96e4c102fb7eeafcad57681aed1f3864e035
+  image: ghcr.io/gufo-org/toolboxes/gufo-runtime:0.25.0@sha256:27552f26358eb6e245d8f8d060ff91793a34df0db8af708265e024abe79cba44
   command:
     - gufo
   args:
