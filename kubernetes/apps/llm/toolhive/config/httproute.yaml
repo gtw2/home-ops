@@ -13,10 +13,11 @@ metadata:
     # cannot match that, and reported this endpoint down while the gateway was
     # healthy.
     #
-    # The child cannot opt out: the sidecar switches to a DNS probe when the
-    # guarded key is PRESENT, so guarded:false guards it just as guarded:true
-    # does. Setting an explicit url is worse still - the endpoint stays guarded
-    # and gatus builds a DNS target out of an HTTPS URL:
+    # Since gatus-sidecar 0.6.0 a child can opt out with guarded: false or null
+    # (the string "false" still guards). This one stays guarded: an HTTP probe
+    # carries no API key, so the SecurityPolicy would refuse it and [STATUS]
+    # would fail for that, not for the gateway. Setting an explicit url while
+    # guarded is worse still - gatus builds a DNS target out of an HTTPS URL:
     #   dial udp: lookup udp///mcp.${SECRET_DOMAIN}/mcp: unknown port
     #
     # So this check means "DNS resolves", nothing more. Real health for this
