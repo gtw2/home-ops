@@ -94,11 +94,17 @@ spec:
   # Released semver tag, so Renovate can track it - the standing cost of the
   # llama.cpp fork image is that it cannot. Ran on framework as 0.15.0
   # (89d6185) on 2026-10-14: uid 1000 in groups video and render, memlock
-  # 8MiB. Every flag below is still registered at v0.21.0 (gufo-org/gufo
-  # src/cli/serve/serve.cpp); 0.21.0 adds --enable-yarn, needed only for
-  # --context above the native 262144, so it is not set here.
-  # on framework: gufo 0.15.0 (89d6185), uid 1000 in groups video and render,
-  # memlock 8MiB, and every flag below listed by `gufo serve llm --help`.
+  # 8MiB, and every flag below listed by `gufo serve llm --help`. Every flag
+  # is still registered at v0.26.0 (gufo-org/gufo src/cli/serve/serve.cpp,
+  # sampling flags in src/cli/sampling_options.hpp). --cache-ram-bytes now
+  # takes N|off (#783); the explicit byte count below still parses. 0.21.0
+  # added --enable-yarn, needed only for --context above the native 262144,
+  # so it is not set here.
+  #
+  # 0.26.0 also moves the image's ROCm userspace from 7.2.3 to 10.1 (ROCM_PATH
+  # in the image config; gufo-org/toolboxes#24, gufo-org/gufo#847). Every
+  # figure in this file - the tok/s table and 61s load at the top, the RSS and
+  # memory.peak behind resources.memory - was measured on 7.2.3.
   image: ghcr.io/gufo-org/toolboxes/gufo-runtime:0.26.0@sha256:c0df630a7048fed5722e19d5f031464b0fb04156071a0a3191dff226c14cd91e
   command:
     - gufo
