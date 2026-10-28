@@ -10,7 +10,7 @@ vip: 10.10.40.20
 # renovate: datasource=docker depName=ghcr.io/siderolabs/installer-base
 talosVersion: v1.14.5
 # renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
-kubernetesVersion: v1.37.1
+kubernetesVersion: v1.37.2
 
 # Image Factory schematics, selected per node by `profile` in nodes/<node>.yaml.
 # Kernel cmdline args live in the schematic, NOT in machineconfig — changing one
