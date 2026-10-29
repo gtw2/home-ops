@@ -2,7 +2,9 @@
 # yaml-language-server: $schema=https://json.schemastore.org/kustomization
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+# Backends whose model does not change with the Framework's. The Framework
+# model's LiteLLMModel lives in its own file in litellm/app, so swapping that
+# file swaps the name clients see along with the weights.
 resources:
-  - ./rerank.yaml
-  - ./llama-strix-chat.yaml
-  - ./llama-fast.yaml
+  - ./jina-reranker-v2-base-multilingual.yaml
+  - ./qwen3.6-35b-a3b.yaml

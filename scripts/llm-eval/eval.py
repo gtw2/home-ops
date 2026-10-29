@@ -9,8 +9,8 @@ Every task is something that actually broke here, so a passing score means the
 model would have been useful on the day, not that it does well on a benchmark.
 Run it against any model litellm serves - local or hosted - and compare.
 
-  ./eval.py --model llama-strix-chat
-  ./eval.py --model llama-strix-chat --model gpt-5.6 --repeat 3
+  ./eval.py --model qwen3.8-flash-next
+  ./eval.py --model qwen3.8-flash-next --model gpt-5.6 --repeat 3
   ./eval.py --compare results/*.json
 """
 

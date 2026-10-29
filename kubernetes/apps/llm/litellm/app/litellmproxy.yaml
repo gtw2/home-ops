@@ -82,25 +82,21 @@ spec:
     routing_strategy: simple-shuffle
     cooldown_time: 30
     enable_pre_call_checks: true
-    # llama-fast is the workstation 3090, which is down whenever the desktop
-    # uses its GPU or sleeps. HAProxy (llm/llama-desk) answers 503 at once
-    # then, and the request goes to the Framework instead - the same place it
-    # went before llama-fast existed. context_window_fallbacks sends a prompt
-    # over llama-fast's 114688 input tokens there too.
-    fallbacks:
-      - llama-fast: [llama-strix-chat]
-    context_window_fallbacks:
-      - llama-fast: [llama-strix-chat]
-    # No retries before that fallback. llama-fast has one deployment, and
+    # No fallbacks: the model a request names is the model that answers it.
+    # qwen3.6-35b-a3b is the workstation 3090, down whenever the desktop uses
+    # its GPU or sleeps. HAProxy (llm/llama-desk) then answers 503 at once and
+    # the client gets that failure, not another model's answer under the name.
+    #
+    # And no retries for it, so the failure is fast. It has one deployment, and
     # LiteLLM never cools down a group's only deployment, so with the global
-    # num_retries every request retried the dead 3090 before falling back:
-    # 5.6-8.1s against 0.8s straight to llama-strix-chat (measured
-    # 2026-10-08). DefaultRetries covers every error type, not just
-    # HAProxy's 503 (ServiceUnavailableError): a connection gpu-guard cuts
-    # mid-request is an APIConnectionError, which no named field matches.
-    # The fallback itself runs as llama-strix-chat and keeps num_retries.
+    # num_retries every request retried the dead 3090 first: 5.6-8.1s for
+    # retries plus the fallback that then existed, against 0.8s for the
+    # fallback alone (measured 2026-10-08). DefaultRetries covers
+    # every error type, not just HAProxy's 503 (ServiceUnavailableError): a
+    # connection gpu-guard cuts mid-request is an APIConnectionError, which no
+    # named field matches.
     model_group_retry_policy:
-      llama-fast:
+      qwen3.6-35b-a3b:
         DefaultRetries: 0
   litellmSettings:
     success_callback:

@@ -50,10 +50,10 @@ spec:
               # the three MEMINI_LLM_* lines and memini falls back to marker
               # heuristics with no data migration.
               #
-              # llama-strix-chat, not the auto-registered llama-strix: the alias
-              # carries the sampling defaults and token limits.
+              # The Framework's model by its real name: it moves with the
+              # active file in llm/litellm/app/kustomization.yaml.
               MEMINI_LLM_BASE_URL: http://litellm.llm.svc.cluster.local:4000/v1
-              MEMINI_LLM_MODEL: llama-strix-chat
+              MEMINI_LLM_MODEL: qwen3.8-flash-next
               MEMINI_LLM_MAX_TOKENS: "24576"
               MEMINI_DISTILL_TIMEOUT: 600s
               # Straight from the Secret the litellm operator mints in this
@@ -67,7 +67,7 @@ spec:
 
               # Rerank through litellm, which normalises the rerank API shape.
               MEMINI_RERANK: http://litellm.llm.svc.cluster.local:4000/v1
-              MEMINI_RERANK_MODEL: rerank
+              MEMINI_RERANK_MODEL: jina-reranker-v2-base-multilingual
               MEMINI_RERANK_MAX_CONCURRENCY: "2"
               MEMINI_RERANK_TIMEOUT: 45s
               MEMINI_RERANK_POOL: "5"

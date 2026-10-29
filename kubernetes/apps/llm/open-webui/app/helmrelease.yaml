@@ -53,12 +53,14 @@ spec:
               # framework.internal:11434, retired when that host joined the
               # cluster.
               ENABLE_OLLAMA_API: false
-              # Titles, tags, follow-ups and search queries go to the fast tier.
-              # On llama-strix's single slot each of these short calls swapped
-              # out the context of whatever long conversation held it. When the
-              # 3090 is busy, llama-fast falls back to llama-strix-chat, which is
-              # where these went before.
-              TASK_MODEL_EXTERNAL: llama-fast
+              # Titles, tags, follow-ups and search queries go to the 3090, off
+              # the Framework, where on llama-strix's single slot each of these
+              # short calls swapped out the context of whatever long
+              # conversation held it. While the 3090 is off they fail rather
+              # than fall back (litellm/app/litellmproxy.yaml): chats then get
+              # no title, tags or follow-ups, and web search queries the raw
+              # message instead of generated queries (v0.12.5 middleware.py).
+              TASK_MODEL_EXTERNAL: qwen3.6-35b-a3b
               # Context compaction: once a chat's history passes the threshold,
               # the older messages are summarised by the chat model and the
               # newest 40% (the retention default) are kept verbatim.
@@ -73,7 +75,7 @@ spec:
               # The threshold is independent of the model's context size, and
               # it is compared against an ESTIMATE - characters / 4 - which
               # undercounts code, JSON tool output and non-English text. So it
-              # sits well under llama-strix-chat's 229376-token input limit
+              # sits well under qwen3.8-flash-next's 229376-token input limit
               # (262144 context less 32768 reserved for output) rather than
               # near it: 160000 leaves ~43% for the estimate to be wrong by.
               ENABLE_CONTEXT_COMPACTION: true

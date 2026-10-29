@@ -88,8 +88,9 @@ spec:
     port: 8080
     type: ClusterIP
   extraArgs:
+    # The name the LiteLLMModel below sends; llama-server ignores it.
     - --alias
-    - llama-strix
+    - qwen3.6-35b-a3b
     - --image-min-tokens
     - "1024"
     - --cont-batching
@@ -150,3 +151,32 @@ spec:
       initialDelaySeconds: 20
       periodSeconds: 10
       failureThreshold: 6
+---
+# What clients call this model. The 3090 serves the same model under the same
+# name (models/qwen3.6-35b-a3b.yaml), so with this file live the two become one
+# model group that LiteLLM balances across and cools down independently. No
+# sampling overrides here, as there are none on the 3090's entry, so a request
+# behaves the same whichever deployment takes it; both servers run the same
+# --temp/--top-p.
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMModel
+metadata:
+  name: qwen3.6-35b-a3b-strix
+spec:
+  modelName: qwen3.6-35b-a3b
+  proxyRef: litellm
+  params:
+    # --alias above.
+    model: openai/qwen3.6-35b-a3b
+    apiBase: http://llama-strix.llm.svc.cluster.local:8080/v1
+    # llama.cpp serves without auth inside the cluster; litellm still insists
+    # on a non-empty key.
+    apiKey: sk-llmkube-noauth
+  info:
+    mode: chat
+    # contextSize 262144 less maxOutputTokens. That context is shared by two
+    # slots (--kv-unified), so this is the most one request can have, not a
+    # guarantee.
+    maxInputTokens: 229376
+    maxOutputTokens: 32768
+    supportsFunctionCalling: true

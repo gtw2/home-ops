@@ -2,17 +2,19 @@
 apiVersion: litellm.home-operations.com/v1alpha1
 kind: LiteLLMModel
 metadata:
-  name: rerank
+  name: jina-reranker-v2-base-multilingual
 spec:
   # memini calls litellm's /v1/rerank rather than the llama.cpp endpoint
   # directly, so litellm normalises the rerank API shape for it.
-  modelName: rerank
+  modelName: jina-reranker-v2-base-multilingual
   proxyRef: litellm
   params:
-    model: infinity/memini-rerank
+    # The Service keeps its role name (llm/memini/app/memini-rerank.yaml); the
+    # model name matches the server's --alias.
+    model: infinity/jina-reranker-v2-base-multilingual
     apiBase: http://memini-rerank.llm.svc.cluster.local:8080
     # llama.cpp serves without auth in-cluster; litellm still insists on a
-    # non-empty key, same as llama-strix-chat.
+    # non-empty key, same as qwen3.8-flash-next.
     apiKey: sk-llmkube-noauth
   info:
     mode: rerank

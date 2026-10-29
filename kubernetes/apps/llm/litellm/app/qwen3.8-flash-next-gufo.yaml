@@ -3,9 +3,11 @@
 #
 # Same model, different engine and weights, ported from the reference
 # (joryirving/home-ops kubernetes/apps/base/llm/litellm/qwen3.8-flash-next-gufo.yaml,
-# as of d70c2560, 2026-10-14). Kept under the name llama-strix like every
-# option in kustomization.yaml, so the LiteLLMModel, the virtual key and Open
-# WebUI follow whichever file is live. Swapping is the one line there.
+# as of d70c2560, 2026-10-14). The Service is llama-strix, like every option
+# in kustomization.yaml; clients use the model's own name, qwen3.8-flash-next,
+# from the LiteLLMModel at the end of this file. qwen3.8-flash-next.yaml carries
+# the same one, so swapping engines is still the one line there and changes
+# nothing for clients.
 #
 # PREREQUISITES, both outside this file:
 #   1. The BIOS iGPU carve-out at its minimum (docs/talos.md). The model holds
@@ -134,15 +136,16 @@ spec:
     - /models/f869f01c859f8577/UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf
     - --mmproj
     - /models/f869f01c859f8577/mmproj-BF16.gguf
-    # What litellm asks for: the LiteLLMModel sends openai/llama-strix.
+    # What litellm asks for: the LiteLLMModel below sends
+    # openai/qwen3.8-flash-next.
     - --served-model-name
-    - llama-strix
-    # Per session. Keep in step with contextSize and llama-strix-chat's
-    # maxInputTokens.
+    - qwen3.8-flash-next
+    # Per session. Keep in step with contextSize and the LiteLLMModel's
+    # maxInputTokens below.
     - --context
     - "262144"
-    # 32768, not the reference's 65536: it matches llama-strix-chat's
-    # maxOutputTokens, which is what clients are told.
+    # 32768, not the reference's 65536: it matches the LiteLLMModel's
+    # maxOutputTokens below, which is what clients are told.
     - --max-tokens
     - "32768"
     # MTP draft length is adaptive in gufo, capped by --draft-tokens
@@ -274,3 +277,32 @@ spec:
       initialDelaySeconds: 20
       periodSeconds: 10
       failureThreshold: 6
+---
+# What clients call this model. It lives with the weights rather than in
+# models/, so the name on /v1/models always matches what is loaded: the fork's
+# file carries the same LiteLLMModel, and qwen3.6-35b-a3b.yaml its own.
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMModel
+metadata:
+  name: qwen3.8-flash-next
+spec:
+  modelName: qwen3.8-flash-next
+  proxyRef: litellm
+  params:
+    # --served-model-name above.
+    model: openai/qwen3.8-flash-next
+    apiBase: http://llama-strix.llm.svc.cluster.local:8080/v1
+    # gufo serves without auth inside the cluster; litellm still insists on a
+    # non-empty key.
+    apiKey: sk-llmkube-noauth
+    additional:
+      temperature: 0.7
+      top_p: 0.8
+  info:
+    mode: chat
+    # The served context holds prompt AND generation, so input is --context
+    # (262144 per session) less maxOutputTokens. Clients like Open WebUI read
+    # this as the context window.
+    maxInputTokens: 229376
+    maxOutputTokens: 32768
+    supportsFunctionCalling: true

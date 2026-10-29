@@ -85,7 +85,9 @@ spec:
         # A small embedder scores nearly everything above the 0.5 default.
         similarFloor: 0.7
       review:
-        model: litellm/llama-strix-chat
+        # The Framework's model by its real name: it moves with the active
+        # file in llm/litellm/app/kustomization.yaml, as the key's scope does.
+        model: litellm/qwen3.8-flash-next
       limits:
         # Model calls at once, per model: one per gufo session. llama-strix
         # serves 2, each with the full 262144-token context reserved at load

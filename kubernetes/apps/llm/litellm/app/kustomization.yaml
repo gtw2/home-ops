@@ -10,11 +10,15 @@ resources:
   - ./servicemonitor.yaml
   # LiteLLMVirtualKey: one file per consumer
   - ./virtualkeys
-  # Model + InferenceService: the weights and the pod that serves them.
+  # Model + InferenceService + LiteLLMModel: the weights, the pod that serves
+  # them, and the name clients call them by.
   #
-  # Exactly ONE of these may be active. All define the name llama-strix, so
-  # the LiteLLMModel, the virtual key and Open WebUI address whichever is live
-  # without knowing which model is behind it.
+  # Exactly ONE of these may be active: each runs as the Service llama-strix
+  # on the Framework's one GPU. Each also carries its LiteLLMModel under the
+  # model's real name, so /v1/models always says what is loaded. Both
+  # Flash-Next files publish qwen3.8-flash-next, so swapping engines changes
+  # nothing for clients. Swapping to another model changes the name they call:
+  # move kritika, memini and the keys in ./virtualkeys to it in the same commit.
   #
   # To change models, or to roll back, move the comment - do not revert the
   # commit. The manifests are meant to stay in the tree: a revert would also
@@ -35,7 +39,7 @@ resources:
   # - ./qwen3.8-flash-next.yaml
   - ./qwen3.8-flash-next-gufo.yaml
   # - ./qwen3.6-35b-a3b.yaml
-  # LiteLLMModel: how the proxy addresses that pod
+  # LiteLLMModel: the backends that are not the Framework's model
   - ./models
   # Grafana dashboards: one ConfigMap and one CR per dashboard, so they can be
   # added or dropped independently.

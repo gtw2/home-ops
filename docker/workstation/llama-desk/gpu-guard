@@ -15,8 +15,9 @@
 # reboot. The marker saying the guard did it lives under /var/lib, not /run,
 # so after that reboot the guard still knows to start it again.
 #
-# Losing the server mid-request is fine: HAProxy in the cluster notices within
-# about 4-10s and LiteLLM's fallback sends the retry to llama-strix.
+# Losing the server mid-request fails that request, by design: HAProxy in the
+# cluster notices within about 4-10s and answers 503 from then on, and LiteLLM
+# has no fallback for qwen3.6-35b-a3b, so clients see the failure at once.
 set -euo pipefail
 
 CONTAINER=${GPU_GUARD_CONTAINER:-llama-desk}

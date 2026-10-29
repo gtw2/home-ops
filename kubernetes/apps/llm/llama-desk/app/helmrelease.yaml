@@ -5,8 +5,12 @@
 # game holds the GPU, unreachable while the desktop sleeps - so LiteLLM must
 # learn it is gone at once, not after a TCP timeout under its 1200s
 # request_timeout. HAProxy health-checks it and answers 503 the moment it is
-# down, which LiteLLM takes as a failure and falls back on (llama-fast ->
-# llama-strix-chat, litellm/app/litellmproxy.yaml).
+# down, which LiteLLM passes straight back to the client: qwen3.6-35b-a3b has
+# no fallback and no retries (litellm/app/litellmproxy.yaml).
+#
+# /health is all HAProxy checks, so a server that is up but running on the CPU
+# passes. llama-server's --device CUDA0 is what turns a lost GPU into a failed
+# start, and so into a 503 here.
 #
 # Why not a selectorless Service: no health, so a sleeping desktop is a
 # silent black hole. Why not a readiness probe pointed at the workstation:

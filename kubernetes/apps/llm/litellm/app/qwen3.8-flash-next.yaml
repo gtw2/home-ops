@@ -1,10 +1,10 @@
 ---
 # Qwen3.8-Flash-Next on the Framework Desktop's Strix Halo iGPU.
 #
-# Keeps the name llama-strix on purpose: the LiteLLMModel, the virtual key and
-# Open WebUI all address the service by that name, so the weights underneath can
-# change without touching the rest of the chain. Swapping models is one line in
-# kustomization.yaml; swapping quantisations is the block below.
+# The Service is llama-strix, like every option in kustomization.yaml; clients
+# use the model's own name, qwen3.8-flash-next, from the LiteLLMModel at the end
+# of this file. Swapping models is one line in kustomization.yaml; swapping
+# quantisations is the block below.
 #
 # Why this model suits this hardware:
 #   - 512 experts, 10 active => ~2.4B active params/token, so throughput holds
@@ -308,8 +308,10 @@ spec:
     port: 8080
     type: ClusterIP
   extraArgs:
+    # The name the LiteLLMModel below sends. llama-server serves one model and
+    # ignores it, but logs and responses on both sides agree.
     - --alias
-    - llama-strix
+    - qwen3.8-flash-next
     # The load path, and the thing that made ROCm work at all.
     #
     # NOT --load-mode mmap: that is what hung three ROCm attempts (see the
@@ -395,3 +397,31 @@ spec:
       initialDelaySeconds: 20
       periodSeconds: 10
       failureThreshold: 6
+---
+# What clients call this model, identical to the one in
+# qwen3.8-flash-next-gufo.yaml so swapping engines changes nothing for them.
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMModel
+metadata:
+  name: qwen3.8-flash-next
+spec:
+  modelName: qwen3.8-flash-next
+  proxyRef: litellm
+  params:
+    # --alias above.
+    model: openai/qwen3.8-flash-next
+    apiBase: http://llama-strix.llm.svc.cluster.local:8080/v1
+    # llama.cpp serves without auth inside the cluster; litellm still insists
+    # on a non-empty key.
+    apiKey: sk-llmkube-noauth
+    additional:
+      temperature: 0.7
+      top_p: 0.8
+  info:
+    mode: chat
+    # The served context holds prompt AND generation, so input is contextSize
+    # (262144, one slot) less maxOutputTokens. Clients like Open WebUI read
+    # this as the context window.
+    maxInputTokens: 229376
+    maxOutputTokens: 32768
+    supportsFunctionCalling: true

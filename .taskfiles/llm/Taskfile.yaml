@@ -40,7 +40,10 @@ tasks:
 
   eval:compare:
     desc: Compare the most recent report per model side by side
-    cmd: uv run {{.EVAL}} --compare $(ls -1t {{.RESULTS}}/*.json | awk -F- '!seen[$NF]++' | tr '\n' ' ')
+    # Keyed on everything after the <date>-<time>- stamp: model names carry
+    # dashes, so the last dash-separated field would merge qwen3.6-35b-a3b with
+    # any other *-a3b model.
+    cmd: uv run {{.EVAL}} --compare $(ls -1t {{.RESULTS}}/*.json | awk '{k=$0; sub(/.*\/[0-9]+-[0-9]+-/, "", k)} !seen[k]++' | tr '\n' ' ')
     preconditions:
       - test -n "$(ls -A {{.RESULTS}}/*.json 2>/dev/null)"
       - which uv

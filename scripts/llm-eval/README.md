@@ -9,7 +9,7 @@ have been useful on the day, which is not the same thing as scoring well on a
 public benchmark.
 
 ```sh
-task llm:eval MODEL=llama-strix-chat          # score one model
+task llm:eval MODEL=qwen3.8-flash-next        # score one model
 task llm:eval:compare                          # table of the last reports
 uv run scripts/llm-eval/eval.py --help         # everything else
 ```
@@ -138,10 +138,11 @@ the manifest dump is not written to disk.
 
 ## Baselines
 
-`baseline/` holds one committed report per set of weights. They are named after
-the model, not the service: litellm serves whatever is live as
-`llama-strix-chat`, so the report's own filename and its `weights` field are the
-only record of what was actually measured.
+`baseline/` holds one committed report per set of weights. litellm serves each
+model under its own name (`qwen3.8-flash-next`), but that name says nothing of
+the quantisation or the engine behind it, so the report's `weights` field is the
+record of what was actually measured. Reports from before 2026-10-29 carry the
+old alias, `llama-strix-chat`, which served whichever model was live.
 
 | weights | overall | tok/s |
 |---|---|---|

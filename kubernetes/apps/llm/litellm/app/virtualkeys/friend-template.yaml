@@ -26,8 +26,8 @@
 #   secretName: litellm-key-friend-<name>
 #   secretKey: api-key
 #   models:
-#     - llama-fast
-#     - llama-strix-chat
+#     - qwen3.6-35b-a3b
+#     - qwen3.8-flash-next
 #   maxParallelRequests: 1
 #   rpmLimit: 30
 # ---

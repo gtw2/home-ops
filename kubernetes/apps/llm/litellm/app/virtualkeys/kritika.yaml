@@ -11,7 +11,7 @@ spec:
   # Scoped: kritika is an automated consumer that only ever asks for the review
   # model. Embeddings go straight to toolhive-embed, as memini's do.
   models:
-    - llama-strix-chat
+    - qwen3.8-flash-next
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/external-secrets.io/pushsecret_v1alpha1.json
 apiVersion: external-secrets.io/v1alpha1

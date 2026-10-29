@@ -62,8 +62,11 @@ spec:
     cpu: "2"
     memory: 4Gi
   extraArgs:
+    # The model's name, which litellm sends
+    # (llm/litellm/app/models/jina-reranker-v2-base-multilingual.yaml). The
+    # Service keeps its role name, memini-rerank.
     - --alias
-    - memini-rerank
+    - jina-reranker-v2-base-multilingual
     - --cont-batching
     - --kv-unified
     - --threads

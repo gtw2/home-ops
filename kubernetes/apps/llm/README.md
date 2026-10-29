@@ -10,12 +10,12 @@ llmkube/            # operator: Model + InferenceService CRDs, shared model cach
                     # priority classes, the AMD DRA ResourceClaimTemplate
 litellm-operator/   # operator: LiteLLMProxy / LiteLLMModel / LiteLLMVirtualKey CRDs
 litellm/app/        # the proxy, its database, and the models it serves
-  qwen3.8-flash-next-gufo.yaml  # Model + InferenceService, the active model (gufo)
+  qwen3.8-flash-next-gufo.yaml  # Model + InferenceService + LiteLLMModel, the active model (gufo)
   qwen3.8-flash-next.yaml  # the same model on the llama.cpp fork
   qwen3.6-35b-a3b.yaml     # the alternative; kustomization.yaml picks one
-  models/             #   LiteLLMModel: how the proxy addresses that backend
+  models/             #   LiteLLMModel for the backends that are not the Framework's model
   virtualkeys/        #   one API key per consumer; out-of-namespace ones pushed to 1Password
-llama-desk/         # HAProxy in front of the workstation 3090 (llama-fast)
+llama-desk/         # HAProxy in front of the workstation 3090 (qwen3.6-35b-a3b)
 toolhive/           # MCP tooling: the operator, the servers, and the gateway
   crds/ app/          #   operator install, split so CRDs land first
   config/             #   MCPGroup, embedding model, VirtualMCPServer, route
@@ -29,6 +29,12 @@ app that consumes them, reconciled by that app's own Kustomization.
 ## How a request flows
 
 `client -> litellm.${SECRET_DOMAIN} (envoy-external) -> LiteLLMProxy -> llama-strix InferenceService -> Strix Halo iGPU (DRA)`
+
+Clients ask for a model by its real name (`qwen3.8-flash-next`,
+`qwen3.6-35b-a3b`, `jina-reranker-v2-base-multilingual`); every name the proxy
+serves is a hand-written `LiteLLMModel`. The Services behind them keep
+hardware or role names (`llama-strix`, `llama-desk`, `memini-rerank`), which
+clients never see.
 
 The GPU is claimed through DRA: the `framework-gpu` ResourceClaimTemplate
 requests the `gpu.amd.com` DeviceClass published by the ROCm
@@ -71,32 +77,41 @@ pointing at a 500Gi `openebs-hostpath` claim on the Framework's own NVMe
 (`nvme1n1p1`, 4.1TB). openebs-hostpath provisions fine on the tainted node: the
 localpv helper pod copies the target node's taints into its own tolerations.
 
-## The fast tier (llama-fast)
+## The workstation 3090 (qwen3.6-35b-a3b)
 
-`llama-fast` is Qwen3.6-35B-A3B on the workstation's RTX 3090, served by the
-Compose stack in `docker/workstation/llama-desk/` on `10.10.40.30`. It is up
-only while the desktop is not using the GPU, so it is a tier, not a
-dependency:
+`qwen3.6-35b-a3b` is served from the workstation's RTX 3090 by the Compose
+stack in `docker/workstation/llama-desk/` on `10.10.40.30`. It is up only while
+the desktop is not using the GPU:
 
-`client -> litellm (llama-fast) -> llama-desk (HAProxy) -> workstation:8080`
+`client -> litellm (qwen3.6-35b-a3b) -> llama-desk (HAProxy) -> workstation:8080`
 
-When the workstation is down, HAProxy answers 503 at once and LiteLLM's
-`fallbacks` send the request to `llama-strix-chat`, as do
-`context_window_fallbacks` for prompts over its 114688 input tokens. Open
-WebUI's task calls (`TASK_MODEL_EXTERNAL`) use it, which keeps those short
-calls off llama-strix's single slot whenever the 3090 is free. Whether the
-3090 is up is `haproxy_server_status` from the llama-desk ServiceMonitor.
+When the workstation is down, HAProxy answers 503 at once and the request
+fails: there is no fallback to another model and no retry, so a name always
+means the model that answered, and the failure is immediate. Prompts over its
+114688 input tokens are refused the same way. Open WebUI's task calls
+(`TASK_MODEL_EXTERNAL`) use it to keep those short calls off the Framework,
+and go without titles, tags and follow-ups while it is down. Whether the 3090
+is up is `haproxy_server_status` from the llama-desk ServiceMonitor.
+
+HAProxy only sees `/health`, which a server running on the CPU still passes.
+`--device CUDA0` in the Compose file makes a lost GPU a failed start instead;
+the image comment there has the CUDA forward-compat trap that once kept it on
+the CPU for weeks.
 
 The API key is `LLAMA_DESK_API_KEY` on the 1Password `litellm` item; the
 workstation reads the same field into `/etc/llama-desk/api-keys`.
 
 ## Adding a model
 
-Drop a `Model` + `InferenceService` pair into `litellm/app/` and add it to that
-kustomization. `litellm-operator`'s `llmkube.autoRegister` picks it up under the
-InferenceService name automatically; add a `LiteLLMModel` under
-`litellm/app/models/` only to expose a tuned alias with its own sampling
-defaults and token limits.
+Drop a `Model` + `InferenceService` + `LiteLLMModel` into `litellm/app/` and
+add it to that kustomization. The `LiteLLMModel`'s `modelName` is the model's
+real name, lowercase (`qwen3.8-flash-next`), and the server's `--alias` or
+`--served-model-name` matches it. Nothing is registered automatically:
+`litellm-operator`'s `llmkube.autoRegister` is off, because it can only publish
+the InferenceService name, and a Service name cannot hold the dots in a model
+name. A backend that is not the Framework's model keeps its `LiteLLMModel` in
+`litellm/app/models/` instead. Then add the name to the `models` of every
+scoped key in `litellm/app/virtualkeys/` that should reach it.
 
 GPU access: reference `framework-gpu` as the model's
 `resourceClaimTemplateName`. There is one GPU in this cluster, so there is one

@@ -1,0 +1,34 @@
+---
+apiVersion: litellm.home-operations.com/v1alpha1
+kind: LiteLLMModel
+metadata:
+  name: qwen3.6-35b-a3b
+spec:
+  # Qwen3.6-35B-A3B on the workstation's RTX 3090, up only while the desktop
+  # is not using it (docker/workstation/llama-desk). There is no fallback:
+  # while the 3090 is down, HAProxy answers 503 and the request fails at once
+  # rather than being answered by a different model under this name.
+  modelName: qwen3.6-35b-a3b
+  proxyRef: litellm
+  params:
+    # llama-server serves one model and ignores the name; qwen3.6-35b-a3b is
+    # its --alias, so logs on both sides agree.
+    model: openai/qwen3.6-35b-a3b
+    # The Service is named for the box (llm/llama-desk, HAProxy in front of
+    # the workstation), not the model it happens to serve.
+    apiBase: http://llama-desk.llm.svc.cluster.local:8080/v1
+    # Unlike llama-strix, this server is on the LAN rather than behind a
+    # ClusterIP, so it takes a key. The workstation reads the same 1Password
+    # field into /etc/llama-desk/api-keys.
+    apiKeyRef:
+      name: litellm
+      key: LLAMA_DESK_API_KEY
+  info:
+    mode: chat
+    # The server's --ctx-size 131072, less maxOutputTokens. That context is
+    # shared by two slots (--kv-unified), so this is the most one request can
+    # have, not a guarantee. LiteLLM refuses anything longer before sending
+    # it (enable_pre_call_checks in litellmproxy.yaml).
+    maxInputTokens: 114688
+    maxOutputTokens: 16384
+    supportsFunctionCalling: true

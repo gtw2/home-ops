@@ -23,12 +23,14 @@ spec:
       leaderElection:
         enabled: true
     llmkube:
-      # Every llmkube InferenceService is registered with the proxy under its
-      # own name automatically. The hand-written LiteLLMModels in litellm/app
-      # add a second, tuned alias (llama-strix-chat) with sampling defaults and
-      # token limits - a distinct modelName, so it never collides with the
-      # auto-registered entry.
-      autoRegister: true
+      # Off: clients address models by their real names (qwen3.8-flash-next),
+      # and every name the proxy serves is a hand-written LiteLLMModel.
+      # Auto-registration can only publish the InferenceService name, which is
+      # a Service name and so cannot carry the dots in a model's name; it would
+      # put llama-strix, memini-rerank and toolhive-embed back on /v1/models
+      # beside the real names, the reranker as a chat model. Turning it off
+      # deletes those generated LiteLLMModels and leaves the hand-written ones.
+      autoRegister: false
     resources:
       requests:
         cpu: 25m
