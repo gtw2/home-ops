@@ -13,6 +13,10 @@
 # One-time setup on the workstation:
 #   pacman -S nvidia-container-toolkit
 #   nvidia-ctk runtime configure --runtime=docker && systemctl restart docker
+#   # No CUDA forward compat on a GeForce card: see the image comment below.
+#   echo NVIDIA_CTK_CDI_GENERATE_DISABLED_HOOKS=enable-cuda-compat \
+#     >> /etc/nvidia-container-toolkit/nvidia-cdi-refresh.env
+#   systemctl start nvidia-cdi-refresh.service
 #   install -d /var/lib/llama-desk/models /etc/llama-desk
 #   # The key LiteLLM sends (litellm/app/models/llama-fast.yaml), as the
 #   # ExternalSecret synced it from the litellm item's LLAMA_DESK_API_KEY.
@@ -30,7 +34,21 @@ name: llama-desk
 services:
   llama-server:
     container_name: llama-desk
-    # cuda13: driver 610 supports it, and CUDA 13 still builds sm_86 (Ampere).
+    # CUDA 13.4.1 (cuda>=13.4 in the image config): driver 615 or newer on this
+    # card, and CUDA 13 still builds sm_86 (Ampere).
+    #
+    # The image also ships CUDA forward-compat libraries (cuda-compat-13-4,
+    # libcuda 615.71.09), which only datacenter GPUs can use: loaded on this
+    # GeForce card, CUDA init fails with error 803 ("system has unsupported
+    # display driver / cuda driver combination"). Docker 29.2+ injects the GPU
+    # through CDI, whose enable-cuda-compat hook loads them whenever the image's
+    # CUDA is newer than the host driver, by writing an
+    # /etc/ld.so.conf.d/00-compat-*.conf into the container. Those files outlive
+    # the driver upgrade that makes them unnecessary, since gpu-guard only stops
+    # and starts this container: on 2026-10-29 it held 16, every one naming
+    # /usr/local/cuda-13.4/compat and sorting ahead of the driver's own entries.
+    # Created on driver 610, this server ran on the CPU from 2026-10-08 until it
+    # was recreated with the hook disabled (one-time setup above).
     image: ghcr.io/ggml-org/llama.cpp:server-cuda13-b11459@sha256:695214dcb4d4062014335702caee98836bbf92c5974b78331c70e152176cbf08
     # unless-stopped, not always: a container the GPU guard stopped for a game
     # must stay stopped across a docker restart.
@@ -79,6 +97,14 @@ services:
       - /models/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
       - --n-gpu-layers
       - "99"
+      # Exit at startup ("invalid device: CUDA0") when CUDA is unusable, rather
+      # than serve from the CPU. Without it a failed ggml_cuda_init only warns
+      # ("no usable GPU found, --gpu-layers option will be ignored"), /health
+      # still answers 200, and HAProxy keeps routing to a server running at CPU
+      # speed, which is how the error 803 above went unnoticed for weeks. A
+      # failed start takes it out of HAProxy, so LiteLLM falls back at once.
+      - --device
+      - CUDA0
       # 131072 shared by both slots (--kv-unified), so one long agent context
       # and a short task request can coexist. Unmeasured starting point; the
       # LiteLLM model's maxInputTokens must follow this.
