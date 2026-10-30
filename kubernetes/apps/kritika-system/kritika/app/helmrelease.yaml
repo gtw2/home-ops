@@ -88,6 +88,32 @@ spec:
         # The Framework's model by its real name: it moves with the active
         # file in llm/litellm/app/kustomization.yaml, as the key's scope does.
         model: litellm/qwen3.8-flash-next
+      # After each review, one more call to the same model: the PR, its diff
+      # and the review's account, no tools, for a score of 0-5 and a risk
+      # rating. It cannot drop a finding (a P1 caps the score at 3, a P0 at
+      # 2); approval then needs both settings below. No gate: nothing requires
+      # the status, as main has no branch protection or ruleset and automerge
+      # PRs are not reviewed.
+      #
+      # The scorer's budget is fixed in code: 2m, the wait for a slot
+      # (limits.concurrency, shared with reviews) included, and 4096 output
+      # tokens, thinking included. Probed 2026-10-29 with kritika's prompt
+      # through LiteLLM, gufo otherwise idle, on four real PRs: 10-47s and at
+      # most 1425 tokens, the 47s on #1925, the longest description of
+      # #1853-#2004 (23k prompt tokens).
+      confidence:
+        # No effort, so gufo's --reasoning-effort low. none ran 2-5x faster
+        # but rated the Node 24 -> 26 major (#1980) high risk, not medium;
+        # qwen3.6 on the 3090 called it a digest update, low.
+        model: litellm/qwen3.8-flash-next
+        # 4, not the default 5: no P0 or P1 still approves, and a concern of
+        # the scorer's own lowers the score and shows in its reason without
+        # holding the approval.
+        threshold: 4
+        # Holds approval from high and critical changes. The default, low,
+        # would hold it from routine updates: the rubric rates a minor of
+        # anything shared, and any 0.x minor, at least medium.
+        risk: medium
       limits:
         # Model calls at once, per model: one per gufo session. llama-strix
         # serves 2, each with the full 262144-token context reserved at load
