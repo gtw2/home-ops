@@ -107,7 +107,7 @@ spec:
   # in the image config; gufo-org/toolboxes#24, gufo-org/gufo#847). Every
   # figure in this file - the tok/s table and 61s load at the top, the RSS and
   # memory.peak behind resources.memory - was measured on 7.2.3.
-  image: ghcr.io/gufo-org/toolboxes/gufo-runtime:0.27.0@sha256:af997f31d5a825ad02fd44cbb6744e71a21df6149c02c5ed3bb0bb843b3f0013
+  image: ghcr.io/gufo-org/toolboxes/gufo-runtime:0.28.0@sha256:29b231d7d296c7de56cf3412a6bb40002b43f12b04e225885bd54a06a652db7d
   command:
     - gufo
   args:
