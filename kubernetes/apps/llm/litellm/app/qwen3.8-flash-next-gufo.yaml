@@ -155,7 +155,11 @@ spec:
     - mtp
     - --mtp-model
     - /models/f869f01c859f8577/MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
-    # Sampling identical to qwen3.8-flash-next.yaml and the reference.
+    # Sampling identical to qwen3.8-flash-next.yaml and the reference: the
+    # model card's thinking preset. gufo carries the card's thinking-off
+    # preset too (0.7/0.8, presence penalty 1.5), but these flags replace it
+    # (src/core/text_sampling_defaults.hpp, 0.27.0), so a request that turns
+    # thinking off and sends no sampling gets these as well.
     - --temperature
     - "1.0"
     - --top-p
@@ -295,9 +299,11 @@ spec:
     # gufo serves without auth inside the cluster; litellm still insists on a
     # non-empty key.
     apiKey: sk-llmkube-noauth
-    additional:
-      temperature: 0.7
-      top_p: 0.8
+    # No temperature or top_p: litellm adds these to every request that sends
+    # none, as kritika's never do, over the --temperature and --top-p above.
+    # Until 2026-10-29 that was 0.7/0.8, carried over from Qwen3-30B-A3B:
+    # Qwen's preset for thinking off, on a model that thinks here
+    # (--reasoning-effort above). The card's thinking preset is the args'.
   info:
     mode: chat
     # The served context holds prompt AND generation, so input is --context

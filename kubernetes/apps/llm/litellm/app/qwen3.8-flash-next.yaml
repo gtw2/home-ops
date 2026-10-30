@@ -414,9 +414,8 @@ spec:
     # llama.cpp serves without auth inside the cluster; litellm still insists
     # on a non-empty key.
     apiKey: sk-llmkube-noauth
-    additional:
-      temperature: 0.7
-      top_p: 0.8
+    # No temperature or top_p, as in qwen3.8-flash-next-gufo.yaml, which says
+    # why.
   info:
     mode: chat
     # The served context holds prompt AND generation, so input is contextSize
