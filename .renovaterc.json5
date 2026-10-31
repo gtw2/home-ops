@@ -1,11 +1,11 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  // NOTE: we intentionally do NOT extend the org's aggregate preset
-  // "github>home-operations/.github:renovate-config", because it also brings the org's own automerge
-  // rules and PR rate limits; this repo keeps its own in .renovate/ and below. We cherry-pick its
-  // parts from renovate/ in that repo instead. They are documented only as parts of the aggregate
-  // and can move without notice: home-operations/renovate-config, their old home, was removed on
-  // 2026-10-30 and Renovate stopped with "Cannot find preset's package" until these paths changed.
+  // NOTE: .renovate/home-operations/ holds copies of the home-operations shared preset parts this
+  // repo used to extend (home-operations/.github@51471230, renovate/). Upstream moved them twice and
+  // each move stopped Renovate with "Cannot find preset's package": renovate-config was removed on
+  // 2026-10-30, then on 2026-10-31 the parts were folded into the org's aggregate preset
+  // "github>home-operations/.github:renovate-config". We do NOT extend that aggregate: it automerges
+  // every minor, patch and digest update, and this repo keeps its own automerge rules in .renovate/.
   extends: [
     "config:recommended",
     "docker:enableMajor",
@@ -14,11 +14,11 @@
     ":automergePr",
     ":configMigration",
     ":dependencyDashboard",
-    "github>home-operations/.github//renovate/annotated.json5",
-    "github>home-operations/.github//renovate/groups.json5",
-    "github>home-operations/.github//renovate/labels.json5",
-    "github>home-operations/.github//renovate/semanticCommits.json5",
-    "github>home-operations/.github//renovate/sharedActions.json5",
+    "local>gtw2/home-ops//.renovate/home-operations/annotated.json5",
+    "local>gtw2/home-ops//.renovate/home-operations/groups.json5",
+    "local>gtw2/home-ops//.renovate/home-operations/labels.json5",
+    "local>gtw2/home-ops//.renovate/home-operations/semanticCommits.json5",
+    "local>gtw2/home-ops//.renovate/home-operations/sharedActions.json5",
     "local>gtw2/home-ops//.renovate/autoMerge.json5",
     "local>gtw2/home-ops//.renovate/groups.json5",
     "local>gtw2/home-ops//.renovate/grafanDashboards.json5",
