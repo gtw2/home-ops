@@ -27,9 +27,11 @@ spec:
   # Retain, not Delete: deleting this object should not tear the invite out
   # from under a running agent while we are still evaluating.
   deletionPolicy: Retain
-  # No dns: block. v1.7.1 exposes spec.dns.mode: DNSEndpoint, but the operator's
-  # own README says "The operator does not manage DNS yet" and its annotation
-  # reference marks towonel.io/dns-record as "Reserved / inert - intended to opt
-  # a hostname out of the (unimplemented) DNS handoff". DNS stays ours, written
-  # as DNSEndpoints below and beside each game server, which also sidesteps the
-  # question of which annotation prefix the operator would have emitted.
+  # No dns: block, so the DNS handoff stays Disabled and DNS stays
+  # hand-written, in ../dns/dnsendpoint.yaml and beside each game server.
+  # v1.10.0 made the handoff real (spec.dns.mode: DNSEndpoint CNAMEs each
+  # hub-confirmed hostname to its region's edge), but on our own hub it would
+  # also need an edge target (chart dns.edgeTargets or spec.dns.cnameTarget;
+  # only the public hub has defaults) and spec.dns.providerSpecific with the
+  # alpha-prefixed cloudflare-proxied "false" the hand-written records carry.
+  # Without that, cloudflare-dns's --cloudflare-proxied publishes them proxied.
