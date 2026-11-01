@@ -23,5 +23,5 @@ spec:
     # 0.0.107 removed mise from the runner: that tools key takes only
     # aqua:<owner>/<repo> packages pinned to a release's tag, and any other
     # key fails the file.
-    tag: 0.0.112
+    tag: 0.0.115
   url: oci://ghcr.io/home-operations/charts/kritika
