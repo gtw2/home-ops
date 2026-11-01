@@ -107,6 +107,13 @@ spec:
   # in the image config; gufo-org/toolboxes#24, gufo-org/gufo#847). Every
   # figure in this file - the tok/s table and 61s load at the top, the RSS and
   # memory.peak behind resources.memory - was measured on 7.2.3.
+  #
+  # 0.28.1 also changes how MTP drafts (gufo-org/gufo#882, at --speculative
+  # below), so the table's gufo tok/s and 70-74% acceptance predate that too.
+  # Upstream measured #882 on these weights: +11% for one 384-token reply and
+  # for four 256-token replies at once, about 10% slower on two of five
+  # 16-token replies, and byte-identical greedy output. kritika's concurrency
+  # comment quotes the table, so re-measure before relying on either.
   image: ghcr.io/gufo-org/toolboxes/gufo-runtime:0.28.1@sha256:faaa6e21afb903bea20cbc893aa30239146e68e0252d412a7ff4932a26f236b8
   command:
     - gufo
@@ -148,8 +155,12 @@ spec:
     # maxOutputTokens below, which is what clients are told.
     - --max-tokens
     - "32768"
-    # MTP draft length is adaptive in gufo, capped by --draft-tokens
-    # (default 7). Left at the default, as the reference does; the fork's
+    # --draft-tokens stays at its default 7, as the reference runs it. Since
+    # 0.28.1 (gufo-org/gufo#882) a drafting cycle runs up to it rather than to
+    # a length the controller picked, which now only decides whether to draft
+    # or back off to plain decoding; the chain stops at the first draft whose
+    # own head probability is under 0.85 (greedy) or 0.95 (sampled). Jointly
+    # planned greedy batches cap at the planner's width instead. The fork's
     # fixed nDraftMax 2 has no equivalent here.
     - --speculative
     - mtp
