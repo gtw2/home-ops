@@ -6,10 +6,14 @@ review:
   approve: true
 skills:
   scope:
-    # Offered only to Renovate PRs, so other reviews don't spend the local
-    # model's single slot reading it.
-    renovate-review:
-      when: [{ expr: pr.headRef.startsWith("renovate/") }]
+    # Given whole to every review, not only Renovate's: a hand edit under
+    # kubernetes/ or talos/ needs its rendering, dependents and tuppr
+    # sections too. A scope cannot say "a renovate/ branch or these paths":
+    # its paths and when must both hold. A scoped skill was already given
+    # whole (since 0.0.55), so this adds its ~3.5k prompt tokens to the
+    # other reviews and no tool call to any.
+    reviewing-pull-requests:
+      load: true
 # Since kritika 0.0.61 AGENTS.md is no longer loaded automatically. What a
 # review must enforce is restated here, because rules are read from the merge
 # base and a pull request cannot rewrite them; AGENTS.md is offered as
@@ -53,8 +57,8 @@ tools:
   # renovate: datasource=github-releases depName=home-operations/flate
   aqua:home-operations/flate: v0.6.5
   # 0.0.103 rebuilt the -tools image on Red Hat Hardened Images without fd,
-  # rg and yq, which the renovate-review skill tells reviews to use. These
-  # are the versions that image last shipped.
+  # rg and yq, which the reviewing-pull-requests skill tells reviews to use.
+  # These are the versions that image last shipped.
   # renovate: datasource=github-releases depName=sharkdp/fd
   aqua:sharkdp/fd: v10.5.0
   # renovate: datasource=github-releases depName=BurntSushi/ripgrep
