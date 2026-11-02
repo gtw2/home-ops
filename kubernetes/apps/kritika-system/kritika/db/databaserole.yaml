@@ -1,6 +1,6 @@
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/postgresql.cnpg.io/databaserole_v1.json
-# kritika's migrations grant these roles what they need.
+# kritika's migrations grant this role what it needs.
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
 metadata:
@@ -17,6 +17,10 @@ spec:
   databaseRoleReclaimPolicy: retain
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/postgresql.cnpg.io/databaserole_v1.json
+# Unused since kritika 0.0.116, whose migration 0054 revokes everything this
+# role was granted. Upstream says to delete it and its Secret only after the
+# upgrade: Flux applies this directory before the HelmRelease, so deleting
+# them with the bump would pull the Secret from 0.0.115's runners first.
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
 metadata:
