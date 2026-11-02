@@ -9,8 +9,9 @@ spec:
   # The 5m default is too short under Recreate: the old pod's drain alone can
   # take 200s (terminationGracePeriodSeconds), then the new digests pull and
   # the leader runs migrations. A timeout triggers the rollback remediation,
-  # and rolling back across a queue change strands jobs in Postgres
-  # (upstream docs/database.md, "Queue upgrades and rollbacks").
+  # and kritika's migrations only go forward, so the older release comes back
+  # on the newer schema: rolled back from 0.0.116, 0.0.115's runners would
+  # find the policies they write through dropped (migration 0054).
   timeout: 15m
   chartRef:
     kind: OCIRepository
@@ -25,9 +26,11 @@ spec:
       retries: 3
   values:
     # One replica, so a rolling update buys little, and it overlaps the old
-    # pod's workers with the new leader's migrations. Upstream says to stop
-    # older replicas first (docs/database.md, "Queue upgrades and rollbacks",
-    # 0.0.65). Webhooks missed in the gap are caught by the 10m PR poll.
+    # pod's workers with the new leader's migrations. Upstream said to stop
+    # older replicas first for 0.0.65 (a docs/database.md note that 0.0.105
+    # dropped), and its #1343 for 0.0.116 that an old replica turned leader
+    # grants the old runner role its table privileges again. Webhooks missed
+    # in the gap are caught by the 10m PR poll.
     # Helm merges maps, so rollingUpdate must be nulled.
     strategy:
       type: Recreate
@@ -193,8 +196,6 @@ spec:
         existingSecret: kritika-postgres-credentials
       app:
         existingSecret: kritika-postgres-app
-      runner:
-        existingSecret: kritika-postgres-runner
     runner:
       # Without these, runner pods are BestEffort with no memory limit. A
       # runner's flate cache always starts cold, and a cold one-namespace
@@ -210,7 +211,7 @@ spec:
       type: cilium
       # 443 for GitHub; 4000 for LiteLLM and 8080 for toolhive-embed, which
       # kritika serve calls on the runners' behalf. Runner pods only ever reach
-      # DNS, Postgres and the gateway.
+      # DNS and the gateway: since 0.0.116 they report through it, not Postgres.
       egressPorts: [443, 4000, 8080]
     httpRoute:
       enabled: true

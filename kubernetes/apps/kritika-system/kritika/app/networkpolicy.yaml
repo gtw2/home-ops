@@ -61,7 +61,8 @@ spec:
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
 # The same for runner pods, which the chart denies all ingress: their replies
-# come from Postgres, kube-dns and kritika's egress gateway.
+# come from kube-dns and kritika's egress gateway. Since 0.0.116 a runner
+# reports through the gateway and opens no connection to Postgres.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -72,8 +73,6 @@ spec:
       kritika.home-operations.com/role: runner
   ingress:
     - fromEndpoints:
-        - matchLabels:
-            cnpg.io/cluster: kritika-postgres
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: kube-system
             k8s-app: kube-dns

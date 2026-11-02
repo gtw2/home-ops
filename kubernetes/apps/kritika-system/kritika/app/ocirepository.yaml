@@ -22,6 +22,10 @@ spec:
     # mise.lock: flate now comes from the tools key of .kritika.yaml.
     # 0.0.107 removed mise from the runner: that tools key takes only
     # aqua:<owner>/<repo> packages pinned to a release's tag, and any other
-    # key fails the file.
-    tag: 0.0.115
+    # key fails the file. 0.0.116 removed database.runner, and the old key is
+    # silently ignored: runners hold no database credential and report
+    # through the gateway. Its migration 0054 revokes the runner role's
+    # grants; upstream says to delete the role's DatabaseRole and Secret after
+    # the upgrade, not with it.
+    tag: 0.0.116
   url: oci://ghcr.io/home-operations/charts/kritika
