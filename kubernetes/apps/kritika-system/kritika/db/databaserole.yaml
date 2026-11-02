@@ -15,22 +15,3 @@ spec:
   # Deleting this resource leaves the role, so a running kritika keeps its
   # connections.
   databaseRoleReclaimPolicy: retain
----
-# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/postgresql.cnpg.io/databaserole_v1.json
-# Unused since kritika 0.0.116, whose migration 0054 revokes everything this
-# role was granted. Nothing else depends on it, so dropping it succeeds.
-apiVersion: postgresql.cnpg.io/v1
-kind: DatabaseRole
-metadata:
-  name: kritika-runner
-spec:
-  cluster:
-    name: kritika-postgres
-  name: kritika_runner
-  login: true
-  passwordSecret:
-    name: kritika-postgres-runner
-  # Deleting this resource drops the role. CNPG rejects ensure: absent, and
-  # Flux prunes an object with the policy it has in the cluster, so this has
-  # to be applied before the document and its Secret are removed.
-  databaseRoleReclaimPolicy: delete

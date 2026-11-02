@@ -24,8 +24,6 @@ spec:
     # aqua:<owner>/<repo> packages pinned to a release's tag, and any other
     # key fails the file. 0.0.116 removed database.runner, and the old key is
     # silently ignored: runners hold no database credential and report
-    # through the gateway. Its migration 0054 revokes the runner role's
-    # grants; upstream says to delete the role's DatabaseRole and Secret after
-    # the upgrade, not with it.
+    # through the gateway.
     tag: 0.0.116
   url: oci://ghcr.io/home-operations/charts/kritika
