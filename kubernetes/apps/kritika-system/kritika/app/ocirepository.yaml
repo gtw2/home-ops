@@ -25,5 +25,5 @@ spec:
     # key fails the file. 0.0.116 removed database.runner, and the old key is
     # silently ignored: runners hold no database credential and report
     # through the gateway.
-    tag: 0.0.116
+    tag: 0.0.117
   url: oci://ghcr.io/home-operations/charts/kritika
