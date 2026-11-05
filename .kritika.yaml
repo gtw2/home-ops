@@ -60,7 +60,7 @@ tools:
   # rg and yq, which the reviewing-pull-requests skill tells reviews to use.
   # These are the versions that image last shipped.
   # renovate: datasource=github-releases depName=sharkdp/fd
-  aqua:sharkdp/fd: v10.5.0
+  aqua:sharkdp/fd: v10.5.1
   # renovate: datasource=github-releases depName=BurntSushi/ripgrep
   aqua:BurntSushi/ripgrep: 15.2.0
   # renovate: datasource=github-releases depName=mikefarah/yq
