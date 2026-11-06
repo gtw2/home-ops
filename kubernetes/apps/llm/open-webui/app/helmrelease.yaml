@@ -27,7 +27,7 @@ spec:
           app:
             image:
               repository: ghcr.io/open-webui/open-webui
-              tag: v0.12.5@sha256:03443b8de6b617da9d900edd09b4bf1cb0ddbfdcba6afb42c548336a0b821ded
+              tag: v0.13.0@sha256:2272b0fb7c8783a016bcc179abb467cfa34590c99c5e6560fe0e9155b4820a09
             env:
               # Most of open-webui's settings are PersistentConfig: env seeds
               # the database on FIRST launch and is ignored on every start
@@ -80,6 +80,11 @@ spec:
               # near it: 160000 leaves ~43% for the estimate to be wrong by.
               ENABLE_CONTEXT_COMPACTION: true
               CONTEXT_COMPACTION_TOKEN_THRESHOLD: 160000
+              # v0.13.0 raises the default cap on one reply's tool-call rounds
+              # from 256 to 1024. Each round is a request to the Framework,
+              # which everything else here shares, so a looping model should
+              # stop at the old limit.
+              CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS: 256
               # Open-webui settings
               ENABLE_RAG_WEB_SEARCH: true
               ENABLE_SEARCH_QUERY: true
