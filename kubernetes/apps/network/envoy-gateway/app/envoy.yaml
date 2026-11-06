@@ -134,10 +134,16 @@ spec:
   targetSelectors:
     - group: gateway.networking.k8s.io
       kind: Gateway
-  compression:
+  # Each entry needs its own sub-object, even an empty one: buildCompression
+  # (1.9.3 and 1.10.0) skips an entry without it, so a bare `- type: Gzip` here
+  # would silently turn that codec off, where the old `compression` field did not.
+  compressor:
     - type: Brotli
+      brotli: {}
     - type: Gzip
+      gzip: {}
     - type: Zstd
+      zstd: {}
   tcpKeepalive: {}
   timeout:
     http:
