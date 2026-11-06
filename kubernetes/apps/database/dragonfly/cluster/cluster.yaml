@@ -5,7 +5,7 @@ kind: Dragonfly
 metadata:
   name: dragonfly
 spec:
-  image: ghcr.io/dragonflydb/dragonfly:v2.1.0
+  image: ghcr.io/dragonflydb/dragonfly:v2.1.0@sha256:94891bb22ce2fb0f7a5a3ff1bb3b2fbbc5830e2523293e47723d87fa3e5b1184
   replicas: 3
   env:
     - name: MAX_MEMORY
@@ -19,9 +19,11 @@ spec:
     - --cluster_mode=emulated
     - --lock_on_hashtags
     - --default_lua_flags=allow-undeclared-keys
-    # On by default: a daily call to version.dragonflydb.io that, from v2.0.2,
-    # also sends threads, kernel, uptime, memory bucket and cloud provider.
-    - --version_check=false
+    # --version_check stays at its default on purpose. The daily call must not
+    # leave the cluster, but from v2.1.0 the DSAL forbids disabling usage
+    # monitoring tools (LICENSE.md 4(b)) while saying firewall filtering of
+    # outbound traffic is not that (6). dragonfly-egress in networkpolicy.yaml
+    # blocks it instead. Do not remove that policy without restoring a block.
   resources:
     requests:
       cpu: 50m

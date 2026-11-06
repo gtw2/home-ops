@@ -92,3 +92,39 @@ spec:
     ports:
     - port: 9999
       protocol: TCP
+---
+# Keep dragonfly's daily call to version.dragonflydb.io inside the cluster: it
+# sends threads, kernel, uptime, memory bucket, cloud or VM label, deployment
+# environment and role (src/server/version_monitor.cc at v2.1.0). Why this is a
+# policy and not --version_check=false is in cluster.yaml.
+#
+# Selecting the pods isolates them for egress, and the only thing they start
+# themselves is replication: dragonfly-operator v1.7.1 hands replicas the
+# master's pod IP, on 9999 as observed. DNS stays blocked too, so the hostname
+# never resolves. A dragonfly snapshot to S3 or an FQDN replica would need a
+# rule here.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dragonfly-egress
+  namespace: database
+spec:
+  podSelector:
+    matchLabels:
+      app: dragonfly
+      app.kubernetes.io/name: dragonfly
+      app.kubernetes.io/part-of: dragonfly
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: dragonfly
+          app.kubernetes.io/name: dragonfly
+          app.kubernetes.io/part-of: dragonfly
+    ports:
+    - port: 6379
+      protocol: TCP
+    - port: 9999
+      protocol: TCP
