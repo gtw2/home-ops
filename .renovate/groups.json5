@@ -56,6 +56,15 @@
       },
     },
     {
+      description: "Envoy Gateway Group — the bootstrap helmfile's CRDs and the chart Flux deploys must stay on one release",
+      groupName: "Envoy Gateway",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/envoyproxy\\/gateway-helm$/"],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       description: "External Secrets Operator Group",
       groupName: "External Secrets Operator",
       matchDatasources: ["docker"],
