@@ -97,7 +97,7 @@ spec:
   # llama.cpp fork image is that it cannot. Ran on framework as 0.15.0
   # (89d6185) on 2026-10-14: uid 1000 in groups video and render, memlock
   # 8MiB, and every flag below listed by `gufo serve llm --help`. Every flag
-  # is still registered at v0.26.0 (gufo-org/gufo src/cli/serve/serve.cpp,
+  # is still registered at v0.31.0 (gufo-org/gufo src/cli/serve/serve.cpp,
   # sampling flags in src/cli/sampling_options.hpp). --cache-ram-bytes now
   # takes N|off (#783); the explicit byte count below still parses. 0.21.0
   # added --enable-yarn, needed only for --context above the native 262144,
@@ -114,6 +114,12 @@ spec:
   # for four 256-token replies at once, about 10% slower on two of five
   # 16-token replies, and byte-identical greedy output. kritika's concurrency
   # comment quotes the table, so re-measure before relying on either.
+  #
+  # 0.29.0 and 0.30.0 rework Flash-Next's prefill and decode (gufo-org/gufo#890,
+  # #894, #895, #961, #963, #1016; #933's 16,384-row prefill passes arrived and
+  # left again within 0.29.0, #954), so the table, the 61s load and the eval
+  # row predate those too. Re-measure before comparing against
+  # qwen3.8-flash-next.yaml.
   image: ghcr.io/gufo-org/toolboxes/gufo-runtime:0.31.0@sha256:9a6e2d43ca00d8d1c89453ebf456e975fd197ef54d648ba0d1b4a8bcc0917f24
   command:
     - gufo
@@ -126,8 +132,12 @@ spec:
     - "8080"
     # Two sessions, each with the full context. gufo reserves their capacity
     # at admission, so if two do not fit it fails at startup instead of
-    # OOMing mid-request; fall back to "1" then. They fit on the first start
-    # (load_completed sessions=2 context_tokens=262144).
+    # OOMing mid-request; fall back to "1" then. They fit on 0.28.1 (2026-11-01,
+    # load_completed sessions=2 context_tokens=262144 gpu_device_used_mib=104002
+    # gpu_device_total_mib=126976). 0.29.0 counts one more row per MTP session
+    # in that reservation (gufo-org/gufo#993, 40,960 bytes in upstream's test),
+    # small against the ~22GiB free there. Not yet seen on 0.31.0: confirm
+    # against the line its first start logs.
     - --sessions
     - "2"
     # gufo's per-client queue limit defaults to --max-pending, and every
@@ -191,9 +201,13 @@ spec:
     - --preserve-thinking
     - "off"
     # Restart-safe prompt cache on the node's NVMe, the reference's 64GiB.
-    # gufo insists on owning the directory and chmods it 0700, so it must
-    # create it: /cache is the group-writable gufo-cache the prestage Job
-    # made, and /cache/continuation does not exist until gufo starts.
+    # gufo creates /cache/continuation if it is missing, holds LOCK there so a
+    # second server cannot share it, and keeps its data in a 0700 v2/ tree.
+    # /cache is the group-writable gufo-cache the prestage Job made, which uid
+    # 1000 writes through fsGroup 102. The name outlives the legacy continuation
+    # cache that 0.30.0 removes (gufo-org/gufo#1014): on 0.28.1 this directory
+    # already held the component cache and no .kvc files, so it carries over,
+    # and a new path would strand its 63GiB outside --cache-disk-bytes.
     #
     # --cache-ram-bytes pinned to the 12175706112 (11.3GiB) 0.15.0 chose by
     # default on the first start, with 23.2GiB available: the default is half
