@@ -17,6 +17,11 @@ spec:
         seccompProfile: { type: RuntimeDefault }
     controllers:
       windrose:
+        # Left out of the manifest so a warden Stop survives a Helm upgrade: with
+        # a value here, every upgrade sets it back. Deployments only. On a
+        # StatefulSet this chart renders an empty `replicas:`, which wakes the
+        # server on every upgrade instead.
+        replicas: null
         annotations:
           reloader.stakater.com/auto: "true"
         containers:
