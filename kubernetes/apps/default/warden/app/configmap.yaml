@@ -12,7 +12,7 @@ metadata:
   namespace: default # keep
 data:
   config.yaml: |
-    poll_interval: 30            # seconds between reconcile ticks
+    poll_interval: 30            # seconds between checks of a steady server
     discovery_interval: 120      # seconds between annotation scans
     cooldown_seconds: 300        # 5 min dwell before the opposite action
     start_timeout_seconds: 300   # 5 min to become ready, else Failed
