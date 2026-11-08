@@ -1,59 +1,9 @@
 ---
-# Qwen3.8-Flash-Next on gufo, the challenger to qwen3.8-flash-next.yaml.
-#
-# Same model, different engine and weights, ported from the reference
-# (joryirving/home-ops kubernetes/apps/base/llm/litellm/qwen3.8-flash-next-gufo.yaml,
-# as of d70c2560, 2026-10-14). The Service is llama-strix, like every option
-# in kustomization.yaml; clients use the model's own name, qwen3.8-flash-next,
-# from the LiteLLMModel at the end of this file. qwen3.8-flash-next.yaml carries
-# the same one, so swapping engines is still the one line there and changes
-# nothing for clients.
-#
-# PREREQUISITES, both outside this file:
-#   1. The BIOS iGPU carve-out at its minimum (docs/talos.md). The model holds
-#      ~95GiB of GPU memory (100787MiB device-used at load), more than the
-#      96GiB carve-out it shipped with.
-#   2. The weights on the node. llmkube never runs its model downloader for
-#      runtime: generic (NeedsModelInit() = false), so nothing in this file
-#      fetches them. They arrived on 2026-10-14 through a one-off Job,
-#      flash-next-gufo-prestage (#1742); if the cache is ever lost, restore
-#      that file from git history and let it run before swapping to this.
-#
-# Measured here 2026-10-14, first day live, against the llama.cpp fork on the
-# same node and memory layout:
-#
-#                            llama.cpp fork      gufo
-#   one request alone        38.0-38.9 tok/s     36.9-42.1 tok/s
-#   two at once              second one queues   25.3-26.6 + 30.7-41.9 tok/s
-#   MTP acceptance           60-62%              70-74%
-#   load                     ~15s                61s (45s of it fingerprinting)
-#   task llm:eval            89%, 93%            82%
-#
-# Same 77-token prompt, 1500 tokens out, cache off. The gain is concurrency,
-# not single-stream speed: upstream's 65.25 tok/s single-user figure did not
-# reproduce (gufo logged plan=serial-fallback for every solo request).
-#
-# The eval gap is not yet a finding. It is one run per task, and the fork
-# itself swung 60% -> 100% on noderestriction-labels between its two runs.
-# Of gufo's misses, openwebui-persistentconfig was right but worded
-# "first-boot", which the check's regex misses; noderestriction-labels was
-# genuinely wrong (blamed API-server prefix validation, not NodeRestriction).
-# Settle it with --repeat 3 on both before choosing on quality. The weights
-# differ too (UD-Q4_K_XL here, IQ4_NL there), so this is not engine alone.
 apiVersion: inference.llmkube.dev/v1alpha1
 kind: Model
 metadata:
   name: llama-strix
 spec:
-  # unsloth UD-Q4_K_XL, the quant gufo publishes its Flash-Next numbers for,
-  # and the reference's. 4 shards, 103.6GiB, against IQ4_NL's 93.4GiB.
-  #
-  # Same source as the UD-Q3_K_XL and MTP files already cached, so the same
-  # cache key: /models/f869f01c859f8577 (sha256 of spec.source, first 16 hex).
-  # args below hardcode that path; changing source moves it.
-  #
-  # Under runtime: generic this Model is bookkeeping and the GPU claim, not a
-  # download. The prestage Job fetched exactly this file list.
   source: hf://unsloth/Qwen3.8-Flash-Next-GGUF
   files:
     - UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf
@@ -61,8 +11,6 @@ spec:
     - UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00003-of-00004.gguf
     - UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00004-of-00004.gguf
     - MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
-    # BF16, not the F16 already cached: gufo's --mmproj takes "Qwen BF16
-    # vision sidecar" (gufo serve llm --help, 0.15.0).
     - mmproj-BF16.gguf
   mmproj: mmproj-BF16.gguf
   format: gguf
@@ -85,41 +33,10 @@ metadata:
   labels:
     krr/ignore: "true"
   annotations:
-    # waitForIdle polls /slots by default, which gufo does not serve, and any
-    # failure counts as busy - so without this every rollout of this pod would
-    # wait out idleTimeoutSeconds. /health always answers, so the wait is in
-    # effect off for this pod: a rollout can cut off a request in flight.
     inference.llmkube.dev/idle-endpoint: /health
 spec:
   modelRef: llama-strix
   runtime: generic
-  # Released semver tag, so Renovate can track it - the standing cost of the
-  # llama.cpp fork image is that it cannot. Ran on framework as 0.15.0
-  # (89d6185) on 2026-10-14: uid 1000 in groups video and render, memlock
-  # 8MiB, and every flag below listed by `gufo serve llm --help`. Every flag
-  # is still registered at v0.31.0 (gufo-org/gufo src/cli/serve/serve.cpp,
-  # sampling flags in src/cli/sampling_options.hpp). --cache-ram-bytes now
-  # takes N|off (#783); the explicit byte count below still parses. 0.21.0
-  # added --enable-yarn, needed only for --context above the native 262144,
-  # so it is not set here.
-  #
-  # 0.26.0 also moves the image's ROCm userspace from 7.2.3 to 10.1 (ROCM_PATH
-  # in the image config; gufo-org/toolboxes#24, gufo-org/gufo#847). Every
-  # figure in this file - the tok/s table and 61s load at the top, the RSS and
-  # memory.peak behind resources.memory - was measured on 7.2.3.
-  #
-  # 0.28.1 also changes how MTP drafts (gufo-org/gufo#882, at --speculative
-  # below), so the table's gufo tok/s and 70-74% acceptance predate that too.
-  # Upstream measured #882 on these weights: +11% for one 384-token reply and
-  # for four 256-token replies at once, about 10% slower on two of five
-  # 16-token replies, and byte-identical greedy output. kritika's concurrency
-  # comment quotes the table, so re-measure before relying on either.
-  #
-  # 0.29.0 and 0.30.0 rework Flash-Next's prefill and decode (gufo-org/gufo#890,
-  # #894, #895, #961, #963, #1016; #933's 16,384-row prefill passes arrived and
-  # left again within 0.29.0, #954), so the table, the 61s load and the eval
-  # row predate those too. Re-measure before comparing against
-  # qwen3.8-flash-next.yaml.
   image: ghcr.io/gufo-org/toolboxes/gufo-runtime:0.31.0@sha256:9a6e2d43ca00d8d1c89453ebf456e975fd197ef54d648ba0d1b4a8bcc0917f24
   command:
     - gufo
@@ -130,57 +47,28 @@ spec:
     - 0.0.0.0
     - --port
     - "8080"
-    # Two sessions, each with the full context. gufo reserves their capacity
-    # at admission, so if two do not fit it fails at startup instead of
-    # OOMing mid-request; fall back to "1" then. They fit on 0.28.1 (2026-11-01,
-    # load_completed sessions=2 context_tokens=262144 gpu_device_used_mib=104002
-    # gpu_device_total_mib=126976). 0.29.0 counts one more row per MTP session
-    # in that reservation (gufo-org/gufo#993, 40,960 bytes in upstream's test),
-    # small against the ~22GiB free there. Not yet seen on 0.31.0: confirm
-    # against the line its first start logs.
     - --sessions
     - "2"
-    # gufo's per-client queue limit defaults to --max-pending, and every
-    # request arrives from the litellm pod's IP. Reference values.
     - --max-pending
     - "32"
     - --max-pending-per-client
     - "16"
-    # 64MiB, the reference's. Requests carry base64 images.
     - --max-request-bytes
     - "67108864"
     - --model
     - /models/f869f01c859f8577/UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf
     - --mmproj
     - /models/f869f01c859f8577/mmproj-BF16.gguf
-    # What litellm asks for: the LiteLLMModel below sends
-    # openai/qwen3.8-flash-next.
     - --served-model-name
     - qwen3.8-flash-next
-    # Per session. Keep in step with contextSize and the LiteLLMModel's
-    # maxInputTokens below.
     - --context
     - "262144"
-    # 32768, not the reference's 65536: it matches the LiteLLMModel's
-    # maxOutputTokens below, which is what clients are told.
     - --max-tokens
     - "32768"
-    # --draft-tokens stays at its default 7, as the reference runs it. Since
-    # 0.28.1 (gufo-org/gufo#882) a drafting cycle runs up to it rather than to
-    # a length the controller picked, which now only decides whether to draft
-    # or back off to plain decoding; the chain stops at the first draft whose
-    # own head probability is under 0.85 (greedy) or 0.95 (sampled). Jointly
-    # planned greedy batches cap at the planner's width instead. The fork's
-    # fixed nDraftMax 2 has no equivalent here.
     - --speculative
     - mtp
     - --mtp-model
     - /models/f869f01c859f8577/MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf
-    # Sampling identical to qwen3.8-flash-next.yaml and the reference: the
-    # model card's thinking preset. gufo carries the card's thinking-off
-    # preset too (0.7/0.8, presence penalty 1.5), but these flags replace it
-    # (src/core/text_sampling_defaults.hpp, 0.27.0), so a request that turns
-    # thinking off and sends no sampling gets these as well.
     - --temperature
     - "1.0"
     - --top-p
@@ -193,80 +81,37 @@ spec:
     - "0.0"
     - --repeat-penalty
     - "1.0"
-    # low, as qwen3.8-flash-next.yaml runs, not the reference's medium: an
-    # engine comparison should not also change how long the model thinks.
     - --reasoning-effort
     - low
-    # = the fork's --no-reasoning-preserve.
     - --preserve-thinking
     - "off"
-    # Restart-safe prompt cache on the node's NVMe, the reference's 64GiB.
-    # gufo creates /cache/continuation if it is missing, holds LOCK there so a
-    # second server cannot share it, and keeps its data in a 0700 v2/ tree.
-    # /cache is the group-writable gufo-cache the prestage Job made, which uid
-    # 1000 writes through fsGroup 102. The name outlives the legacy continuation
-    # cache that 0.30.0 removes (gufo-org/gufo#1014): on 0.28.1 this directory
-    # already held the component cache and no .kvc files, so it carries over,
-    # and a new path would strand its 63GiB outside --cache-disk-bytes.
-    #
-    # --cache-ram-bytes pinned to the 12175706112 (11.3GiB) 0.15.0 chose by
-    # default on the first start, with 23.2GiB available: the default is half
-    # the host RAM still available after the model loads, capped by the
-    # container limit. 0.18.0 (gufo-org/gufo#637) counts the pod's reclaimable
-    # page cache as available, so the default now depends on what the load
-    # left cached. Those pages are hipHostMalloc'd and charged to this pod;
-    # see resources.memory, which was sized for this figure.
-    # No --cache-disk-staging-bytes: Flash-Next ignores it.
     - --cache-disk
     - /cache/continuation
     - --cache-disk-bytes
     - "68719476736"
     - --cache-ram-bytes
     - "12175706112"
-  # Required for runtime: generic - args name the model itself. The warning in
-  # qwen3.8-flash-next.yaml against setting this applies to runtime: llamacpp
-  # only, where it makes the operator pass --model "".
   skipModelInit: true
   contextSize: 262144
   rolloutPolicy:
-    # 300, not the reference's 86400, for the reason given in
-    # qwen3.8-flash-next.yaml; the annotation above makes it moot for now.
     waitForIdle: true
     idleTimeoutSeconds: 300
   replicas: 1
   priority: high
-  # node.kubernetes.io/gpu-vendor, not the reference's
-  # topology.kubernetes.io/gpus: see qwen3.8-flash-next.yaml.
   nodeSelector:
     node.kubernetes.io/gpu-vendor: amd
   tolerations:
     - key: llm-workload
       operator: Exists
       effect: NoSchedule
-  # The cache files are group 102 (the operator's curl image wrote them) and
-  # gufo runs as uid 1000. fsGroup 102 lets it read /models and write /cache.
   podSecurityContext:
     fsGroup: 102
     fsGroupChangePolicy: OnRootMismatch
-  # No-op, as in qwen3.8-flash-next.yaml; kept to match the reference.
   env:
     - name: HSA_OVERRIDE_GFX_VERSION
       value: "11.5.1"
   resources:
     cpu: "1"
-    # llmkube maps this to both request and limit.
-    #
-    # 24Gi, not the reference's 108Gi. That figure assumed gufo copies the
-    # weights into anonymous memory, charged to this cgroup
-    # (joryirving/home-ops#10479). Not so here, on 0.15.0 with the carve-out
-    # at 512MiB: the weights and sessions are GPU allocations in GTT, which no
-    # cgroup is charged for. Measured on the first day: process RSS 1040MiB
-    # after load, memory.peak 16.8GiB once the prompt cache filled, of which
-    # 11.3GiB anon (the RAM cache budget, see --cache-disk) and 5.4GiB file
-    # (the disk cache's page cache, reclaimable). 24Gi covers that with room.
-    #
-    # The ~95GiB in GTT is invisible to kubelet, so allocatable overstates
-    # what is free; the llm-workload taint and the OOMConfig cover it.
     memory: 24Gi
   extraVolumes:
     - name: models
@@ -289,8 +134,6 @@ spec:
         path: /health
         port: 8080
       periodSeconds: 10
-      # 2h, as for the fork, though nothing downloads in this pod and the
-      # first load took 61s. Kept generous for a cold page cache.
       failureThreshold: 720
     liveness:
       httpGet:
@@ -307,9 +150,6 @@ spec:
       periodSeconds: 10
       failureThreshold: 6
 ---
-# What clients call this model. It lives with the weights rather than in
-# models/, so the name on /v1/models always matches what is loaded: the fork's
-# file carries the same LiteLLMModel, and qwen3.6-35b-a3b.yaml its own.
 apiVersion: litellm.home-operations.com/v1alpha1
 kind: LiteLLMModel
 metadata:
@@ -321,19 +161,9 @@ spec:
     # --served-model-name above.
     model: openai/qwen3.8-flash-next
     apiBase: http://llama-strix.llm.svc.cluster.local:8080/v1
-    # gufo serves without auth inside the cluster; litellm still insists on a
-    # non-empty key.
     apiKey: sk-llmkube-noauth
-    # No temperature or top_p: litellm adds these to every request that sends
-    # none, as kritika's never do, over the --temperature and --top-p above.
-    # Until 2026-10-29 that was 0.7/0.8, carried over from Qwen3-30B-A3B:
-    # Qwen's preset for thinking off, on a model that thinks here
-    # (--reasoning-effort above). The card's thinking preset is the args'.
   info:
     mode: chat
-    # The served context holds prompt AND generation, so input is --context
-    # (262144 per session) less maxOutputTokens. Clients like Open WebUI read
-    # this as the context window.
     maxInputTokens: 229376
     maxOutputTokens: 32768
     supportsFunctionCalling: true
