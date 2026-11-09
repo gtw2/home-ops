@@ -55,7 +55,7 @@ rules:
 # are on. Check a new tool against that list.
 tools:
   # renovate: datasource=github-releases depName=home-operations/flate
-  aqua:home-operations/flate: v0.7.0
+  aqua:home-operations/flate: v0.7.1
   # 0.0.103 rebuilt the -tools image on Red Hat Hardened Images without fd,
   # rg and yq, which the reviewing-pull-requests skill tells reviews to use.
   # These are the versions that image last shipped.
