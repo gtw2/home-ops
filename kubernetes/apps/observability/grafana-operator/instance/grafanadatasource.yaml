@@ -23,20 +23,22 @@ spec:
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDatasource
 metadata:
-  name: loki
+  name: victorialogs
 spec:
   allowCrossNamespaceImport: true
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
   datasource:
-    name: loki
-    uid: loki
-    type: loki
+    # The type is a plugin, not built in: it is in GF_INSTALL_PLUGINS in
+    # grafana.yaml. Queries are LogsQL, not LogQL. mcp-grafana's log tools
+    # pick their VictoriaLogs backend from this type (2.3.0,
+    # tools/loki_backend_victorialogs.go), so they keep working.
+    name: victorialogs
+    uid: victorialogs
+    type: victoriametrics-logs-datasource
     access: proxy
-    url: http://loki-headless.observability.svc.cluster.local:3100
-    jsonData:
-      maxLines: 250
+    url: http://victoria-logs.observability.svc.cluster.local:9428
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/grafana.integreatly.org/grafanadatasource_v1beta1.json
 apiVersion: grafana.integreatly.org/v1beta1

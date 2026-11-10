@@ -11,8 +11,10 @@
 #     by hand.
 #   - llama-server dropped 3 of its 25 panels (Prompt cache size, Cached
 #     prompt count, Cache evictions / interval). They query a
-#     victoriametrics-logs-datasource in LogsQL; this cluster runs Loki, and
-#     LogsQL is not LogQL, so repointing them would not have made them work.
+#     victoriametrics-logs-datasource in LogsQL; this cluster ran Loki at the
+#     time, and LogsQL is not LogQL, so repointing them would not have made
+#     them work. It runs VictoriaLogs now (datasource uid victorialogs), so
+#     they can be brought back from the source dashboard.
 #
 # instanceSelector is grafana.internal/instance, which is what this repo's
 # Grafana matches on. The source repo uses "dashboards: grafana" - copying that

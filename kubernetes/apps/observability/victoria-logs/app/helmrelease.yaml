@@ -1,0 +1,48 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: victoria-logs
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: victoria-logs
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    server:
+      # Service victoria-logs:9428, which the collector and the Grafana
+      # datasource (grafana-operator/instance/grafanadatasource.yaml) both name.
+      fullnameOverride: victoria-logs
+      image:
+        # quay.io carries the same image as Docker Hub (same index digest for
+        # v1.53.0), without Docker Hub's pull limits.
+        registry: quay.io
+        repository: victoriametrics/victoria-logs
+        tag: v1.53.0@sha256:251121fa882af99b95ba0c230a4a2f412ea602d2698c64a96c58dc9842bb755d
+      # Same window Loki kept.
+      retentionPeriod: 14d
+      persistentVolume:
+        enabled: true
+        storageClassName: ceph-block
+        # Loki's 14 days were 2.3GiB on disk (kubelet_volume_stats_used_bytes,
+        # 2026-11-10) at ~420MB a day of raw lines from four nodes. The
+        # Framework's logs are new with this collector, so that is a floor,
+        # and VictoriaLogs' own on-disk size here has not been measured yet.
+        size: 20Gi
+      # Starting values, not measured: Loki sat at 616Mi for the same stream.
+      resources:
+        requests:
+          cpu: 10m
+          memory: 128Mi
+        limits:
+          memory: 1Gi
+      serviceMonitor:
+        enabled: true
