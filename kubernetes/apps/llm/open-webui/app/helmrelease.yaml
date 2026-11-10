@@ -36,6 +36,23 @@ spec:
               # connection below can live in git. Everything not declared here
               # falls back to upstream defaults rather than a stored value.
               ENABLE_PERSISTENT_CONFIG: "false"
+              # Authentik is the way in (the OAUTH_* settings in
+              # externalsecret.yaml), so the local signup endpoint and the
+              # password form are off. Upstream defaults both to on, and
+              # with persistent config off those defaults applied at every
+              # start: anyone could POST /api/v1/auths/signup on the public
+              # hostname. With OAUTH_MERGE_ACCOUNTS_BY_EMAIL, an account
+              # registered that way under an invited person's address is the
+              # one their first SSO login attaches to and promotes, while
+              # the password its creator chose still signs in (v0.13.3,
+              # utils/oauth.py and routers/auths.py).
+              #
+              # Either one being false makes signup answer 403. Password
+              # sign-in through the API stays possible for accounts that have
+              # a password; ENABLE_PASSWORD_AUTH=false would end that too.
+              # OAuth account creation is ENABLE_OAUTH_SIGNUP and unaffected.
+              ENABLE_SIGNUP: "false"
+              ENABLE_LOGIN_FORM: "false"
               # Models come from litellm in the llm namespace, which fronts the
               # llama.cpp InferenceService on the Framework. OPENAI_API_KEY is
               # the litellm virtual key, pulled from the secret below - the
