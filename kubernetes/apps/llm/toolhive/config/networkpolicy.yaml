@@ -1,0 +1,156 @@
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Who may open a connection to the MCP pods.
+#
+# The gateway is anonymous at the pod (virtualmcpserver.yaml) and so is every
+# backend proxy behind it: the x-api-key check lives on envoy-internal, which
+# an in-cluster caller never passes through. Without a policy, any pod in the
+# cluster could call vmcp-mcp-gateway:4483 or mcp-ha-proxy:8080 directly and
+# use the Home Assistant, arr and seerr credentials and the cluster-wide
+# read-only kubectl role. These policies leave that to the callers named here.
+#
+# All toolhive-managed pods carry toolhive=true (the gateway, each backend's
+# proxy Deployment and its server StatefulSet), which is what the first policy
+# selects. The others add what one workload needs on top; Cilium allows the
+# union.
+#
+# Half of each list is not callers at all. On this cluster's netkit datapath a
+# reply to a connection the pod made through a Service is judged by the pod's
+# INGRESS policy (kritika-system/kritika/app/networkpolicy.yaml has the
+# detail), so every peer a pod calls has to be allowed in for its answers to
+# arrive. Those entries are marked "replies". The cost is that such a peer
+# could also open a connection of its own; they are this cluster's own
+# services, each already trusted with more than that.
+#
+# A new backend needs its upstream added here the same way, or its tools fail
+# with nothing in its log: the drop is on the reply. Hubble is off, so look
+# with `cilium-dbg monitor --type drop` on the pod's node.
+#
+# Not tested against live traffic, for that same reason. After it applies,
+# check the VirtualMCPServer and MCPServer status, the Cluster tools
+# connection in Open WebUI, and a call to mcp.${SECRET_DOMAIN} with the key.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mcp-pods
+spec:
+  endpointSelector:
+    matchLabels:
+      toolhive: "true"
+  ingress:
+    - fromEndpoints:
+        # Gateway to proxy, proxy to server, and the replies back.
+        - matchLabels:
+            io.kubernetes.pod.namespace: llm
+            toolhive: "true"
+        # The operator that creates and reconciles them.
+        - matchLabels:
+            io.kubernetes.pod.namespace: llm
+            app.kubernetes.io/name: toolhive-operator
+        # Replies: DNS.
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+    # Replies: the proxies manage their server pods, the gateway discovers its
+    # backends and the kubectl and flux servers do their work through the API.
+    - fromEntities:
+        - kube-apiserver
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mcp-gateway
+spec:
+  endpointSelector:
+    matchLabels:
+      toolhive: "true"
+      toolhive-name: mcp-gateway
+  ingress:
+    - fromEndpoints:
+        # Open WebUI's Cluster tools connection, straight to the Service.
+        - matchLabels:
+            io.kubernetes.pod.namespace: llm
+            app.kubernetes.io/name: open-webui
+        # LAN callers, after securitypolicy.yaml has checked their key.
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            gateway.envoyproxy.io/owning-gateway-name: envoy-internal
+        # podmonitor.yaml, on 8080.
+        - matchLabels:
+            io.kubernetes.pod.namespace: observability
+            app.kubernetes.io/name: prometheus
+        # Replies: the optimizer's embeddings.
+        - matchLabels:
+            io.kubernetes.pod.namespace: llm
+            app: toolhive-embed
+        # Replies: session storage.
+        - matchLabels:
+            io.kubernetes.pod.namespace: database
+            app.kubernetes.io/name: dragonfly
+        # Replies: the two remote backends (MCPServerEntry), which the gateway
+        # calls itself with no proxy pod between.
+        - matchLabels:
+            io.kubernetes.pod.namespace: llm
+            app.kubernetes.io/name: memini
+        - matchLabels:
+            io.kubernetes.pod.namespace: observability
+            app.kubernetes.io/name: mcp-grafana
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mcp-ha
+spec:
+  endpointSelector:
+    matchLabels:
+      toolhive: "true"
+      toolhive-name: ha
+  ingress:
+    # Replies: HOMEASSISTANT_URL.
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: home-automation
+            app.kubernetes.io/name: home-assistant
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mcp-arr
+spec:
+  endpointSelector:
+    matchLabels:
+      toolhive: "true"
+      toolhive-name: arr
+  ingress:
+    # Replies: SONARR_URL, RADARR_URL and PROWLARR_URL.
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: downloads
+            app.kubernetes.io/name: sonarr
+        - matchLabels:
+            io.kubernetes.pod.namespace: downloads
+            app.kubernetes.io/name: radarr
+        - matchLabels:
+            io.kubernetes.pod.namespace: downloads
+            app.kubernetes.io/name: prowlarr
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mcp-seerr
+spec:
+  endpointSelector:
+    matchLabels:
+      toolhive: "true"
+      toolhive-name: seerr
+  ingress:
+    # Replies: OVERSEERR_URL.
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: media
+            app.kubernetes.io/name: seerr

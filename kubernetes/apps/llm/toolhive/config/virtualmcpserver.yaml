@@ -10,6 +10,8 @@ spec:
   # Anonymous at the pod. Callers from inside the cluster (open-webui) reach the
   # Service directly and are trusted; callers from the LAN come through
   # envoy-internal, where securitypolicy.yaml enforces the x-api-key header.
+  # Which pods count as "inside the cluster" is networkpolicy.yaml: open-webui
+  # and envoy-internal, not every pod that can resolve the Service.
   incomingAuth:
     type: anonymous
   outgoingAuth:
