@@ -27,15 +27,10 @@
       ignoreTests: false,
     },
     {
-      description: "Auto-merge GitHub Actions",
-      matchManagers: ["github-actions"],
-      automerge: true,
-      automergeType: "branch",
-      matchUpdateTypes: ["minor", "patch", "digest"],
-      minimumReleaseAge: "3 days",
-      ignoreTests: true,
-    },
-    {
+      // Only these two publishers. Other actions used to automerge after 3 days
+      // without tests, and some run on the self-hosted runner, which holds a
+      // Talos os:admin credential: a compromised release would have reached it
+      // with nobody reading the diff. Their updates now open a PR.
       description: "Auto-merge trusted GitHub Actions",
       matchManagers: ["github-actions"],
       matchPackageNames: [

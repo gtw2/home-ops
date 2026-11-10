@@ -1,21 +1,20 @@
 ---
+# No Kubernetes RBAC is bound to this ServiceAccount, on purpose. The repository
+# is public, and for a pull_request event GitHub runs the workflow file from the
+# pull request itself, so the fork checks in .github/workflows are not a
+# boundary: a fork can remove them and target this runner. Whatever the runner
+# pod holds is what such a job gets.
+#
+# The only job that runs here (image-pull.yaml) calls talosctl with the Talos
+# ServiceAccount below and never the Kubernetes API. The runner sets
+# ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER=false and no workflow uses `container:`,
+# so the kubernetes-mode hooks, which would need to create pods, never run. A
+# workflow that starts using a job container needs a namespaced Role for it
+# (pods, pods/exec, pods/log, jobs), not cluster-admin.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: home-ops-runner
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: home-ops-runner
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-  - kind: ServiceAccount
-    name: home-ops-runner
-    namespace: actions-runner-system
 ---
 apiVersion: talos.dev/v1alpha1
 kind: ServiceAccount
