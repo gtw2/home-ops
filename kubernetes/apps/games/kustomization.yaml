@@ -13,6 +13,7 @@ resources:
   - ./filebrowser/ks.yaml
   - ./icarus/ks.yaml
   - ./minecraft/ks.yaml
+  - ./network-policy/ks.yaml
   - ./palworld/ks.yaml
   - ./romm/ks.yaml
   - ./satisfactory/ks.yaml

@@ -1,0 +1,137 @@
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Egress lockdown for the game servers.
+#
+# These are the pods that take traffic straight from the internet (the towonel
+# edge and the LoadBalancer IPs), run third-party server builds, and mostly run
+# without runAsNonRoot or dropped capabilities. Until this policy, one of them
+# compromised could open a connection to anything: the MCP gateway (anonymous
+# in-cluster, with a Home Assistant token behind it), dragonfly (no auth, and
+# its NetworkPolicy admits this namespace), mosquitto (anonymous) and every
+# host on the LAN.
+#
+# Egress only. With no ingress section the pods stay open inbound exactly as
+# before, so the game ports, the towonel agents, Prometheus, warden and
+# discordgsm are untouched. That also keeps this clear of the netkit reply
+# problem described in kritika-system/kritika/app/networkpolicy.yaml, which
+# only bites a pod whose INGRESS is enforced.
+#
+# Selected: every app-template pod in the namespace except romm and
+# filebrowser. Those two are web apps behind the gateways, not game servers,
+# and romm needs Postgres, dragonfly and Authentik.
+# - app.kubernetes.io/controller is the label app-template puts on its pods.
+#   Requiring it leaves out the kopiur mover Jobs that run here (labelled
+#   app.kubernetes.io/managed-by=kopiur and nothing else of ours).
+# - NotIn, not a list of games: a game added later is covered without anyone
+#   remembering this file. If it needs something in-cluster, it fails at
+#   first start and gets a rule below.
+#
+# Not tested against live traffic: Hubble is off, so there is no flow log to
+# check it against beforehand. After it applies, watch for drops with
+#   kubectl -n kube-system exec ds/cilium -- cilium-dbg monitor --type drop
+# on the node running the game.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: game-servers-egress
+spec:
+  endpointSelector: &gameServers
+    matchLabels:
+      io.kubernetes.pod.namespace: games
+    matchExpressions:
+      - key: app.kubernetes.io/controller
+        operator: Exists
+      - key: app.kubernetes.io/name
+        operator: NotIn
+        values:
+          - romm
+          - filebrowser
+  egress:
+    # DNS. Plain L4, no dns rules: nothing below uses toFQDNs, so there is no
+    # reason to put these lookups through the DNS proxy.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+    # The internet: Steam, Mojang, mod and update downloads, Discord webhooks.
+    # Every port, since each game picks its own. The exceptions are the
+    # private and link-local ranges, which is what keeps the LAN (10.10.0.0/16,
+    # 192.168.1.0/24) out of reach. Replies to a LAN player who connected in
+    # are part of that inbound connection and are not judged here.
+    #
+    # Pods and nodes are not covered by a CIDR rule at all while
+    # policy-cidr-match-mode is unset, so this grants nothing inside the
+    # cluster whatever the ranges say.
+    - toCIDRSet:
+        - cidr: 0.0.0.0/0
+          except:
+            - 10.0.0.0/8
+            - 100.64.0.0/10
+            - 169.254.0.0/16
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+
+    # Each other. mc-router proxies to velocity (the proxyServerName
+    # annotations) and velocity to the Minecraft backends. Scoped to game
+    # servers, so romm and filebrowser are not reachable from one.
+    - toEndpoints:
+        - *gameServers
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# The Minecraft servers with a database on postgres17 (LuckPerms and friends:
+# their ExternalSecrets carry postgres17-rw.database.svc.cluster.local).
+# velocity also runs postgres-init against it at start.
+#
+# Cilium checks egress after the Service address is translated, so the rule
+# names the Postgres pods and their port, not the Service.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: minecraft-postgres-egress
+spec:
+  endpointSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - minecraft-velocity
+          - minecraft-lobby
+          - minecraft-vanilla
+          - minecraft-vanilla-creative
+          - minecraft-create
+          - minecraft-create-creative
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: database
+            cnpg.io/cluster: postgres17
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# mc-router watches Services and scales the backend StatefulSets through the
+# Kubernetes API (its Role is in minecraft/router/helmrelease.yaml). The API
+# server is on the node IPs, which only the entity selects.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: minecraft-router-apiserver-egress
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: minecraft-router
+  egress:
+    - toEntities:
+        - kube-apiserver
