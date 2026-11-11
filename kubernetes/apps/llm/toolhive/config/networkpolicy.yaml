@@ -18,18 +18,26 @@
 # Half of each list is not callers at all. On this cluster's netkit datapath a
 # reply to a connection the pod made through a Service is judged by the pod's
 # INGRESS policy (kritika-system/kritika/app/networkpolicy.yaml has the
-# detail), so every peer a pod calls has to be allowed in for its answers to
-# arrive. Those entries are marked "replies". The cost is that such a peer
-# could also open a connection of its own; they are this cluster's own
-# services, each already trusted with more than that.
+# detail), so every in-cluster peer a pod calls that way has to be allowed in
+# for its answers to arrive. Those entries are marked "replies". The cost is
+# that such a peer could also open a connection of its own; they are this
+# cluster's own services, each already trusted with more than that.
 #
-# A new backend needs its upstream added here the same way, or its tools fail
-# with nothing in its log: the drop is on the reply. Hubble is off, so look
-# with `cilium-dbg monitor --type drop` on the pod's node.
+# A peer outside the cluster needs no entry: there is no Service address to
+# rewrite, so its reply matches the connection the pod opened. arr and seerr
+# fetch their server from the npm registry at every start that way, as
+# kritika's serve pod calls GitHub with its ingress enforced and no rule
+# that covers the reply.
 #
-# Not tested against live traffic, for that same reason. After it applies,
-# check the VirtualMCPServer and MCPServer status, the Cluster tools
-# connection in Open WebUI, and a call to mcp.${SECRET_DOMAIN} with the key.
+# A new backend needs its in-cluster upstream added here the same way, or its
+# tools fail with nothing in its log: the drop is on the reply. Hubble is off,
+# so look with `cilium-dbg monitor --type drop` on the pod's node.
+#
+# Applied 2026-11-10. The next day the VirtualMCPServer and all five
+# MCPServers were Ready, the gateway was still aggregating its seven backends
+# for new sessions and its PodMonitor target was up. No toolhive pod has
+# started under these policies yet (all predate them), so a backend's start
+# path, the npm fetch included, has not been seen to pass.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -44,7 +52,8 @@ spec:
         - matchLabels:
             io.kubernetes.pod.namespace: llm
             toolhive: "true"
-        # The operator that creates and reconciles them.
+        # The operator that creates and reconciles them. The label is the
+        # toolhive-operator chart's own, on its Deployment's pods.
         - matchLabels:
             io.kubernetes.pod.namespace: llm
             app.kubernetes.io/name: toolhive-operator
@@ -68,6 +77,9 @@ spec:
       toolhive: "true"
       toolhive-name: mcp-gateway
   ingress:
+    # The callers, each held to the port it uses: 4483 is the vmcp
+    # container's http port, which the Service and httproute.yaml both
+    # target, and 8080 its metrics port.
     - fromEndpoints:
         # Open WebUI's Cluster tools connection, straight to the Service.
         - matchLabels:
@@ -77,10 +89,22 @@ spec:
         - matchLabels:
             io.kubernetes.pod.namespace: network
             gateway.envoyproxy.io/owning-gateway-name: envoy-internal
-        # podmonitor.yaml, on 8080.
+      toPorts:
+        - ports:
+            - port: "4483"
+              protocol: TCP
+    - fromEndpoints:
+        # podmonitor.yaml.
         - matchLabels:
             io.kubernetes.pod.namespace: observability
             app.kubernetes.io/name: prometheus
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # The replies cannot be held to a port: one arrives on whatever source
+    # port the gateway's own connection left from.
+    - fromEndpoints:
         # Replies: the optimizer's embeddings.
         - matchLabels:
             io.kubernetes.pod.namespace: llm
