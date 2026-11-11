@@ -7,6 +7,7 @@ resources:
   - ./httproute.yaml
   - ./mcpgroup.yaml
   - ./mcptelemetryconfig.yaml
+  - ./networkpolicy.yaml
   - ./podmonitor.yaml
   - ./securitypolicy.yaml
   - ./toolhive-embed.yaml
