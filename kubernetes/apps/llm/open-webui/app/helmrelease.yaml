@@ -37,8 +37,8 @@ spec:
               # falls back to upstream defaults rather than a stored value.
               ENABLE_PERSISTENT_CONFIG: "false"
               # Authentik is the way in (the OAUTH_* settings in
-              # externalsecret.yaml), so the local signup endpoint and the
-              # password form are off. Upstream defaults both to on, and
+              # externalsecret.yaml), so the local signup endpoint is off and
+              # the password form is hidden. Upstream defaults both to on, and
               # with persistent config off those defaults applied at every
               # start: anyone could POST /api/v1/auths/signup on the public
               # hostname. With OAUTH_MERGE_ACCOUNTS_BY_EMAIL, an account
@@ -47,10 +47,22 @@ spec:
               # the password its creator chose still signs in (v0.13.3,
               # utils/oauth.py and routers/auths.py).
               #
-              # Either one being false makes signup answer 403. Password
-              # sign-in through the API stays possible for accounts that have
-              # a password; ENABLE_PASSWORD_AUTH=false would end that too.
-              # OAuth account creation is ENABLE_OAUTH_SIGNUP and unaffected.
+              # Either one being false makes signup answer 403. OAuth account
+              # creation is ENABLE_OAUTH_SIGNUP and unaffected.
+              #
+              # What these two do not do (v0.13.3):
+              # - Take a password away. Sign-in checks ENABLE_PASSWORD_AUTH
+              #   only, left on as the way in when Authentik is down, and the
+              #   form is hidden rather than gone: /auth?form=signin still
+              #   renders it (src/routes/auth/+page.svelte). An account
+              #   registered before this change keeps its password until it
+              #   is deleted in Admin > Users, and stays the one that
+              #   address's first SSO login attaches to.
+              # - Leave local signup as a way to create the first admin. On
+              #   an empty database it answers 403 without the login form,
+              #   unless ENABLE_INITIAL_ADMIN_SIGNUP is true. The first SSO
+              #   login is made admin instead (utils/oauth.py), so a rebuilt
+              #   database is bootstrapped through Authentik.
               ENABLE_SIGNUP: "false"
               ENABLE_LOGIN_FORM: "false"
               # Models come from litellm in the llm namespace, which fronts the
