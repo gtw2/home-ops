@@ -9,8 +9,14 @@
 # ServiceAccount below and never the Kubernetes API. The runner sets
 # ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER=false and no workflow uses `container:`,
 # so the kubernetes-mode hooks, which would need to create pods, never run. A
-# workflow that starts using a job container needs a namespaced Role for it
-# (pods, pods/exec, pods/log, jobs), not cluster-admin.
+# workflow that starts using a job container needs a namespaced Role for it,
+# not cluster-admin: the rules the chart gives its own kubernetes-mode
+# ServiceAccount (templates/kube_mode_role.yaml at 0.15.1) are pods, pods/exec,
+# pods/log, jobs and secrets.
+#
+# The pod does not mount this ServiceAccount's token either
+# (automountServiceAccountToken: false in helmrelease.yaml), so a stray
+# binding to it grants a job nothing. Such a Role needs that turned back on.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
