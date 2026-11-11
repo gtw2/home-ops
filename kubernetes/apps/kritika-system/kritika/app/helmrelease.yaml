@@ -73,6 +73,19 @@ spec:
           # other client): a busy server answers 5xx/429, which a retry
           # outlasts.
           retries: 2
+          # Model calls at once, per model: one per gufo session. llama-strix
+          # serves 2, each with the full 262144-token context reserved at
+          # load (load_completed sessions=2, 2026-10-17), so two reviews no
+          # longer evict each other's context as they did on the one-slot
+          # llama.cpp fork (148 such requests in 72h, 2026-10-07). Two at once
+          # run at ~25-42 tok/s each against ~37-42 alone (gufo file's table).
+          # The sessions are shared, so while two reviews run, Open WebUI and
+          # the agents queue in gufo (--max-pending) rather than fail.
+          # A provider key since 0.0.119, which removed limits.concurrency.
+          # 2 is also the default, which the embedder below takes, as it did
+          # from the old key; stated here so the sizing does not follow an
+          # upstream default.
+          concurrency: 2
         embedder:
           type: openai
           baseUrl: http://toolhive-embed.llm.svc.cluster.local:8080/v1
@@ -99,11 +112,11 @@ spec:
       # PRs are not reviewed.
       #
       # The scorer's budget is fixed in code: 2m, the wait for a slot
-      # (limits.concurrency, shared with reviews) included, and 4096 output
-      # tokens, thinking included. Probed 2026-10-29 with kritika's prompt
-      # through LiteLLM, gufo otherwise idle, on four real PRs: 10-47s and at
-      # most 1425 tokens, the 47s on #1925, the longest description of
-      # #1853-#2004 (23k prompt tokens).
+      # (providers.litellm.concurrency, shared with reviews) included, and
+      # 4096 output tokens, thinking included. Probed 2026-10-29 with
+      # kritika's prompt through LiteLLM, gufo otherwise idle, on four real
+      # PRs: 10-47s and at most 1425 tokens, the 47s on #1925, the longest
+      # description of #1853-#2004 (23k prompt tokens).
       confidence:
         # No effort, so gufo's --reasoning-effort low. none ran 2-5x faster
         # but rated the Node 24 -> 26 major (#1980) high risk, not medium;
@@ -117,16 +130,6 @@ spec:
         # would hold it from routine updates: the rubric rates a minor of
         # anything shared, and any 0.x minor, at least medium.
         risk: medium
-      limits:
-        # Model calls at once, per model: one per gufo session. llama-strix
-        # serves 2, each with the full 262144-token context reserved at load
-        # (load_completed sessions=2, 2026-10-17), so two reviews no longer
-        # evict each other's context as they did on the one-slot llama.cpp
-        # fork (148 such requests in 72h, 2026-10-07). Two at once run at
-        # ~25-42 tok/s each against ~37-42 alone (gufo file's table). The
-        # sessions are shared, so while two reviews run, Open WebUI and the
-        # agents queue in gufo (--max-pending) rather than fail.
-        concurrency: 2
       agent:
         # The run tool offers the runner image's curl, find, gh, grep and jq
         # plus the aqua packages in the tools key of .kritika.yaml: flate,
@@ -225,9 +228,11 @@ spec:
         enabled: true
       prometheusRule:
         enabled: true
-        # The chart's 600s/15m fires on normal queueing. With limits.concurrency
-        # at 1, over 7 days to 2026-10-13 the median review took ~13m and 37
-        # of 82 took over 15m, so a batch of three Renovate PRs waited past it.
+        # The chart's 600s/15m fires on normal queueing. With one model call
+        # at a time (limits.concurrency: 1 then; the key is now
+        # providers.litellm.concurrency, at 2), over 7 days to 2026-10-13 the
+        # median review took ~13m and 37 of 82 took over 15m, so a batch of
+        # three Renovate PRs waited past it.
         # One review can run 50m (agent.timeout plus the runner's 5m), so an
         # hour's wait held for 30m means a stall, not a queue.
         queueAgeSeconds: 3600

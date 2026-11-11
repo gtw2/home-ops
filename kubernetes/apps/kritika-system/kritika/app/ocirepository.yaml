@@ -24,6 +24,9 @@ spec:
     # aqua:<owner>/<repo> packages pinned to a release's tag, and any other
     # key fails the file. 0.0.116 removed database.runner, and the old key is
     # silently ignored: runners hold no database credential and report
-    # through the gateway.
+    # through the gateway. 0.0.119 removed limits.concurrency, and the old
+    # key fails startup: model calls at once and the request timeout (5m
+    # unless set, as before) are per provider, providers.<name>.concurrency
+    # and .timeout.
     tag: 0.0.119
   url: oci://ghcr.io/home-operations/charts/kritika
