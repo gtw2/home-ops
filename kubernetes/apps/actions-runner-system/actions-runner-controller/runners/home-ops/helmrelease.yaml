@@ -68,6 +68,8 @@ spec:
               - mountPath: /var/run/secrets/talos.dev
                 name: talos
                 readOnly: true
+        # Nothing in the pod calls the Kubernetes API (see rbac.yaml).
+        automountServiceAccountToken: false
         serviceAccountName: *name
         volumes:
           - name: talos
