@@ -18,14 +18,22 @@
 # only bites a pod whose INGRESS is enforced.
 #
 # Selected: every app-template pod in the namespace except romm and
-# filebrowser. Those two are web apps behind the gateways, not game servers,
-# and romm needs Postgres, dragonfly and Authentik.
+# filebrowser, which are web apps behind the gateways, not game servers.
+# - romm needs Postgres, dragonfly and Authentik.
+# - filebrowser needs nothing in-cluster, but it has no login (FB_NOAUTH)
+#   over the valheim volume, and its route is on envoy-internal only.
+#   The last rule below lets every selected pod reach every other, so
+#   selecting it here would open it to the game servers. Its own egress is
+#   not restricted by this file.
 # - app.kubernetes.io/controller is the label app-template puts on its pods.
 #   Requiring it leaves out the kopiur mover Jobs that run here (labelled
-#   app.kubernetes.io/managed-by=kopiur and nothing else of ours).
-# - NotIn, not a list of games: a game added later is covered without anyone
-#   remembering this file. If it needs something in-cluster, it fails at
-#   first start and gets a rule below.
+#   app.kubernetes.io/managed-by=kopiur and nothing else of ours). It also
+#   leaves out anything not deployed with app-template: such a workload gets
+#   no policy from this file and keeps unrestricted egress. Every game here
+#   is app-template (all the HelmReleases under games/, 2026-11-11).
+# - NotIn, not a list of games: an app-template game added later is covered
+#   without anyone remembering this file. If it needs something in-cluster,
+#   it fails at first start and gets a rule below.
 #
 # Not tested against live traffic: Hubble is off, so there is no flow log to
 # check it against beforehand. After it applies, watch for drops with
@@ -70,6 +78,11 @@ spec:
     # Pods and nodes are not covered by a CIDR rule at all while
     # policy-cidr-match-mode is unset, so this grants nothing inside the
     # cluster whatever the ranges say.
+    #
+    # 224.0.0.0/3 is multicast, the reserved block above it and limited
+    # broadcast, which LAN server discovery uses. Whether such a packet from
+    # a pod would get off the node at all on this routed datapath was not
+    # tested; no game needs to send one, so the range is excluded as well.
     - toCIDRSet:
         - cidr: 0.0.0.0/0
           except:
@@ -78,6 +91,7 @@ spec:
             - 169.254.0.0/16
             - 172.16.0.0/12
             - 192.168.0.0/16
+            - 224.0.0.0/3
 
     # Each other. mc-router proxies to velocity (the proxyServerName
     # annotations) and velocity to the Minecraft backends. Scoped to game
