@@ -72,8 +72,15 @@ spec:
                   value: "true"
                 - name: GF_FEATURE_TOGGLES_ENABLE
                   value: publicDashboards
+                # Grafana 12 reads this into its preinstall list at start
+                # (pkg/setting/setting_plugins.go), "<id>" or "<id> <version>".
+                # The panels take the catalog's latest at each start. The logs
+                # datasource is pinned: the victorialogs datasource
+                # (grafanadatasource.yaml) is this plugin, and an unpinned
+                # entry would have moved it on any restart. Renovate follows
+                # the pin through .renovate/grafanaPlugins.json5.
                 - name: GF_INSTALL_PLUGINS
-                  value: grafana-clock-panel,grafana-piechart-panel,grafana-worldmap-panel,natel-discrete-panel,pr0ps-trackmap-panel,vonage-status-panel,victoriametrics-logs-datasource
+                  value: grafana-clock-panel,grafana-piechart-panel,grafana-worldmap-panel,natel-discrete-panel,pr0ps-trackmap-panel,vonage-status-panel,victoriametrics-logs-datasource 0.34.0
                 - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
                   value: natel-discrete-panel,pr0ps-trackmap-panel,panodata-map-panel
                 - name: GF_SECURITY_COOKIE_SAMESITE

@@ -29,6 +29,11 @@ spec:
         tag: v1.53.0@sha256:251121fa882af99b95ba0c230a4a2f412ea602d2698c64a96c58dc9842bb755d
       # Same window Loki kept.
       retentionPeriod: 14d
+      # GiB. The window above is by age only, so a burst of logs (a pod
+      # crash-looping with a stack trace) could fill the 20Gi volume before
+      # anything is 14 days old, and ingestion stops on a full volume. Past
+      # this size the oldest per-day partitions are dropped instead.
+      retentionDiskSpaceUsage: 15
       persistentVolume:
         enabled: true
         storageClassName: ceph-block

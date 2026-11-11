@@ -46,6 +46,18 @@ spec:
       - name: varlog
         mountPath: /var/log
         readOnly: true
+    # Root, because the kubelet's log files are root-only, but with nothing
+    # else: the same three settings promtail ran with on these nodes while
+    # reading /var/log/pods and writing its positions to a hostPath. The chart
+    # sets none of them. vlagent writes only under tmpDataPath
+    # (/var/lib/vl-collector: checkpoints and the send queue, v1.53.0
+    # app/vlagent/main.go), so a read-only root filesystem costs it nothing.
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: true
     # Starting values, not measured: the promtail pods ran at 120-200Mi.
     resources:
       requests:

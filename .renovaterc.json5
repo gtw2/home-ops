@@ -22,6 +22,7 @@
     "local>gtw2/home-ops//.renovate/autoMerge.json5",
     "local>gtw2/home-ops//.renovate/groups.json5",
     "local>gtw2/home-ops//.renovate/grafanDashboards.json5",
+    "local>gtw2/home-ops//.renovate/grafanaPlugins.json5",
   ],
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
   // No schedule: updates open as they are released, rather than all at once on

@@ -1,0 +1,37 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  customDatasources: {
+    // The catalog Grafana installs from, not the plugin's GitHub releases: a
+    // release can be tagged days before the catalog serves it (0.34.0 was
+    // tagged 2026-11-06 and listed 2026-11-10), and a version the catalog
+    // does not have yet fails the install at Grafana's start.
+    "grafana-plugins": {
+      defaultRegistryUrlTemplate: "https://grafana.com/api/plugins/{{packageName}}/versions",
+      format: "json",
+      transformTemplates: ['{"releases": items.{"version": version, "releaseTimestamp": createdAt}}'],
+    },
+  },
+  customManagers: [
+    {
+      // GF_INSTALL_PLUGINS takes "<id> <version>" entries in one
+      // comma-separated value, which no manager parses. Only pinned entries
+      // match; the unpinned panels in the same value are left alone.
+      description: "Process pinned Grafana plugins",
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+      matchStrings: [
+        "[:,]\\s?(?<depName>[a-z0-9]+(?:-[a-z0-9]+)*-(?:datasource|panel|app)) (?<currentValue>\\d+\\.\\d+\\.\\d+)",
+      ],
+      datasourceTemplate: "custom.grafana-plugins",
+      versioningTemplate: "semver",
+    },
+  ],
+  packageRules: [
+    {
+      commitMessageTopic: "Grafana plugin {{depName}}",
+      matchDatasources: ["custom.grafana-plugins"],
+      semanticCommitScope: "grafana-plugins",
+      semanticCommitType: "chore",
+    },
+  ],
+}
