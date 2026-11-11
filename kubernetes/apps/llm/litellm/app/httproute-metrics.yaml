@@ -1,0 +1,50 @@
+---
+# Keeps /metrics off the public gateway. LiteLLM serves its Prometheus metrics
+# on the same port as the API, and the operator's HTTPRoute sends every path of
+# litellm.${SECRET_DOMAIN} to it, so /metrics/ answered anyone on the internet
+# with per-key series labelled user_email, client_ip, api_key_alias and
+# hashed_api_key (84 kB, 2026-11-10).
+#
+# Blocked here and not with require_auth_for_metrics_endpoint, so Prometheus
+# keeps scraping the Service directly (servicemonitor.yaml) without holding a
+# LiteLLM key.
+#
+# This route and the operator's attach to the same listener and hostname, and
+# Gateway API gives the longer path match precedence: /metrics beats the
+# operator's PathPrefix /. A PathPrefix matches whole path elements, so this
+# covers /metrics and /metrics/ and nothing like /metricsfoo.
+#
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/gateway.envoyproxy.io/httproutefilter_v1alpha1.json
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: litellm-metrics-blocked
+spec:
+  directResponse:
+    statusCode: 404
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/gateway.networking.k8s.io/httproute_v1.json
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: litellm-metrics-blocked
+  annotations:
+    # Same hostname as the operator's route, which already has the check.
+    gatus.home-operations.com/enabled: "false"
+spec:
+  hostnames: ["litellm.${SECRET_DOMAIN}"]
+  parentRefs:
+    - name: envoy-external
+      namespace: network
+      sectionName: https
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /metrics
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: litellm-metrics-blocked
