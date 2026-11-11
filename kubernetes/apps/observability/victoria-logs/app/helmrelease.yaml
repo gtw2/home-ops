@@ -42,12 +42,18 @@ spec:
         # Framework's logs are new with this collector, so that is a floor,
         # and VictoriaLogs' own on-disk size here has not been measured yet.
         size: 20Gi
-      # Starting values, not measured: Loki sat at 616Mi for the same stream.
+      # The 1Gi this started with was OOM-killed within 8s of every start on
+      # 2026-11-11: on first run each collector replays its node's existing
+      # log files, up to 14 days of them, and the server buffers rows per CPU
+      # (20 on talos-4, with no CPU limit) for each day's partition
+      # (lib/logstorage/datadb.go, v1.53.0). 4Gi is headroom for that
+      # backfill, not a measurement; lower it once the steady state is known.
+      # Loki sat at 616Mi for the same stream.
       resources:
         requests:
           cpu: 10m
           memory: 128Mi
         limits:
-          memory: 1Gi
+          memory: 4Gi
       serviceMonitor:
         enabled: true
