@@ -1,100 +1,100 @@
 {
-  $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  // NOTE: .renovate/home-operations/ holds copies of the home-operations shared preset parts this
-  // repo used to extend (home-operations/.github@51471230, renovate/). Upstream moved them twice and
-  // each move stopped Renovate with "Cannot find preset's package": renovate-config was removed on
-  // 2026-10-30, then on 2026-10-31 the parts were folded into the org's aggregate preset
-  // "github>home-operations/.github:renovate-config". We do NOT extend that aggregate: it automerges
-  // every minor, patch and digest update, and this repo keeps its own automerge rules in .renovate/.
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   extends: [
-    "config:recommended",
-    "docker:enableMajor",
-    "helpers:pinGitHubActionDigestsToSemver",
-    "abandonments:recommended",
-    ":automergePr",
-    ":configMigration",
-    ":dependencyDashboard",
-    "local>gtw2/home-ops//.renovate/home-operations/annotated.json5",
-    "local>gtw2/home-ops//.renovate/home-operations/groups.json5",
-    "local>gtw2/home-ops//.renovate/home-operations/labels.json5",
-    "local>gtw2/home-ops//.renovate/home-operations/semanticCommits.json5",
-    "local>gtw2/home-ops//.renovate/home-operations/sharedActions.json5",
-    "local>gtw2/home-ops//.renovate/autoMerge.json5",
-    "local>gtw2/home-ops//.renovate/groups.json5",
-    "local>gtw2/home-ops//.renovate/grafanDashboards.json5",
-    "local>gtw2/home-ops//.renovate/grafanaPlugins.json5",
+    'config:recommended',
+    'docker:enableMajor',
+    'helpers:pinGitHubActionDigestsToSemver',
+    'abandonments:recommended',
+    ':automergePr',
+    ':configMigration',
+    ':dependencyDashboard',
+    'local>gtw2/home-ops//.renovate/home-operations/annotated.json5',
+    'local>gtw2/home-ops//.renovate/home-operations/groups.json5',
+    'local>gtw2/home-ops//.renovate/home-operations/labels.json5',
+    'local>gtw2/home-ops//.renovate/home-operations/semanticCommits.json5',
+    'local>gtw2/home-ops//.renovate/home-operations/sharedActions.json5',
+    'local>gtw2/home-ops//.renovate/autoMerge.json5',
+    'local>gtw2/home-ops//.renovate/groups.json5',
+    'local>gtw2/home-ops//.renovate/grafanDashboards.json5',
+    'local>gtw2/home-ops//.renovate/grafanaPlugins.json5',
   ],
-  dependencyDashboardTitle: "Renovate Dashboard 🤖",
-  // No schedule: updates open as they are released, rather than all at once on
-  // the weekend. Every PR is reviewed by kritika on the local model, which has
-  // one slot, so a weekend batch queued its reviews for hours. Instead cap new
-  // PRs per hour so reviews keep pace; leave concurrent PRs unlimited so open
-  // ones never hold back new updates.
+  dependencyDashboard: {
+    title: 'Renovate Dashboard 🤖',
+  },
   prHourlyLimit: 6,
   prConcurrentLimit: 0,
-  ignorePaths: ["**/*.sops.*"],
-  // The shared presets do not set framework manager file patterns, and Renovate's
-  // defaults do not match this repo's kubernetes/** layout — keep these explicit or
-  // most HelmRelease/image/kustomize dependencies stop being detected.
+  ignorePaths: [
+    '**/*.sops.*',
+  ],
   flux: {
-    managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml(?:\\.j2)?$/"],
+    managerFilePatterns: [
+      '/(^|/)kubernetes/.+\\.ya?ml(?:\\.j2)?$/',
+    ],
   },
-  "helm-values": {
-    managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml(?:\\.j2)?$/"],
+  'helm-values': {
+    managerFilePatterns: [
+      '/(^|/)kubernetes/.+\\.ya?ml(?:\\.j2)?$/',
+    ],
   },
   helmfile: {
-    managerFilePatterns: ["/(^|/)helmfile\\.ya?ml(?:\\.j2)?$/"],
+    managerFilePatterns: [
+      '/(^|/)helmfile\\.ya?ml(?:\\.j2)?$/',
+    ],
   },
   kubernetes: {
-    managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml(?:\\.j2)?$/"],
+    managerFilePatterns: [
+      '/(^|/)kubernetes/.+\\.ya?ml(?:\\.j2)?$/',
+    ],
   },
   kustomize: {
-    managerFilePatterns: ["/^kustomization\\.ya?ml(?:\\.j2)?$/"],
+    managerFilePatterns: [
+      '/^kustomization\\.ya?ml(?:\\.j2)?$/',
+    ],
   },
   customManagers: [
     {
-      // CNPG Clusters use `imageName:`, which the kubernetes manager does not match.
-      customType: "regex",
-      description: "Process CloudNativePG Cluster images",
-      managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
-      matchStrings: [
-        "imageName: (?<depName>[^\\s:@]+):(?<currentValue>[^\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?",
+      customType: 'regex',
+      description: 'Process CloudNativePG Cluster images',
+      managerFilePatterns: [
+        '/(^|/)kubernetes/.+\\.ya?ml$/',
       ],
-      datasourceTemplate: "docker",
+      matchStrings: [
+        'imageName: (?<depName>[^\\s:@]+):(?<currentValue>[^\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?',
+      ],
+      datasourceTemplate: 'docker',
     },
     {
-      // The FluxInstance's manifests bundle is a tag inside an OCI URL, which no
-      // manager parses. depName matches the Flux Operator group.
-      customType: "regex",
-      description: "Process the FluxInstance distribution artifact",
-      managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
-      matchStrings: [
-        "artifact: oci://(?<depName>ghcr\\.io/controlplaneio-fluxcd/flux-operator-manifests):(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
+      customType: 'regex',
+      description: 'Process the FluxInstance distribution artifact',
+      managerFilePatterns: [
+        '/(^|/)kubernetes/.+\\.ya?ml$/',
       ],
-      datasourceTemplate: "docker",
+      matchStrings: [
+        'artifact: oci://(?<depName>ghcr\\.io/controlplaneio-fluxcd/flux-operator-manifests):(?<currentValue>v\\d+\\.\\d+\\.\\d+)',
+      ],
+      datasourceTemplate: 'docker',
     },
     {
-      // The shared annotated preset needs `key: value` or `key=value` on the
-      // line after the annotation, so a bare remote resource URL such as
-      // dragonfly-operator's CRD is never matched and its group moves without it.
-      customType: "regex",
-      description: "Process annotated remote resource URLs",
-      managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
+      customType: 'regex',
+      description: 'Process annotated remote resource URLs',
+      managerFilePatterns: [
+        '/(^|/)kubernetes/.+\\.ya?ml$/',
+      ],
       matchStrings: [
-        "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s*-\\s+https://\\S+?/(?<currentValue>v?\\d+\\.\\d+\\.\\d+[^/\\s]*)/",
+        'datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s*-\\s+https://\\S+?/(?<currentValue>v?\\d+\\.\\d+\\.\\d+[^/\\s]*)/',
       ],
     },
   ],
   packageRules: [
     {
-      // A major bump triggers an offline pg_upgrade and needs a new barman serverName,
-      // so major upgrades are done by hand.
-      description: "Disable Postgres major updates for CNPG Clusters",
+      description: 'Disable Postgres major updates for CNPG Clusters',
       matchPackageNames: [
-        "ghcr.io/cloudnative-pg/postgresql",
-        "ghcr.io/tensorchord/cloudnative-vectorchord",
+        'ghcr.io/cloudnative-pg/postgresql',
+        'ghcr.io/tensorchord/cloudnative-vectorchord',
       ],
-      matchUpdateTypes: ["major"],
+      matchUpdateTypes: [
+        'major',
+      ],
       enabled: false,
     },
   ],
