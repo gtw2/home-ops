@@ -30,6 +30,17 @@ machine:
         options: [bind, rshared, rw]
     extraConfig:
       serializeImagePulls: false
+      # Prune unused images once /var is 65% full, down to 55%. The kubelet
+      # defaults (85/80) are too late here: the Ceph monitors keep their store
+      # on /var (dataDirHostPath /var/lib/rook), and Ceph raises MON_DISK_LOW
+      # when a monitor's disk is down to 30% free. That is HEALTH_WARN, which
+      # the tuppr health checks treat as a reason not to upgrade anything.
+      #
+      # On 2026-11-11 talos-2 crossed it at 69% used. 523GB of the 690GB was
+      # container images: 1,186 of them, of which the running pods used a few
+      # GB. Superseded versions pile up because nothing prunes below 85%.
+      imageGCHighThresholdPercent: 65
+      imageGCLowThresholdPercent: 55
 {% if profile == "amd-ai" %}
       # Dedicate the node: only pods tolerating llm-workload land here, so the
       # GTT-pinned GPU memory is not competing with general workloads.
