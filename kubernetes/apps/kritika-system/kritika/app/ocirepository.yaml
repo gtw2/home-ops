@@ -28,5 +28,5 @@ spec:
     # key fails startup: model calls at once and the request timeout (5m
     # unless set, as before) are per provider, providers.<name>.concurrency
     # and .timeout.
-    tag: 0.0.119
+    tag: 0.0.120
   url: oci://ghcr.io/home-operations/charts/kritika
