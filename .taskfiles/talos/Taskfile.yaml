@@ -3,7 +3,8 @@
 version: '3'
 
 # Machine configs are rendered from talos/machineconfig.yaml.j2 by minijinja.
-# Context = talos/cluster.yaml + talos/nodes/<node>.yaml + talos/talsecret.sops.yaml.
+# Context = talos/cluster.yaml + talos/nodes/<node>.yaml + talos/talsecret.sops.yaml
+# + talos/nut.sops.yaml.
 # Secrets are piped from sops and never written to disk.
 
 tasks:
@@ -17,11 +18,14 @@ tasks:
       {{.TALOS_DIR}}/cluster.yaml
       {{.TALOS_DIR}}/nodes/{{.NODE}}.yaml
       <(sops -d {{.TALOS_DIR}}/talsecret.sops.yaml)
+      <(sops -d {{.TALOS_DIR}}/nut.sops.yaml)
     requires:
       vars: [NODE]
     preconditions:
       - test -f {{.TALOS_DIR}}/nodes/{{.NODE}}.yaml
       - test -f {{.SOPS_AGE_KEY_FILE}}
+      - sh: test -f {{.TALOS_DIR}}/nut.sops.yaml
+        msg: talos/nut.sops.yaml is missing - see "UPS shutdown" in docs/talos.md
       - which minijinja-cli sops
 
   validate:
@@ -67,22 +71,35 @@ tasks:
       - which minijinja-cli sops talosctl yq
 
   upgrade-node:
-    desc: Upgrade Talos on a single node [NODE=required]
-    # Version comes from cluster.yaml, which tracks the running cluster.
+    desc: Upgrade Talos on a single node [NODE=required, REBOOT_MODE=powercycle]
+    # Version and schematic both come from cluster.yaml, which tracks the
+    # running cluster. With the version unchanged this reinstalls the node on
+    # its profile's current schematic, which is how a schematic change (an
+    # added extension, a kernel arg) reaches a node. tuppr does not do that:
+    # it acts on a version mismatch only.
+    #
+    # powercycle matches the TalosUpgrade policy in
+    # kubernetes/apps/system-upgrade/tuppr/upgrades/talosupgrade.yaml.
     cmd: >-
       talosctl --nodes {{.IP}} upgrade
       --image="factory.talos.dev/installer/{{.SCHEMATIC}}:{{.TALOS_VERSION}}"
+      --reboot-mode={{.REBOOT_MODE}}
       --timeout=10m
     vars:
+      REBOOT_MODE: '{{.REBOOT_MODE | default "powercycle"}}'
       IP:
         sh: yq '.address | split("/") | .[0]' {{.TALOS_DIR}}/nodes/{{.NODE}}.yaml
+      # Schematics are keyed by the node's profile. strenv rather than a
+      # literal path because `amd-ai` has a hyphen in it.
       SCHEMATIC:
-        sh: yq '.schematic' {{.TALOS_DIR}}/cluster.yaml
+        sh: PROFILE=$(yq '.profile' {{.TALOS_DIR}}/nodes/{{.NODE}}.yaml) yq '.schematics[strenv(PROFILE)]' {{.TALOS_DIR}}/cluster.yaml
       TALOS_VERSION:
         sh: yq '.talosVersion' {{.TALOS_DIR}}/cluster.yaml
     requires:
       vars: [NODE]
     preconditions:
+      - sh: test -n "{{.SCHEMATIC}}" && test "{{.SCHEMATIC}}" != "null"
+        msg: no schematic in talos/cluster.yaml for this node's profile
       - talosctl --nodes {{.IP}} get machineconfig
       - talosctl config info
       - which talosctl yq

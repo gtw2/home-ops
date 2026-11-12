@@ -1,0 +1,17 @@
+nutPassword: ENC[AES256_GCM,data:oqWP5ezFvvypGhZSdAnXFxny9SEdVID7im3/wSsDRiM=,iv:UaqvnXTbH1Jduo0TXS2qQ8ckijnztoFJEyDZ8RTh2QI=,tag:hLd+tBfA+X3/2Sai5OFetQ==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBxcEdleU83UmVhaldGU3Iy
+        dWZFVjhIOStIekRNQlBrNzAxVkpETWFjTDJ3CmlJVGM4elZIN3I1bTJFNDNOellX
+        REZ5OW5nYmZBTkx4RFhIZzUwWTZSRUkKLS0tIG5MZ0FBMVR0UEVwWjkwVGF6Ulhh
+        ZHJUN3FzTlNyU2pUNWJvUkdHZm5MNXcKSOTsmrBKijCyvwZtAE7m5IIMDX3cOPp/
+        HitKJW8WAdmpASUITYQPdi19guveRPsdqrMHCvMdpz1BabmI/+pzOQ==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age16la8m5zvpastlq7jzmv5agmfkghq4ckw28jy8lacqqyxmw2c8y3s9cpunf
+  lastmodified: "2026-11-12T01:11:05Z"
+  mac: ENC[AES256_GCM,data:TfSmNU8I8VKAHMxHUb/w2BdnBt3spJoXN7lRCw2GiTbuyYnISooBDqj8l1pt7efuhJFkYD/DRcPWOg8xz2NUJWNCVv+toaRrZT9GLyCE1Beifha5939PoZBAZSB3a/K2VEzQgfU9ClCCnwCjkfRHFmywnvG2x/gvlhR8qTRHWV0=,iv:iz2k6aAOZJK7Ir68fui2TNF3yQVGpAFUKhjCNBdqa5E=,tag:rwuo7uoQQ5EcPX9/Rvn2fQ==,type:str]
+  mac_only_encrypted: true
+  unencrypted_suffix: _unencrypted
+  version: 3.13.3

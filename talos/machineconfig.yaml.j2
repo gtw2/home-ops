@@ -1,10 +1,11 @@
 ---
 # Talos machine config, rendered per node by `task talos:render NODE=<hostname>`.
 #
-# Context comes from three sources, merged by minijinja:
+# Context comes from four sources, merged by minijinja:
 #   cluster.yaml            cluster-wide values
 #   nodes/<hostname>.yaml   per-node values (4 scalars + role)
 #   talsecret.sops.yaml     PKI and tokens, decrypted to a pipe at render time
+#   nut.sops.yaml           NUT client password, decrypted the same way
 #
 # Replaces talhelper. See docs/talos.md for why.
 version: v1alpha1
@@ -238,6 +239,34 @@ provisioning:
     # are safe; keep it that way.
     match: '{{ localHostpathMatch }}'
   minSize: {{ localHostpathMinSize }}
+---
+# UPS-driven shutdown. The nut-client extension (in both schematics) runs
+# upsmon on the node as a secondary of the NUT server on tank. When tank
+# declares a forced shutdown, upsmon runs /sbin/poweroff: Talos's own init
+# binary, which asks machined over the node's local socket for an ordinary
+# graceful shutdown. No Talos API credential is involved.
+#
+# SHUTDOWNCMD must be exactly /sbin/poweroff. The extension execs it directly,
+# with no shell and no arguments.
+#
+# SHUTDOWNEXIT no keeps upsmon logged in to tank after it has asked for the
+# shutdown, until Talos stops this service late in the sequence. tank waits for
+# its secondaries to log off (Host Sync) before shutting itself down, so this
+# is what keeps NFS up until the pods using it are gone. With the default (yes)
+# upsmon exits as soon as it has asked, which tells tank it is free to go.
+#
+# The password is double-quoted because upsmon.conf splits on whitespace and
+# treats # as a comment. It must not itself contain a double quote or a
+# backslash.
+apiVersion: v1alpha1
+kind: ExtensionServiceConfig
+name: nut-client
+configFiles:
+  - content: |-
+      MONITOR {{ nutMonitor }} 1 {{ nutUser }} "{{ nutPassword }}" secondary
+      SHUTDOWNCMD "/sbin/poweroff"
+      SHUTDOWNEXIT no
+    mountPath: /usr/local/etc/nut/upsmon.conf
 {% if profile == "amd-ai" %}
 ---
 # Single onboard NIC. Bonded with one link so a second can be added later
