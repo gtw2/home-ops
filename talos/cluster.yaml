@@ -15,10 +15,17 @@ kubernetesVersion: v1.37.2
 # Image Factory schematics, selected per node by `profile` in nodes/<node>.yaml.
 # Kernel cmdline args live in the schematic, NOT in machineconfig — changing one
 # mints a new id and needs a Talos upgrade to take effect.
+#
+# The definition behind an id is not kept in this repo. Read it back with
+#   curl https://factory.talos.dev/schematics/<id>
+# The id is the sha256 of exactly that text, so an edited copy POSTed to
+# https://factory.talos.dev/schematics returns the id to put here.
 schematics:
-  # Intel NUC-class nodes: i915, intel-ucode, mei, nfsrahead, thunderbolt.
-  intel: f4176a2c9144679daa66b1da85814ab3d85145cfb3a7522582b448e4ef3764ad
-  # AMD Strix Halo (Framework Desktop): amdgpu, amd-ucode, nfsrahead.
+  # Intel NUC-class nodes: i915, intel-ucode, mei, nfsrahead, nut-client,
+  # thunderbolt.
+  intel: eedc5a208f7758edf7df3fbdbe293c9300b9822f94de0cfe890f28ed884b91c7
+  # AMD Strix Halo (Framework Desktop): amdgpu, amd-ucode, nfsrahead,
+  # nut-client.
   # Kernel args reserve 124GiB of the 128GB unified memory for the iGPU
   # (amdgpu.gttsize=126976, ttm.pages_limit=32505856) with a 96GiB page pool,
   # plus amd_iommu=off / amd_pstate=active / pcie_aspm=off.
@@ -32,7 +39,7 @@ schematics:
   # It is the idle drive that dies - weights are mmap'd once and then served
   # from page cache, so it can sit hours with no I/O, while the identical
   # sibling holding EPHEMERAL never idles and has never failed.
-  amd-ai: bae949941d550ad54348bc980f4823efde3418c0fa40da8b77f3484aec723199
+  amd-ai: a5a5e7ad335558510cd41aa5295262b8dfb9320a7869cf38a433fc17b2529c88
 
 dnsDomain: cluster.local
 podSubnets: ["10.42.0.0/16"]
@@ -44,3 +51,13 @@ nodeSubnet: 10.10.40.0/24
 
 certSANs: ["127.0.0.1", "10.10.40.20"]
 apiServerExtraSANs: ["k8s.internal"]
+
+# UPS the nut-client extension watches on every node, as <ups>@<server>, and
+# the NUT user it logs in as. The password is `nutPassword` in nut.sops.yaml.
+# See "UPS shutdown" in docs/talos.md.
+#
+# The server is tank's address on the node subnet, not tank.internal: a node
+# deciding whether to shut down in a power cut should not depend on DNS, or on
+# a router hop to reach it.
+nutMonitor: ups-main@10.10.40.5
+nutUser: talos

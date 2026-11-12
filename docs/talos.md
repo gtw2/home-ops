@@ -9,9 +9,10 @@ talos/
   cluster.yaml            # cluster-wide values (versions, subnets, schematic)
   nodes/talos-N.yaml      # per-node values — 4 scalars plus role
   talsecret.sops.yaml     # PKI + tokens, SOPS/age encrypted
+  nut.sops.yaml           # NUT client password, SOPS/age encrypted
 ```
 
-Context is merged from those three sources at render time. Secrets are piped
+Context is merged from those four sources at render time. Secrets are piped
 straight from `sops` into minijinja and never written to disk.
 
 ## Usage
@@ -21,7 +22,7 @@ task talos:render     NODE=talos-1     # print the rendered config
 task talos:validate                    # render + talosctl validate, all nodes
 task talos:diff-node  NODE=talos-1     # dry-run against the live node
 task talos:apply-node NODE=talos-1     # apply (MODE=auto by default)
-task talos:upgrade-node NODE=talos-1   # Talos upgrade, version from cluster.yaml
+task talos:upgrade-node NODE=talos-1   # Talos upgrade, version + schematic from cluster.yaml
 ```
 
 `talos:diff-node` before `talos:apply-node`, always. An empty diff means the
@@ -175,6 +176,84 @@ Notes on the profile:
 Still to do at the Kubernetes layer, separate from machineconfig: the AMD GPU
 device plugin (or GPU Operator with driver installation disabled), which
 advertises `amd.com/gpu` and exposes `/dev/dri` + `/dev/kfd` to pods.
+
+## Changing a schematic
+
+Extensions and kernel args live in the Image Factory schematic, so adding one
+means a new id and a reinstall of each node at the same Talos version.
+
+1. Fetch the current definition, edit it, and POST it back for the new id (the
+   comment above `schematics` in `cluster.yaml` has the URLs). Put the id in
+   `cluster.yaml`.
+2. Per node: `task talos:diff-node`, `task talos:apply-node`, then
+   `task talos:upgrade-node`. Wait for Ceph to return to `HEALTH_OK` before
+   the next node. Nothing gates that for you on this path.
+
+`apply-node` only records the new installer image; `upgrade-node` is what
+installs it. tuppr will not do the second step, because it compares versions
+and not schematics. Between the two steps tuppr (0.5.13) refuses to upgrade
+that node at all, with `install image ... does not embed the runtime
+schematic`, so do not merge a Talos version bump while nodes are half-way.
+
+## UPS shutdown
+
+Every node runs the `nut-client` extension: NUT's `upsmon`, logged in to the
+NUT server on tank as a secondary. When tank declares a forced shutdown,
+`upsmon` runs `/sbin/poweroff`. That is Talos's own init binary, bind-mounted
+into the extension, and it asks machined over the node's local socket for an
+ordinary graceful shutdown. Nothing holds a Talos API credential, and a node
+needs only tank in order to act: not the Kubernetes API, not DNS, not another
+node.
+
+The config is the `ExtensionServiceConfig` in `machineconfig.yaml.j2`, fed by
+`nutMonitor` and `nutUser` in `cluster.yaml` and `nutPassword` in
+`nut.sops.yaml`. Create that file once, from the repo root:
+
+```sh
+printf 'nutPassword: %s\n' "$(openssl rand -hex 16)" |
+  sops --filename-override talos/nut.sops.yaml --encrypt /dev/stdin \
+  > talos/nut.sops.yaml
+```
+
+No `talos:` task will render until it exists. tank needs the matching user, in
+the TrueNAS UPS service's Extra Users:
+
+```
+[talos]
+  password = <nutPassword>
+  upsmon secondary
+```
+
+What decides the timing:
+
+- **When the nodes go is tank's decision alone.** upsmon on a node cannot run
+  timers of its own (the extension has no shell, so no `NOTIFYCMD` or
+  `upssched`). The nodes go when tank sets the forced-shutdown flag, which its
+  Shutdown Mode and Shutdown Timer control.
+- **How long a node takes.** `/sbin/poweroff` takes no arguments, so this is
+  always the non-forced path: cordon, drain, then stop pods. With every node
+  draining at once the PodDisruptionBudgets cannot be satisfied (the CNPG
+  primaries allow 0 disruptions, Ceph allows 1), and those evictions retry
+  until Talos's fixed 5 minute drain timeout. Read from the 1.14.5 source and
+  not yet measured: expect 6-7 minutes from the signal on the Intel nodes, and
+  a minute or two on `framework`, which runs nothing behind a budget.
+- **What tank waits for.** `SHUTDOWNEXIT no` keeps each node's upsmon logged
+  in until Talos stops the service, after the pods are gone. tank's Host Sync
+  is how long it waits for those logins to drop before shutting down anyway.
+  It has to be longer than the figure above, or NFS disappears under pods that
+  are still stopping.
+
+Checks:
+
+```sh
+talosctl -n <ip> service ext-nut-client   # STATE Running
+talosctl -n <ip> logs ext-nut-client      # no "access denied"
+# Logins on tank: 1 for tank itself + 1 per node. bash only, no nc needed.
+bash -c 'exec 3<>/dev/tcp/tank.internal/3493; printf "GET NUMLOGINS ups-main\n" >&3; head -1 <&3'
+```
+
+`upsmon -c fsd` on tank is the end-to-end test, and it is not a dry run: it
+powers off every node and tank itself.
 
 ## Open items
 

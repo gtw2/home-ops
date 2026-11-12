@@ -71,6 +71,10 @@ tasks:
       - test -f {{.ROOT_DIR}}/.sops.yaml
       - test -f {{.SOPS_AGE_KEY_FILE}}
       - test -f {{.TALOS_DIR}}/machineconfig.yaml.j2
+      # Checked here as well as in talos:render, so a missing file stops the
+      # bootstrap before it reaches the `until talosctl bootstrap` loop.
+      - sh: test -f {{.TALOS_DIR}}/nut.sops.yaml
+        msg: talos/nut.sops.yaml is missing - see "UPS shutdown" in docs/talos.md
       - which minijinja-cli talosctl sops yq
 
   apps:
