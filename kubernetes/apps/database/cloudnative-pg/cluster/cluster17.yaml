@@ -14,8 +14,14 @@ spec:
   # down for about 2.5 minutes. authentik-server crash-looped, while radarr
   # and sonarr failed their liveness probes, restarted into the outage and
   # hung until their 10-minute startup probes gave up. A switchover takes
-  # seconds. It rejects an update that changes the image and the Postgres
-  # parameters at once: apply them one at a time.
+  # seconds.
+  #
+  # The webhook then rejects an update that changes both the image and the
+  # Postgres parameters, judged against the live Cluster rather than per PR.
+  # Flux applies whatever main holds, so merge the second change only after
+  # cloudnative-pg-cluster has applied the first. A rejected apply retries
+  # until one change is reverted, and every Kustomization that depends on
+  # cloudnative-pg-cluster waits for it.
   primaryUpdateMethod: switchover
   storage:
     size: 20Gi
