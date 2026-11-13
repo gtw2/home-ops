@@ -2,8 +2,6 @@
 # Copied to /opt/doco-cd by Ansible, because doco-cd cannot deploy itself.
 # Everything else under docker/sentinel/ is reconciled from git by doco-cd.
 secrets:
-  api_secret:
-    file: /opt/doco-cd/api_secret
   webhook_secret:
     file: /opt/doco-cd/webhook_secret
 
@@ -11,7 +9,10 @@ services:
   app:
     container_name: doco-cd
     environment:
-      API_SECRET_FILE: /run/secrets/api_secret
+      # No API key, so the REST API (/v1/api) is off: nothing here calls it.
+      # The healthcheck's /v1/health needs no key. Don't restore API_SECRET or
+      # API_SECRET_FILE: from 0.134.0, either one being set at all, even
+      # empty, stops doco-cd from starting.
       DEPLOY_CONFIG_BASE_DIR: ./docker/sentinel/
       HTTP_PORT: 8880
       LOG_LEVEL: info
@@ -31,10 +32,9 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-    image: ghcr.io/kimdre/doco-cd:0.133.2@sha256:8ca3cf6701f70ac3af4c5d726e542fe3a854a038149375f87222ec2719b3c975
+    image: ghcr.io/kimdre/doco-cd:0.134.0@sha256:1d40f570403689c762c63009ade3d5d0dc24595bf40f9629a8ab3865e4ddb768
     restart: unless-stopped
     secrets:
-      - api_secret
       - webhook_secret
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

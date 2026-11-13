@@ -141,7 +141,6 @@
         executable: /bin/bash
         creates: "{{ item }}"
       loop:
-        - "{{ doco_cd_config_dir }}/api_secret"
         - "{{ doco_cd_config_dir }}/webhook_secret"
 
     - name: Allow SSH
@@ -206,6 +205,14 @@
       until: doco_cd_container.container.State.Health.Status == "healthy"
       retries: 30
       delay: 5
+
+    # doco-cd 0.134.0 dropped API_SECRET and the Compose file sets no API key
+    # in its place, so nothing reads this file. It goes only after the new
+    # container is healthy, so a failed upgrade leaves it for a rollback.
+    - name: Remove retired doco-cd API secret
+      ansible.builtin.file:
+        path: "{{ doco_cd_config_dir }}/api_secret"
+        state: absent
 
     - name: Wait for GitOps-managed containers
       community.docker.docker_container_info:
