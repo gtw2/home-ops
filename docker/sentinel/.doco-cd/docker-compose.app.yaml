@@ -1,13 +1,25 @@
 ---
-# Copied to /opt/doco-cd by Ansible, because doco-cd cannot deploy itself.
-# Everything else under docker/sentinel/ is reconciled from git by doco-cd.
+# doco-cd deploys this file itself, as the "doco-cd" deployment in
+# docker/sentinel/.doco-cd.yaml, so a merged change here rolls out within the
+# hour like any other stack. Ansible copies it to /opt/doco-cd only to start
+# doco-cd on a host that has no self-updating instance.
+#
+# doco-cd recognises its own container by this project name and the "app"
+# service name. Renaming either makes the next deploy start a second doco-cd
+# beside the running one.
+name: doco-cd
+
 secrets:
   webhook_secret:
     file: /opt/doco-cd/webhook_secret
 
 services:
   app:
-    container_name: doco-cd
+    # No container_name, because a self-update runs two containers for a
+    # moment: doco-cd starts its successor beside itself and steps aside only
+    # once the successor is healthy (scale_out). Containers are therefore
+    # named doco-cd-app-N. A container_name forces the applier strategy
+    # instead, which stops doco-cd before replacing it.
     environment:
       # No API key, so the REST API (/v1/api) is off: nothing here calls it.
       # The healthcheck's /v1/health needs no key. Don't restore API_SECRET or
@@ -20,9 +32,17 @@ services:
         - url: https://github.com/gtw2/home-ops.git
           reference: main
           interval: 3600
+      # Lets doco-cd replace its own container when this file changes. A
+      # successor that is not healthy within the deployment's timeout (3m
+      # default) is removed and the running instance carries on. That commit
+      # is not retried until another commit arrives.
+      SELF_UPDATE_ENABLED: "true"
       TZ: America/New_York
       WEBHOOK_SECRET_FILE: /run/secrets/webhook_secret
     healthcheck:
+      # Also the gate for self-updates: a successor is kept only once this
+      # reports healthy.
+      #
       # The small /healthcheck binary (0.124+) rather than `/doco-cd
       # healthcheck`, which pages most of the 101MiB main binary back in on
       # every check. Images before 0.124 do not ship it: a rollback past
@@ -33,6 +53,8 @@ services:
       timeout: 5s
       retries: 3
     image: ghcr.io/kimdre/doco-cd:0.134.0@sha256:1d40f570403689c762c63009ade3d5d0dc24595bf40f9629a8ab3865e4ddb768
+    # Self-update refuses a service without a restart policy: recovery from a
+    # crash mid-handover relies on Docker restarting the container.
     restart: unless-stopped
     secrets:
       - webhook_secret
@@ -45,10 +67,23 @@ services:
       # Bind mounts inside those stacks are different: the daemon resolves
       # those against the host, so they need no equivalent.
       - /opt/sentinel/env:/opt/sentinel/env:ro
+      # The same reasoning covers this file's own webhook_secret source once
+      # doco-cd deploys itself. The daemon makes the mount, so it works
+      # without this, but the client checks the path first and logs "secret
+      # file webhook_secret does not exist" on every self-update.
+      - /opt/doco-cd/webhook_secret:/opt/doco-cd/webhook_secret:ro
       - data:/data
 
 volumes:
-  data: {}
+  # The repository cache and the self-update journal. External, so Compose
+  # never manages it: self-update refuses changes to a project volume,
+  # because a rollback cannot restore its data. Compose does not create an
+  # external volume either, so the playbook creates doco-cd_data on a new
+  # host; a rename has to change it there too. On the current host it is
+  # the volume Compose created before doco-cd deployed itself.
+  data:
+    external: true
+    name: doco-cd_data
 
 networks:
   default:

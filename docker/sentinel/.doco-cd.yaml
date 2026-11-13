@@ -8,3 +8,15 @@ force_recreate: false
 reconciliation:
   enabled: true
   interval: 3600
+
+---
+# doco-cd itself. name must stay the compose project of the running doco-cd,
+# and the compose file's service must stay "app". doco-cd recognises its own
+# container by those two labels and hands over to a successor
+# (SELF_UPDATE_ENABLED) instead of starting a second doco-cd. Auto-discovery
+# above never picks this directory up: docker-compose.app.yaml is not one of
+# the compose file names it scans for.
+name: doco-cd
+working_dir: ./docker/sentinel/.doco-cd
+compose_files:
+  - docker-compose.app.yaml

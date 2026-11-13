@@ -124,6 +124,19 @@
         driver: bridge
         state: present
 
+    # The doco-cd Compose file declares this volume external, and Compose never
+    # creates an external volume: without this, a new host fails "Run doco-cd
+    # Compose" with 'external volume "doco-cd_data" not found'. Upstream's
+    # bootstrap script creates it the same way. It holds the repository cache
+    # and the handover journal, so an existing one is never recreated.
+    - name: Create doco-cd data volume
+      community.docker.docker_volume:
+        name: doco-cd_data
+        state: present
+        recreate: never
+
+    # Used only to start doco-cd below. Once it runs with self-update it deploys
+    # this same file from git itself, so this copy is not what is running.
     - name: Copy doco-cd Compose file
       ansible.builtin.copy:
         src: ../../docker/sentinel/.doco-cd/docker-compose.app.yaml
@@ -190,6 +203,30 @@
         state: enabled
         policy: deny
 
+    # doco-cd replaces its own container from git: SELF_UPDATE_ENABLED, plus
+    # the "doco-cd" deployment in docker/sentinel/.doco-cd.yaml. Compose runs
+    # here only when no doco-cd has self-update on. That means a new host, or
+    # an instance started without it, which must be recreated with it once
+    # before it can take over its own stack. Against a self-updating doco-cd,
+    # Compose would replace it outside its own health-gated handover.
+    - name: Find doco-cd
+      community.docker.docker_host_info:
+        containers: true
+        containers_all: true
+        containers_filters:
+          label:
+            - com.docker.compose.project=doco-cd
+            - com.docker.compose.service=app
+      register: doco_cd_host
+
+    - name: Read doco-cd environment
+      community.docker.docker_container_info:
+        name: "{{ item.Id }}"
+      loop: "{{ doco_cd_host.containers }}"
+      loop_control:
+        label: "{{ item.Names | first }}"
+      register: doco_cd_found
+
     - name: Run doco-cd Compose
       community.docker.docker_compose_v2:
         project_src: "{{ doco_cd_config_dir }}"
@@ -197,12 +234,27 @@
           - docker-compose.yaml
         pull: always
         state: present
+      # A container listed by "Find doco-cd" can be gone by the time it is
+      # inspected, for example a handover removing its predecessor. Its
+      # result then has no container, which would fail the play here, so only
+      # containers that still exist count.
+      when: >-
+        doco_cd_found.results | selectattr('exists')
+        | map(attribute='container.Config.Env') | flatten
+        | select('equalto', 'SELF_UPDATE_ENABLED=true') | list | length == 0
 
-    - name: Wait for doco-cd container to become healthy
-      community.docker.docker_container_info:
-        name: doco-cd
-      register: doco_cd_container
-      until: doco_cd_container.container.State.Health.Status == "healthy"
+    # By label, because the container has no fixed name, and a self-update
+    # briefly runs two. Either one being healthy will do.
+    - name: Wait for doco-cd to become healthy
+      community.docker.docker_host_info:
+        containers: true
+        containers_filters:
+          label:
+            - com.docker.compose.project=doco-cd
+            - com.docker.compose.service=app
+          health: healthy
+      register: doco_cd_healthy
+      until: doco_cd_healthy.containers | length > 0
       retries: 30
       delay: 5
 

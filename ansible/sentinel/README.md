@@ -3,10 +3,11 @@
 Bootstrap the OVH VPS (`40.160.90.34`, Vint Hill VA) that fronts the cluster's
 Towonel agents and runs the out-of-cluster Gatus.
 
-Ansible prepares the host and starts `doco-cd`; `doco-cd` then reconciles the
-Compose stacks under `docker/sentinel/` from this repo. Ansible is for things
-that cannot come from git: host packages, the firewall, and the two rendered
-secret files.
+Ansible prepares the host and starts `doco-cd`. `doco-cd` then reconciles the
+Compose stacks under `docker/sentinel/` from this repo, its own included (see
+[How doco-cd updates itself](#how-doco-cd-updates-itself)). Ansible is for
+things that cannot come from git: host packages, the firewall, and the two
+rendered secret files.
 
 ## Run it
 
@@ -75,6 +76,35 @@ sudo docker exec towonel-hub cat /data/operator.key
 
 It is the account-level key, not an invite token: the operator provisions
 invites itself.
+
+## How doco-cd updates itself
+
+`docker/sentinel/.doco-cd/docker-compose.app.yaml` is deployed by `doco-cd`
+itself, as the `doco-cd` deployment in `docker/sentinel/.doco-cd.yaml`. A
+merged change to it, such as a Renovate image bump, rolls out at the next
+hourly poll like any other stack:
+
+1. `doco-cd` starts a successor container from the new file beside itself.
+2. If the successor reports healthy within the deployment's timeout (3m), the
+   old container hands over and is removed.
+3. If it does not, the successor is removed and the old container keeps
+   running. That commit is not retried until another commit arrives.
+
+The playbook runs Compose for `doco-cd` only when no `doco-cd` container has
+`SELF_UPDATE_ENABLED=true`, which means a new host or one recovering from a
+manual start. Otherwise a `task sentinel:apply` leaves `doco-cd` alone. Either
+way it creates the `doco-cd_data` volume if it is missing: the Compose file
+declares it external, and Compose never creates an external volume.
+
+There is no fixed container name. Each update counts up from `doco-cd-app-1`:
+
+```bash
+sudo docker ps --filter label=com.docker.compose.project=doco-cd
+sudo docker compose -p doco-cd logs -f
+```
+
+`compose -p` needs no Compose file. Following the project rather than one
+container ID also picks up the successor when a handover starts it.
 
 ## Adding a tunnelled game server
 
