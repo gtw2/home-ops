@@ -104,5 +104,5 @@ third place to update.
 ## Back up
 
 `/opt/towonel/data` — `operator.key`, `invite_hash.key`, `hub.db`, `node.key`.
-Losing these means re-enrolling every agent. `doco-cd` keeps its generated API
-and webhook secrets in `/opt/doco-cd`; those are regenerable.
+Losing these means re-enrolling every agent. `doco-cd` keeps its generated
+webhook secret in `/opt/doco-cd`; it is regenerable.
