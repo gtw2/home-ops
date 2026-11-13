@@ -9,6 +9,20 @@ spec:
   # CNPG Offical Image
   imageName: ghcr.io/cloudnative-pg/postgresql:18.7-standard-trixie@sha256:23719505c7cc417b043ffd9998b44ab8d57fec1d92f0bf11b231a1754a5962f2
   primaryUpdateStrategy: unsupervised
+  # Update a replica, then switch over to it, rather than restart the primary
+  # in place. The in-place restart for 18.7 (2026-11-13) took the database
+  # down for about 2.5 minutes. authentik-server crash-looped, while radarr
+  # and sonarr failed their liveness probes, restarted into the outage and
+  # hung until their 10-minute startup probes gave up. A switchover takes
+  # seconds.
+  #
+  # The webhook then rejects an update that changes both the image and the
+  # Postgres parameters, judged against the live Cluster rather than per PR.
+  # Flux applies whatever main holds, so merge the second change only after
+  # cloudnative-pg-cluster has applied the first. A rejected apply retries
+  # until one change is reverted, and every Kustomization that depends on
+  # cloudnative-pg-cluster waits for it.
+  primaryUpdateMethod: switchover
   storage:
     size: 20Gi
     storageClass: openebs-hostpath
