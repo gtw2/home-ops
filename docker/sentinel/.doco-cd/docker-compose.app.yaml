@@ -77,8 +77,10 @@ services:
 volumes:
   # The repository cache and the self-update journal. External, so Compose
   # never manages it: self-update refuses changes to a project volume,
-  # because a rollback cannot restore its data. This is the volume Compose
-  # created as doco-cd_data before doco-cd deployed itself.
+  # because a rollback cannot restore its data. Compose does not create an
+  # external volume either, so the playbook creates doco-cd_data on a new
+  # host; a rename has to change it there too. On the current host it is
+  # the volume Compose created before doco-cd deployed itself.
   data:
     external: true
     name: doco-cd_data

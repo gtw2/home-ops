@@ -92,14 +92,19 @@ hourly poll like any other stack:
 
 The playbook runs Compose for `doco-cd` only when no `doco-cd` container has
 `SELF_UPDATE_ENABLED=true`, which means a new host or one recovering from a
-manual start. Otherwise a `task sentinel:apply` leaves `doco-cd` alone.
+manual start. Otherwise a `task sentinel:apply` leaves `doco-cd` alone. Either
+way it creates the `doco-cd_data` volume if it is missing: the Compose file
+declares it external, and Compose never creates an external volume.
 
 There is no fixed container name. Each update counts up from `doco-cd-app-1`:
 
 ```bash
 sudo docker ps --filter label=com.docker.compose.project=doco-cd
-sudo docker logs -f "$(sudo docker ps -q --filter label=com.docker.compose.project=doco-cd)"
+sudo docker compose -p doco-cd logs -f
 ```
+
+`compose -p` needs no Compose file. Following the project rather than one
+container ID also picks up the successor when a handover starts it.
 
 ## Adding a tunnelled game server
 

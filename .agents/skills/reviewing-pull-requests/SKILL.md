@@ -208,7 +208,8 @@ and line in its explanation.
   merge like any other stack, and what decides it is the successor's
   configuration. 0.134.0 will not start with `API_SECRET*` set. Renaming
   the external `doco-cd_data` volume starts the successor without its
-  repository cache and handover journal. Renaming the `doco-cd` project or
+  repository cache and handover journal, and the playbook creates it by
+  that name on a new host. Renaming the `doco-cd` project or
   the `app` service starts a second doco-cd. `task sentinel:apply` only
   starts doco-cd on a host without a self-updating instance.
 
