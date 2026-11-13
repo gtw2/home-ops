@@ -200,9 +200,17 @@ and line in its explanation.
   each minor: an update that skips a minor is a finding, and so is a
   Kubernetes version the Talos release does not support.
 - `docker/sentinel/` runs on the external VPS, not in the cluster. doco-cd
-  there deploys each stack from `main` within the hour, except its own
-  `.doco-cd/docker-compose.app.yaml`, which changes nothing until
-  `task sentinel:apply` runs the Ansible playbook.
+  there deploys each stack from `main` within the hour, its own
+  `.doco-cd/docker-compose.app.yaml` included: with `SELF_UPDATE_ENABLED`
+  it starts a successor from the new file beside itself, keeps it once it
+  reports healthy within the deployment's timeout, and otherwise removes it
+  and keeps running (`scale_out`). A doco-cd bump therefore rolls out on
+  merge like any other stack, and what decides it is the successor's
+  configuration. 0.134.0 will not start with `API_SECRET*` set. Renaming
+  the external `doco-cd_data` volume starts the successor without its
+  repository cache and handover journal. Renaming the `doco-cd` project or
+  the `app` service starts a second doco-cd. `task sentinel:apply` only
+  starts doco-cd on a host without a self-updating instance.
 
 ## What a check proves
 
