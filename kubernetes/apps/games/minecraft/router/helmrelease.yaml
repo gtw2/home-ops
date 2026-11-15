@@ -66,7 +66,7 @@ spec:
           app:
             image:
               repository: itzg/mc-router
-              tag: 1.56.2@sha256:c6f9de9b2e90b90e36e66e096ccd68a3474fcc8d40c0847a0f8c6a366dfe5be2
+              tag: 1.56.4@sha256:62e0d278c7c6cc04382440fe92e8ac1e7f17f6b9402f6a498552ad9d83b1d124
             args:
               - --in-kube-cluster
               - --kube-namespace=games
