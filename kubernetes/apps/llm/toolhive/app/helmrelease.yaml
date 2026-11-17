@@ -34,3 +34,13 @@ spec:
       gc:
         gomemlimit: 450MiB
         gogc: 75
+      # No reporting to Stacklok. By default the operator checks
+      # updates.stacklok.com hourly under an instance ID, each proxy posts tool
+      # counts to /api/v1/toolcount, and from 0.66.0 the gateway does both.
+      # This variable stops all of it: the operator passes it on to every
+      # workload it deploys. TOOLHIVE_USAGE_METRICS_ENABLED=false would leave
+      # the update checks running. It also skips the startup instance-ID lookup
+      # that 0.66.0 exits on if the API server is unreachable.
+      env:
+        - name: TOOLHIVE_SKIP_UPDATE_CHECK
+          value: "true"
