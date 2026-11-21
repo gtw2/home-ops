@@ -148,7 +148,7 @@ spec:
         # more prefill per step on the local model; re-check against the
         # first reviews after the bump.
         # 45m then cut off reviews of larger hand-written PRs: warden's feature
-        # PRs (900-2100 lines over 8-26 files) and #2202 here (174 lines over
+        # PRs (287-1239 lines over 8-26 files) and #2202 here (174 lines over
         # 6 files) each stopped at exactly 45m, "agent stopped: canceled",
         # posting nothing, while small PRs still finished in 3-41m. 90m lets
         # such a review reach its 60 steps and submit; one that needs less
