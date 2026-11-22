@@ -2,6 +2,8 @@
 # Least-privilege access for warden, in the `games` namespace only.
 #
 #   READ  — derive lifecycle state and discover annotated Services. No writes.
+#           Only the verbs warden calls (k8s.py and scale.py in gtw2/warden):
+#           grant another with the code that needs it.
 #   SCALE — the only mutation warden makes: patch /scale. Namespace-wide, so
 #           making a game controllable is an annotation and not an RBAC edit.
 #           The 0/1 ceiling is enforced by the ValidatingAdmissionPolicy in
@@ -24,15 +26,15 @@ metadata:
     app.kubernetes.io/instance: warden
     app.kubernetes.io/name: warden
 rules:
+  # Each workload is read by name: its replicas and readyReplicas are the
+  # whole lifecycle state, so warden never lists or watches workloads and
+  # never reads Pods.
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get"]
   - apiGroups: [""]
-    resources: ["services"] # annotation-driven discovery (phase 5)
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["pods"] # optional: richer Failed-state diagnostics
-    verbs: ["get", "list", "watch"]
+    resources: ["services"] # annotation-driven discovery: one list per pass
+    verbs: ["list"]
   # NOTE: no `secrets` rule, deliberately. Query passwords reach the bot as
   # environment variables from warden-secret via envFrom, so warden has zero
   # Kubernetes access to read Secrets.
@@ -46,9 +48,12 @@ metadata:
     app.kubernetes.io/instance: warden
     app.kubernetes.io/name: warden
 rules:
+  # patch alone: warden never reads /scale. Neither does `kubectl scale`
+  # without --current-replicas, so checking the guard by impersonating this
+  # SA with --dry-run=server needs no get here either.
   - apiGroups: ["apps"]
     resources: ["deployments/scale", "statefulsets/scale"]
-    verbs: ["get", "patch"]
+    verbs: ["patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
