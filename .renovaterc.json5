@@ -99,13 +99,14 @@
       enabled: false,
     },
     {
-      description: 'Raise the vchord extension version apart from its image: CNPG updates the extension from the image that both instances must run first',
+      description: 'Raise the vchord extension version apart from its image: CNPG updates the extension from the image that both instances must run first. Only full x.y.z versions: the version names a SQL script, and the short alias tags (1, 1.3) name none',
       matchFileNames: [
         'kubernetes/apps/kritika-system/kritika/db/database.yaml',
       ],
       matchPackageNames: [
         'ghcr.io/home-operations/vchord',
       ],
+      allowedVersions: '/^\\d+\\.\\d+\\.\\d+$/',
       additionalBranchPrefix: 'extension-',
       commitMessageTopic: 'extension {{depName}}',
     },
