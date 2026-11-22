@@ -147,7 +147,13 @@ spec:
         # 64k, the confidence prompt 48k -> 96k. Larger opening prompts mean
         # more prefill per step on the local model; re-check against the
         # first reviews after the bump.
-        timeout: 45m
+        # 45m then cut off reviews of larger hand-written PRs: warden's feature
+        # PRs (287-1239 lines over 8-26 files) and #2202 here (174 lines over
+        # 6 files) each stopped at exactly 45m, "agent stopped: canceled",
+        # posting nothing, while small PRs still finished in 3-41m. 90m lets
+        # such a review reach its 60 steps and submit; one that needs less
+        # still ends when it is done.
+        timeout: 90m
         # 0.0.45 splits a diff over 64 KiB into up to 8 parts by default, each
         # taking another slot of the review model. That model was one llama.cpp
         # slot when this was set, so parts queued behind each other and ended
@@ -233,9 +239,9 @@ spec:
         # providers.litellm.concurrency, at 2), over 7 days to 2026-10-13 the
         # median review took ~13m and 37 of 82 took over 15m, so a batch of
         # three Renovate PRs waited past it.
-        # One review can run 50m (agent.timeout plus the runner's 5m), so an
-        # hour's wait held for 30m means a stall, not a queue.
-        queueAgeSeconds: 3600
+        # One review can run 95m (agent.timeout plus the runner's 5m), so a
+        # wait past 105m held for 30m means a stall, not a queue.
+        queueAgeSeconds: 6300
         queueDelayFor: 30m
       dashboards:
         enabled: true
