@@ -14,7 +14,9 @@ spec:
       ensure: present
     # CNPG installs this version, or updates the extension to it when it
     # changes, so keep it in step with the vchord image tag in cluster.yaml,
-    # and change it only once both instances run that image.
+    # and change it only once both instances run that image. Renovate raises
+    # it in a PR of its own, beside the image's: merge the image's first.
     - name: vchord
+      # renovate: datasource=docker depName=ghcr.io/home-operations/vchord
       version: "1.1.1"
       ensure: present
