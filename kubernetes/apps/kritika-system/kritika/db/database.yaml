@@ -13,7 +13,8 @@ spec:
     - name: vector
       ensure: present
     # CNPG installs this version, or updates the extension to it when it
-    # changes, so keep it in step with the vchord-scratch tag in cluster.yaml.
+    # changes, so keep it in step with the vchord image tag in cluster.yaml,
+    # and change it only once both instances run that image.
     - name: vchord
       version: "1.1.1"
       ensure: present

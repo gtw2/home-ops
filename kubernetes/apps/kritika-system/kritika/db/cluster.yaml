@@ -23,11 +23,14 @@ spec:
     storageClass: openebs-hostpath
   postgresql:
     extensions:
-      # VectorChord mounted as an image volume extension. Move the tag together
-      # with the vchord version in database.yaml.
+      # VectorChord mounted as an image volume extension, from the pgsty fork
+      # that kritika's guide moved to in 0.0.123: TensorChord's releases stop
+      # at 1.1.1. Change the tag first and the vchord version in database.yaml
+      # once both instances run it: the new library works with the old
+      # extension, and the old image has no update script to the new one.
       - name: vchord
         image:
-          reference: ghcr.io/tensorchord/vchord-scratch:pg18-v1.1.1@sha256:bdea43bed2a414e21bbf71767bf6f0739747ac480b267b51772dc214ac28dcb3
+          reference: ghcr.io/home-operations/vchord:1.3.0@sha256:c705b2313d64370eb19d3958a32ff1c68bbd76dd015dfe0ecceae9649949965a
         # The image keeps Debian's paths rather than CNPG's default
         # /extensions/vchord/lib and /extensions/vchord/share.
         dynamic_library_path:

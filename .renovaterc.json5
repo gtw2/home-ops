@@ -54,12 +54,13 @@
   customManagers: [
     {
       customType: 'regex',
-      description: 'Process CloudNativePG Cluster images',
+      description: 'Process CloudNativePG Cluster and image volume extension images',
       managerFilePatterns: [
         '/(^|/)kubernetes/.+\\.ya?ml$/',
       ],
       matchStrings: [
         'imageName: (?<depName>[^\\s:@]+):(?<currentValue>[^\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?',
+        'reference: (?<depName>[^\\s:@]+):(?<currentValue>[^\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?',
       ],
       datasourceTemplate: 'docker',
     },
