@@ -7,15 +7,21 @@ metadata:
 spec:
   # Ranges, not the whole /24: the pool shares its subnet with real hosts, and a
   # Service handed a host's address advertises it over BGP and steals its
-  # traffic from anywhere off-segment. .1 is the gateway; .21-.39 is reserved
-  # for static host addresses - .21-.25 the Talos nodes, .30 the workstation's
-  # 10G NIC (docker/workstation/llama-desk). .20 stays poolable on purpose:
-  # it is both the Talos VIP and the kube-api Service below.
+  # traffic from anywhere off-segment. Left out of the pool:
+  #   .1        the gateway
+  #   .2-.5     UniFi DHCP reservations - .2 the R730XD iDRAC (idrac.internal),
+  #             .4 nas.internal, .5 tank.internal (.3 unused)
+  #   .21-.39   static host addresses - .21-.25 the Talos nodes, .30 the
+  #             workstation's 10G NIC (docker/workstation/llama-desk)
+  #   .250-.254 UniFi's dynamic DHCP range on this VLAN, which also serves the
+  #             reservations above
+  # .20 stays poolable on purpose: it is both the Talos VIP and the kube-api
+  # Service below.
   blocks:
-    - start: "10.10.40.2"
+    - start: "10.10.40.6"
       stop: "10.10.40.20"
     - start: "10.10.40.40"
-      stop: "10.10.40.254"
+      stop: "10.10.40.249"
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cilium.io/ciliumbgpadvertisement_v2.json
 apiVersion: cilium.io/v2
