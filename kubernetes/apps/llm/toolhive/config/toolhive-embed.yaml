@@ -37,7 +37,7 @@ metadata:
 spec:
   modelRef: toolhive-embed
   runtime: llamacpp
-  image: ghcr.io/ggml-org/llama.cpp:server@sha256:c2cf6c72d913b6c89a5f0929f2a866e6161e09e7dc187e0f3b0f21e923e26db3
+  image: ghcr.io/ggml-org/llama.cpp:server@sha256:6fab63852916c294cc8a2f1515079c4ca40248193eea8868ae742134335b989b
   # Deliberately NOT overriding modelCache.claimName the way llama-strix does.
   # That override points at an RWO local claim on the Framework's NVMe; this
   # service must be readable from whichever talos node it lands on, and at
