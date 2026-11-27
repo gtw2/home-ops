@@ -27,6 +27,11 @@ spec:
     # through the gateway. 0.0.119 removed limits.concurrency, and the old
     # key fails startup: model calls at once and the request timeout (5m
     # unless set, as before) are per provider, providers.<name>.concurrency
-    # and .timeout.
-    tag: 0.0.124
+    # and .timeout. 0.0.125 made a root provider's concurrency one pool for
+    # the whole instance and raised its unset default from 2 to 8 (an
+    # account's own provider keeps 2), and dropped the hourly follow-up
+    # limit, with no key to restore it: every mention of the bot runs.
+    # 0.0.126 sends runner egress through HTTPS_PROXY when the pod sets one;
+    # it sets none here.
+    tag: 0.0.127
   url: oci://ghcr.io/home-operations/charts/kritika
