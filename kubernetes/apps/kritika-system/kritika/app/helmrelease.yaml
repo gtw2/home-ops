@@ -82,14 +82,20 @@ spec:
           # The sessions are shared, so while two reviews run, Open WebUI and
           # the agents queue in gufo (--max-pending) rather than fail.
           # A provider key since 0.0.119, which removed limits.concurrency.
-          # 2 is also the default, which the embedder below takes, as it did
-          # from the old key; stated here so the sizing does not follow an
-          # upstream default.
+          # Stated so the sizing does not follow an upstream default: since
+          # 0.0.125 a root provider that sets none gets 8.
           concurrency: 2
         embedder:
           type: openai
           baseUrl: http://toolhive-embed.llm.svc.cluster.local:8080/v1
           apiKey: { env: EMBEDDER_API_KEY }
+          # Embed calls at once: 2, the unset default until 0.0.125 raised it
+          # to 8. Index runs hold all but one slot (internal/worker/index.go),
+          # so this leaves one for indexing and one for a review's similar-code
+          # lookup. At 8, index runs could send 7 batches at once into the one
+          # 32768-token context that maxBatch and maxBatchChars below are
+          # sized for, which toolhive's tool search and memini share.
+          concurrency: 2
       embedding:
         model: embedder/toolhive-embed
         # Qwen3-Embedding-0.6B
