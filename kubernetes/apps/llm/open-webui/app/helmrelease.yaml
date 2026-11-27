@@ -65,6 +65,12 @@ spec:
               #   database is bootstrapped through Authentik.
               ENABLE_SIGNUP: "false"
               ENABLE_LOGIN_FORM: "false"
+              # v0.13.5 adds /api/v1/automations/hooks/{id}/{token}, on by
+              # default: the token in the URL is the only credential, and a
+              # call runs the automation as its owner, on the public hostname.
+              # It answers only for an automation an admin gave a webhook, but
+              # nothing here uses one, so it stays off until something does.
+              ENABLE_AUTOMATION_WEBHOOKS: "false"
               # Models come from litellm in the llm namespace, which fronts the
               # llama.cpp InferenceService on the Framework. OPENAI_API_KEY is
               # the litellm virtual key, pulled from the secret below - the
@@ -174,6 +180,28 @@ spec:
             envFrom:
               - secretRef:
                   name: "{{ .Release.Name }}-secret"
+            # Without a probe the pod is Ready as soon as the container runs,
+            # while the backend is still migrating and loading (about 15s on
+            # 2026-11-17), so the route sends requests to a closed port and
+            # Flux calls the rollout good before it serves. v0.13.5's /ready
+            # returns 503 until startup completes and the database and Redis
+            # (the websocket manager) answer a ping. Readiness only: a
+            # liveness or startup probe could kill a pod mid-migration. The
+            # v0.13.5 chat-history migration has 20 chats (827 kB) to convert,
+            # measured 2026-11-27: one batch of 100, well inside Helm's 5m
+            # timeout, past which the rollback remediation would bring back a
+            # v0.13.4 whose migrations do not know the new schema revision.
+            probes:
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /ready
+                    port: 8080
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
             resources:
               requests:
                 cpu: 500m
