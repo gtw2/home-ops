@@ -34,3 +34,8 @@ spec:
         cpu: 50m
       limits:
         memory: 1Gi
+        # Since 0.7, konflate never prunes its source cache (config.cacheTtl
+        # does nothing), and the cache is an emptyDir. Past this limit the
+        # pod is evicted and comes back with an empty cache. On 0.6.6 the
+        # cache was 26Mi and /tmp 15Mi after ~20h of uptime (2026-11-28).
+        ephemeral-storage: 2Gi
