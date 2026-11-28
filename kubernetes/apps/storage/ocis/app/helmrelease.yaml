@@ -24,6 +24,12 @@ spec:
             fsGroupChangePolicy: OnRootMismatch
             supplementalGroups:
               - 65542 # gladius:external-services
+            # The container runtime's default syscall filter. The container
+            # already drops all capabilities and has a read-only root; this
+            # also blocks the syscalls a container never needs (kernel
+            # keyring, module loading, mounting filesystems and the like).
+            seccompProfile:
+              type: RuntimeDefault
 
         initContainers:
           init-config:
