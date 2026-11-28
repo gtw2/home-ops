@@ -109,14 +109,10 @@ spec:
         - matchLabels:
             io.kubernetes.pod.namespace: llm
             app: toolhive-embed
-        # Replies: session storage, from the gateway's own Dragonfly. The
-        # shared one in database stays until the gateway has moved off it.
+        # Replies: session storage, from the gateway's own Dragonfly.
         - matchLabels:
             io.kubernetes.pod.namespace: llm
             app: toolhive-config-dragonfly
-            app.kubernetes.io/name: dragonfly
-        - matchLabels:
-            io.kubernetes.pod.namespace: database
             app.kubernetes.io/name: dragonfly
         # Replies: the two remote backends (MCPServerEntry), which the gateway
         # calls itself with no proxy pod between.
