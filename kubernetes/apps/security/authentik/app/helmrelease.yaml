@@ -40,9 +40,22 @@ spec:
       envFrom:
         - secretRef:
             name: *secret
+    # The chart turns each key here into an AUTHENTIK_<KEY> env var.
+    #
+    # Vendor calls home stay off, like error reporting (the chart's default).
+    # Both read from the 2026.8.7 source:
+    # - startup analytics: every server start POSTs a "pageview" carrying
+    #   the full version and environment to https://goauthentik.io/api/event
+    #   (lifecycle/gunicorn.conf.py).
+    # - update check: a periodic GET of
+    #   https://version.goauthentik.io/version.json (authentik/admin/tasks.py),
+    #   so the admin UI no longer says when a release is out; Renovate does.
+    #
+    # No redis: 2026.8 has no Redis settings left (authentik/lib/default.yml)
+    # and never connected to the redis.host that used to be set here.
     authentik:
-      redis:
-        host: dragonfly.database.svc.cluster.local
+      disable_startup_analytics: true
+      disable_update_check: true
     # Configuration as code: see blueprints/README.md.
     blueprints:
       configMaps:
