@@ -90,7 +90,7 @@ spec:
               STORAGE_USERS_S3NG_BUCKET: ocis-data
               # Virus scanning. With async uploads (above) every upload passes
               # through postprocessing before anyone can see it or sync it;
-              # virusscan adds a scan by clamav (storage/clamav) as a step.
+              # virusscan adds a scan by clamav (../clamav) as a step.
               # ocis does not start the antivirus service by default, hence
               # OCIS_ADD_RUN_SERVICES. Behaviour read from the v8.2.4 source:
               # - infected: the file is deleted.
