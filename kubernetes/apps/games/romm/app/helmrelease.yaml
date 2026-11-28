@@ -105,6 +105,19 @@ spec:
                 memory: 500Mi
               limits:
                 memory: 2Gi
+            # RomM unpacks and hashes uploaded files, so this is the container
+            # an exploited parser would run in. It already runs as uid 1000
+            # with no effective capabilities, and the image has no setuid,
+            # setgid or file-capability binaries (checked in 5.4.1), so
+            # neither setting below changes what RomM itself can do; they
+            # take away what an attacker could regain. The root filesystem
+            # stays writable: RomM's paths outside its volumes were not
+            # mapped.
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
     service:
       app:
         controller: *app
@@ -144,8 +157,15 @@ spec:
                 subPath: assets
               - path: /romm/resources
                 subPath: resources
+      # Uploads stage their chunks under /tmp (ROMM_TMP_PATH) until the whole
+      # file is assembled, and archives are unpacked here. Without a limit an
+      # archive that unpacks to a huge size fills the node disk and gets other
+      # pods on the node evicted; with one, only this pod is evicted. The
+      # largest file in the library is 25.8GiB (2026-11-27), so 64Gi fits two
+      # of those uploading at once.
       tmp:
         type: emptyDir
+        sizeLimit: 64Gi
         advancedMounts:
           romm:
             app:

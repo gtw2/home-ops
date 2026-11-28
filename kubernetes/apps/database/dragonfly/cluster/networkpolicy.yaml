@@ -36,7 +36,20 @@ spec:
 ---
 # Allow cross-namespace clients to reach dragonfly (port 6379).
 # dragonfly-base restricts 6379 to the database namespace; NetworkPolicies
-# are additive, so this policy opens it to the consuming namespaces.
+# are additive, so this policy opens it to the client pods.
+#
+# Named pods, not whole namespaces. Dragonfly has no password, so anything
+# that can connect reads and writes every app's database in it. With whole
+# namespaces that was every pod in games (the game servers and filebrowser
+# too), llm, media, security and home-automation. Each entry below pairs a
+# namespace with that app's pods (both must match). The list is what
+# connected to 6379 in Cilium's conntrack on every node on 2026-11-27, which
+# matches the REDIS settings in the manifests, except:
+# - authentik: configured (authentik.redis.host) but 2026.8 no longer uses
+#   Redis and no pod was connected. Kept, scoped to its pods, so a
+#   surprise cannot take SSO down; drop it once that is confirmed.
+# - home-automation: no client there, so dropped.
+# A new client fails to connect until it gets an entry here.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -52,16 +65,42 @@ spec:
   - Ingress
   ingress:
   - from:
+    # REDIS_HOST
     - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: games
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: romm
+    # REDIS_HOSTNAME. The server only: machine-learning does not use it.
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: media
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: immich
+          app.kubernetes.io/controller: server
+    # litellm's proxy pods (not its operator), open-webui's websocket
+    # manager, searxng's limiter, and toolhive's mcp-gateway
+    # (virtualmcpserver).
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: llm
+      podSelector:
         matchExpressions:
-          - key: kubernetes.io/metadata.name
+          - key: app.kubernetes.io/name
             operator: In
             values:
-              - games
-              - home-automation
-              - llm
-              - media
-              - security
+              - litellm
+              - open-webui
+              - searxng
+              - virtualmcpserver
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: security
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: authentik
     ports:
     - port: 6379
       protocol: TCP
