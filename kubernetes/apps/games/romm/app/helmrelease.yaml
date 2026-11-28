@@ -46,7 +46,12 @@ spec:
               tag: 5.4.1
             env:
               TZ: ${TIMEZONE}
-              DISABLE_DOWNLOAD_ENDPOINT_AUTH: true
+              # Downloads need a logged-in session or credentials. With this
+              # true, /api/roms/<id>/content answered anyone on the public
+              # route, and the ids are sequential. If a handheld or other
+              # client stops downloading after this, it was relying on that;
+              # give it credentials, or reach RomM through envoy-internal.
+              DISABLE_DOWNLOAD_ENDPOINT_AUTH: false
               DISABLE_USERPASS_LOGIN: false
               ENABLE_RESCAN_ON_FILESYSTEM_CHANGE: "true"
               ENABLE_SCHEDULED_CONVERT_IMAGES_TO_WEBP: "true"
