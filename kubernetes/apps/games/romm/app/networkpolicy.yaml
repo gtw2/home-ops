@@ -50,9 +50,15 @@ spec:
             - port: "5432"
               protocol: TCP
 
-    # REDIS_HOST. Every dragonfly pod: the Service follows the master role,
-    # which the operator moves between them.
+    # REDIS_HOST. Every pod of the instance: the Service follows the master
+    # role, which the operator moves between them. RomM's own instance
+    # (romm-dragonfly, from components/dragonfly) and the shared one in
+    # database, which it used before; drop the second once that is retired.
     - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: games
+            app: romm-dragonfly
+            app.kubernetes.io/name: dragonfly
         - matchLabels:
             io.kubernetes.pod.namespace: database
             app.kubernetes.io/name: dragonfly
