@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/issuer_v1.json
+#
+# GameStream's server certificate. Moonlight pins whatever certificate it sees
+# when it pairs and never checks a name or a CA, so self-signed is what every
+# GameStream host uses. What matters is that it stays the same: a new one means
+# re-pairing every client. Hence the long duration, and a key that is kept.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: games-on-whales-selfsigned
+spec:
+  selfSigned: {}
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/cert-manager.io/certificate_v1.json
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: games-on-whales
+spec:
+  secretName: games-on-whales-tls
+  commonName: games-on-whales
+  dnsNames:
+    - games-on-whales.games.svc
+  # Ten years. A renewal re-pairs every client and needs wolf-agent restarted,
+  # since its init container copies the certificate in at start.
+  duration: 87600h
+  renewBefore: 720h
+  issuerRef:
+    kind: Issuer
+    name: games-on-whales-selfsigned
+  privateKey:
+    # GameStream signs with RSA-2048 and Moonlight expects it.
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+    rotationPolicy: Never
+  usages:
+    - server auth
+    - client auth

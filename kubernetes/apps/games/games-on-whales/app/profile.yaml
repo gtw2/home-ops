@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/axolotlite/fenrir/3f75c1aa5e69f2370ea31b6e2cf10c406ad97abb/schemas/direwolf.games-on-whales.github.io/profile_v1alpha1.json
+#
+# A Profile is one person: the Apps they see, the Moonlight clients allowed to
+# use them, and their own Steam library (steam-data-<profile>-steam-0). Give
+# each person a Profile rather than sharing one. A Profile has one session ID,
+# so resuming its stream from a second device crashes wolf, and two people on
+# one Profile would also share a library and a Steam login.
+#
+# To let a device in, pair it from Moonlight, find its Pairing with
+#   kubectl -n games get pairings
+# and add the name under that person's pairings. Edits made with kubectl are
+# overwritten on the next reconcile.
+#
+# Never pruned: the Profile owns its Steam library PVCs, so if Flux deleted it,
+# Kubernetes would garbage-collect the libraries with it. To retire a Profile,
+# delete it by hand after deciding what happens to the data.
+apiVersion: direwolf.games-on-whales.github.io/v1alpha1
+kind: Profile
+metadata:
+  name: greg
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  apps:
+    - name: steam
+    - name: testball
+  # None yet: the first pairing happens after this is deployed.
+  pairings: []

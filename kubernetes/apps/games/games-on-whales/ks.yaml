@@ -1,0 +1,81 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/source.toolkit.fluxcd.io/gitrepository_v1.json
+#
+# Fenrir's CRDs come straight from the fork whose images this app runs, at the
+# commit those images were built from (org.opencontainers.image.revision on all
+# three is 3f75c1aa). The CRD for App embeds a whole PodTemplateSpec schema and
+# is ~630KB, too big to keep a copy of here. The commit and the image digests in
+# app/helmrelease.yaml move together or not at all: the operator writes fields
+# the CRDs at another commit may not have.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: fenrir
+spec:
+  interval: 1h
+  url: https://github.com/axolotlite/fenrir
+  ref:
+    commit: 3f75c1aa5e69f2370ea31b6e2cf10c406ad97abb
+  ignore: |
+    /*
+    !/crds
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app games-on-whales-crds
+  namespace: &namespace games
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  interval: 1h
+  path: ./crds
+  # Never prune. Removing the CRDs deletes every App, Profile and Pairing with
+  # them, and each Steam library PVC is owned by its Profile, so Kubernetes
+  # would garbage-collect the libraries too.
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: fenrir
+    namespace: *namespace
+  wait: true
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app games-on-whales
+  namespace: &namespace games
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  dependsOn:
+    - name: games-on-whales-crds
+      namespace: *namespace
+    # gpu.nvidia.com, which the shared GPU claim names, comes from this chart.
+    - name: nvidia-gpu-dra-driver
+      namespace: kube-system
+    - name: cert-manager
+      namespace: cert-manager
+  interval: 1h
+  path: ./kubernetes/apps/games/games-on-whales/app
+  postBuild:
+    substitute:
+      APP: *app
+      # The 3090's render node as the node names it. The MS-01's Iris Xe
+      # probes first (i915 is in the schematic; the NVIDIA modules load
+      # later), so it is expected to be renderD128 and the 3090 renderD129.
+      # DRA injects only the 3090's nodes into a pod, so a wrong value here
+      # means a node wolf cannot open. Confirm before enabling (README.md).
+      WOLF_RENDER_NODE: /dev/dri/renderD129
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  wait: false
+  timeout: 5m

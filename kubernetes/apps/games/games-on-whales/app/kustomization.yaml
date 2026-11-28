@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./apps.yaml
+  - ./certificate.yaml
+  - ./deviceclass.yaml
+  - ./helmrelease.yaml
+  - ./networkpolicy.yaml
+  - ./profile.yaml
+  - ./rbac.yaml
+  - ./resourceclaim.yaml
+configMapGenerator:
+  - name: games-on-whales-egl-vendor
+    files:
+      - 10_nvidia.json=./resources/10_nvidia.json
+generatorOptions:
+  disableNameSuffixHash: true
