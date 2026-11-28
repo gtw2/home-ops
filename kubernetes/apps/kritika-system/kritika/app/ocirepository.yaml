@@ -33,5 +33,5 @@ spec:
     # limit, with no key to restore it: every mention of the bot runs.
     # 0.0.126 sends runner egress through HTTPS_PROXY when the pod sets one;
     # it sets none here.
-    tag: 0.0.127
+    tag: 0.0.128
   url: oci://ghcr.io/home-operations/charts/kritika
