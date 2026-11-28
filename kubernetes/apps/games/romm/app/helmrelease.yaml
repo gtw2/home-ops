@@ -73,9 +73,9 @@ spec:
               # free); the cache already defaults to /tmp/romm/cache, and
               # finished uploads assemble straight into the NFS library.
               ROMM_TMP_PATH: /tmp/romm
-              REDIS_HOST: dragonfly.database.svc.cluster.local
+              # RomM's own Dragonfly (components/dragonfly), on its default db 0.
+              REDIS_HOST: romm-dragonfly.games.svc.cluster.local
               REDIS_PORT: 6379
-              REDIS_DB: 4
               OIDC_ENABLED: true
               OIDC_CLAIM_ROLES: "groups"
               OIDC_ROLE_ADMIN: rommAdmin

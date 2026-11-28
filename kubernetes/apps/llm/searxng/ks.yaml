@@ -10,6 +10,11 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
+  components:
+    - ../../../../components/dragonfly
+  dependsOn:
+    - name: dragonfly
+      namespace: database
   interval: 1h
   path: ./kubernetes/apps/llm/searxng/app
   postBuild:

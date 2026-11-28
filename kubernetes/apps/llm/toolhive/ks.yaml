@@ -55,16 +55,27 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
+  # The gateway's session storage (sessionStorage in virtualmcpserver.yaml).
+  components:
+    - ../../../../components/dragonfly
   dependsOn:
     - name: toolhive
       namespace: *namespace
     # The embedding Model pulls weights into the operator's shared CephFS cache.
     - name: llmkube
       namespace: *namespace
+    - name: dragonfly
+      namespace: database
     - name: external-secrets-stores
       namespace: external-secrets
   interval: 1h
   path: ./kubernetes/apps/llm/toolhive/config
+  postBuild:
+    substitute:
+      APP: *app
+      # The gateway's pods are labelled for the VirtualMCPServer kind, not
+      # for this Kustomization.
+      DRAGONFLY_CLIENT: virtualmcpserver
   prune: true
   sourceRef:
     kind: GitRepository

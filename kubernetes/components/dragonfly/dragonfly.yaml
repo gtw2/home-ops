@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://kochhaus-schemas.pages.dev/dragonflydb.io/dragonfly_v1alpha1.json
+#
+# One Dragonfly per app, reached at ${APP}-dragonfly.<namespace>.svc:6379,
+# the Service the operator points at the current master.
+#
+# Why not one shared instance: Dragonfly here has no password, so every
+# client of a shared instance could read and write every other app's keys,
+# pub/sub crossed databases (romm and open-webui both published on the same
+# "socketio" channel), and any client could FLUSHALL, CONFIG SET or REPLICAOF
+# the lot. Per-app ACL users would have needed a password for each app and
+# still left those two apps sharing "socketio", since neither lets the channel
+# be renamed. A separate instance, admitted only to its own app's pods
+# (networkpolicy.yaml), isolates all of it with no credentials to manage.
+#
+# Use it from the app's Flux Kustomization:
+#   components: [../../../../components/dragonfly]
+#   dependsOn: the dragonfly operator Kustomization (database), for the CRD
+#   postBuild.substitute:
+#     APP              - names the instance ${APP}-dragonfly (required)
+#     DRAGONFLY_CLIENT - app.kubernetes.io/name of the pods that may connect,
+#                        when it differs from ${APP}
+#
+# Sized from the shared instance it replaces: with --proactor_threads=2 each
+# pod sat at about 360Mi resident on 2026-11-27 with almost no data, so that
+# is the request. Dragonfly refuses to start with maxmemory under 256MiB per
+# thread (src/server/dfly_main.cc at v2.1.0), so the limit, which maxmemory
+# follows, stays at 512Mi. Two replicas: a master and one replica, so a drain
+# or an upgrade fails over instead of dropping the app's queues and sessions.
+apiVersion: dragonflydb.io/v1alpha1
+kind: Dragonfly
+metadata:
+  name: ${APP}-dragonfly
+spec:
+  image: ghcr.io/dragonflydb/dragonfly:v2.1.0@sha256:94891bb22ce2fb0f7a5a3ff1bb3b2fbbc5830e2523293e47723d87fa3e5b1184
+  replicas: 2
+  env:
+    - name: MAX_MEMORY
+      valueFrom:
+        resourceFieldRef:
+          resource: limits.memory
+          divisor: 1Mi
+  args:
+    - --maxmemory=$(MAX_MEMORY)Mi
+    - --proactor_threads=2
+    # As on the shared instance, which every one of these apps ran against:
+    # emulated cluster mode and hashtag locking are what BullMQ (immich) needs,
+    # and its Lua scripts touch keys they do not declare.
+    - --cluster_mode=emulated
+    - --lock_on_hashtags
+    - --default_lua_flags=allow-undeclared-keys
+    # --version_check stays at its default on purpose. The daily call must not
+    # leave the cluster, but from v2.1.0 the DSAL forbids disabling usage
+    # monitoring tools (LICENSE.md 4(b)) while saying firewall filtering of
+    # outbound traffic is not that (6). The egress policy in
+    # networkpolicy.yaml blocks it instead. Do not remove that policy without
+    # restoring a block.
+  resources:
+    requests:
+      cpu: 20m
+      memory: 384Mi
+    limits:
+      memory: 512Mi
+  # Keep master and replica on different nodes where possible. Soft, so a
+  # node down for maintenance leaves the replica running alongside instead
+  # of Pending.
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app: ${APP}-dragonfly

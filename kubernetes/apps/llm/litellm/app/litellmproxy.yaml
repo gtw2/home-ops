@@ -46,11 +46,11 @@ spec:
       value: litellm_role
     - name: PROXY_LOGOUT_URL
       value: https://sso.${SECRET_DOMAIN}/application/o/litellm/end-session/
-    # Shared dragonfly: with replicas > 1 the router's cooldown state and the
-    # response cache have to be shared, or each replica cools down backends on
-    # its own view of the world.
+    # litellm's own Dragonfly (components/dragonfly). With replicas > 1 the
+    # router's cooldown state and the response cache have to be shared between
+    # them, or each replica cools down backends on its own view of the world.
     - name: REDIS_HOST
-      value: dragonfly.database.svc.cluster.local
+      value: litellm-dragonfly.llm.svc.cluster.local
     - name: REDIS_PORT
       value: "6379"
   envFrom:
