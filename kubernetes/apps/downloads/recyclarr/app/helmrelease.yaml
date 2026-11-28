@@ -12,37 +12,74 @@ spec:
   values:
     controllers:
       recyclarr:
-        type: cronjob
-        cronjob:
-          schedule: 0 0 * * *
-          backoffLimit: 0
-          concurrencyPolicy: Forbid
-          successfulJobsHistory: 1
-          failedJobsHistory: 1
-          ttlSecondsAfterFinished: 86400
+        # v9's image runs a server that syncs on its own schedule
+        # (settings.yml), and its entrypoint exits 1 on CLI args such as
+        # `sync`, so this is no longer a CronJob. Recreate because /config
+        # is an RWO claim.
+        strategy: Recreate
+        annotations:
+          # The server reads settings.yml and recyclarr.yml only at startup.
+          reloader.stakater.com/auto: "true"
         containers:
           app:
             image:
               repository: ghcr.io/recyclarr/recyclarr
               tag: 9.0.0@sha256:4973d11b18b5ef09fb226f4161eecb16434ff7e6b43c56d50fceb52fb22c66c7
             env:
+              # Guide clones and logs, re-downloaded on each start. Sync state
+              # and server.db stay in /config/state on the claim.
               RECYCLARR_DATA_DIR: /tmp
             envFrom:
+              # RADARR_API_KEY, SONARR_API_KEY and the server's
+              # RECYCLARR_API_KEY, without which it does not start.
               - secretRef:
                   name: "{{ .Release.Name }}-secret"
-            args:
-              - sync
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /livez
+                    port: &management 7983
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /readyz
+                    port: *management
+                  periodSeconds: 5
+                  timeoutSeconds: 1
+                  failureThreshold: 3
+              # The server clones the guide repos before it listens. The
+              # upstream chart gives that 5min, as does this.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /livez
+                    port: *management
+                  periodSeconds: 2
+                  timeoutSeconds: 1
+                  failureThreshold: 150
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
               capabilities: { drop: ["ALL"] }
+            # Not yet measured here. The upstream chart measured one server
+            # syncing a Sonarr and a Radarr at ~280Mi peak (~150Mi of it
+            # reclaimable file cache) and suggests these values.
             resources:
               requests:
                 cpu: 10m
+                memory: 256Mi
               limits:
-                memory: 128Mi
-        pod:
-          restartPolicy: Never
+                memory: 512Mi
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true
@@ -59,5 +96,9 @@ spec:
         globalMounts:
           - path: /config/recyclarr.yml
             subPath: recyclarr.yml
+            readOnly: true
+          - path: /config/settings.yml
+            subPath: settings.yml
+            readOnly: true
       tmp:
         type: emptyDir
