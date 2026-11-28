@@ -51,7 +51,7 @@ spec:
             - port: "3900"
               protocol: TCP
 
-    # ANTIVIRUS_CLAMAV_SOCKET, once uploads are scanned (storage/clamav).
+    # ANTIVIRUS_CLAMAV_SOCKET, once uploads are scanned (../clamav).
     # Harmless before that: it names pods that do not exist yet.
     - toEndpoints:
         - matchLabels:
