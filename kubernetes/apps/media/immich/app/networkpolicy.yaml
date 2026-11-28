@@ -1,0 +1,155 @@
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Egress for the Immich server. It takes uploads from users and decodes them
+# (sharp/libvips, ffmpeg, exiftool), so a file that exploits one of those
+# parsers runs code in this pod. Without a policy that code reaches the whole
+# cluster and the LAN. This lists what the server needs and nothing else.
+#
+# Egress only. Inbound (Envoy, homepage, Prometheus) is untouched, which also
+# keeps this clear of the netkit reply problem described in
+# kritika-system/kritika/app/networkpolicy.yaml: it only bites a pod whose
+# ingress is enforced. Same shape as games/romm/app/networkpolicy.yaml.
+#
+# Cilium checks egress after a Service address is translated, so each rule
+# names the pods behind a Service, not the Service.
+#
+# Inventoried from Cilium's conntrack table and immich-config.yaml (v3.4.2).
+# Hubble is off, so after it applies, watch for drops with
+#   kubectl -n kube-system exec ds/cilium -- cilium-dbg monitor --type drop
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: immich-server-egress
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: immich
+      app.kubernetes.io/controller: server
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+    # DB_HOSTNAME, for the server and its init-db container (immich17-rw).
+    # Every instance of the cluster, so a switchover does not cut it off.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: media
+            cnpg.io/cluster: immich17
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+
+    # REDIS_HOSTNAME, Immich's own instance (immich-dragonfly, from
+    # components/dragonfly). Every pod of it: the Service follows the master
+    # role, which the operator moves between them.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: media
+            app: immich-dragonfly
+            app.kubernetes.io/name: dragonfly
+      toPorts:
+        - ports:
+            - port: "6379"
+              protocol: TCP
+
+    # machineLearning.urls.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: media
+            app.kubernetes.io/name: immich
+            app.kubernetes.io/controller: machine-learning
+      toPorts:
+        - ports:
+            - port: "3003"
+              protocol: TCP
+
+    # Authentik (oauth.issuerUrl). The sso hostname resolves to
+    # envoy-external's LAN address, so discovery, token and userinfo calls go
+    # through Envoy. Any port: the listener ports are not declared on the
+    # proxy pods.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: envoy
+            app.kubernetes.io/component: proxy
+
+    # notifications.smtp: the relay set in the ExternalSecret, on port 587
+    # (STARTTLS). Port 587 only, to anything outside the private, CGNAT,
+    # link-local and multicast ranges.
+    # The server's other outbound calls (v3.4.2) don't need the internet:
+    # - The map style and tiles (tiles.immich.cloud) are fetched by the
+    #   browser, and reverse geocoding uses the bundled /build/geodata.
+    # - The version check is off (newVersionCheck in immich-config.yaml).
+    # - The maintenance health check goes to 127.0.0.1.
+    # - Workflow plugins can make HTTP requests to the hosts their manifest
+    #   allows. None are configured (0 workflows); one that calls out needs
+    #   its own rule here.
+    # Pods and nodes are not covered by a CIDR rule at all while
+    # policy-cidr-match-mode is unset, so this grants nothing inside the
+    # cluster.
+    - toCIDRSet:
+        - cidr: 0.0.0.0/0
+          except:
+            - 10.0.0.0/8
+            - 100.64.0.0/10
+            - 169.254.0.0/16
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+            - 224.0.0.0/3
+      toPorts:
+        - ports:
+            - port: "587"
+              protocol: TCP
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Egress for Immich machine learning. It runs models over images the server
+# sends it, and the server is its only client. It needs DNS, and HTTPS to
+# Hugging Face for a model that is not yet in its cache on
+# immich-machine-learning-cache, such as a newly chosen one
+# (immich_ml/models/base.py, v3.4.2). Nothing in the cluster: the rule below
+# is port 443 outside the private ranges only.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: immich-machine-learning-egress
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: immich
+      app.kubernetes.io/controller: machine-learning
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+    - toCIDRSet:
+        - cidr: 0.0.0.0/0
+          except:
+            - 10.0.0.0/8
+            - 100.64.0.0/10
+            - 169.254.0.0/16
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+            - 224.0.0.0/3
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

@@ -155,9 +155,16 @@ spec:
         globalMounts:
           - path: /media
             readOnly: true
+      # Despite the name, this is where Plex's Movies and TV libraries live
+      # (/dvr/Movies, /dvr/TV). Read-only, since Plex only reads them: it has no
+      # DVR recording rules or recordings, allowMediaDeletion is 0, and the
+      # .grab folders DVR left behind were last written in 2024. Radarr, Sonarr
+      # and Bazarr do the writing. Plex decodes every file here, so a file
+      # that exploits it should not be able to change or delete the collection.
       dvr:
         type: nfs
         server: tank.internal
         path: "/mnt/silo/media/downloads"
         globalMounts:
           - path: /dvr
+            readOnly: true

@@ -44,8 +44,24 @@ spec:
             envFrom:
               - secretRef:
                   name: immich-secret
+            # Every Immich container gets this. The server decodes uploaded
+            # photos and videos (sharp/libvips, ffmpeg, exiftool), so it is
+            # where an exploited parser would run, with write access to the
+            # whole photos dataset. The pods already run as uid 3003 with no
+            # effective capabilities, but both images ship Debian's setuid
+            # binaries (su, passwd, mount, chfn and others; checked in
+            # v3.4.2). allowPrivilegeEscalation false stops those from
+            # raising privileges, and dropping ALL empties the bounding set;
+            # Immich uses neither. The root filesystem stays writable: the
+            # paths Immich writes outside its volumes were not mapped.
+            securityContext: &securityContext
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
         containers:
           main:
+            securityContext: *securityContext
             image:
               repository: ghcr.io/immich-app/immich-server
               tag: v3.4.2@sha256:fc880c1bf665b4aab1e74c15e56ab871225989cd546536e6b77e771869af06bd
@@ -71,6 +87,7 @@ spec:
             fsGroupChangePolicy: OnRootMismatch
         containers:
           main:
+            securityContext: *securityContext
             image:
               repository: ghcr.io/immich-app/immich-machine-learning
               tag: v3.4.2@sha256:739405742a79bd7447227c553bb62ed5491aa36acf00bc667af7f9c93b6fae91
