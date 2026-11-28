@@ -11,6 +11,9 @@ resources:
   - ./enshrouded/ks.yaml
   - ./factorio/ks.yaml
   - ./filebrowser/ks.yaml
+  # Off until the NVIDIA node has joined and publishes gpu.nvidia.com devices:
+  # games-on-whales/README.md, "Enabling".
+  # - ./games-on-whales/ks.yaml
   - ./icarus/ks.yaml
   - ./minecraft/ks.yaml
   - ./network-policy/ks.yaml

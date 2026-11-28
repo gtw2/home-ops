@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/resource.k8s.io/resourceclaim_v1.json
+#
+# The 3090, as one claim that wolf and every session pod reference by name.
+# Pods that share a ResourceClaim share the device it allocated (CUDA
+# time-slices between them), which is how wolf's compositor and encoder and a
+# game in a session pod can both use the one card. A ResourceClaimTemplate
+# would instead give each pod its own claim, and the second one would find
+# the device already taken.
+#
+# Shared, not isolated: nothing limits how much VRAM or compute any one of
+# them uses. Sharing the card with workloads outside this namespace needs the
+# driver's consumable capacity instead; see README.md.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaim
+metadata:
+  name: wolf-gpu
+spec:
+  devices:
+    requests:
+      - name: gpu
+        exactly:
+          deviceClassName: gpu.nvidia.com
+          allocationMode: ExactCount
+          count: 1

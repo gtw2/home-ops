@@ -1,0 +1,151 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/axolotlite/fenrir/3f75c1aa5e69f2370ea31b6e2cf10c406ad97abb/schemas/direwolf.games-on-whales.github.io/app_v1alpha1.json
+#
+# What a paired Moonlight client can launch. The operator turns a launch into
+# a StatefulSet `<profile>-<app>` built from spec.template, and adds the
+# session's lobby claim (DeviceClass default-wolf), which is what lands the pod
+# on wolf's node. Validation is thin upstream: a template the API server
+# rejects shows up only in the operator's log.
+#
+# appAssetWebP is a blank 300x400 tile, the same for every App, until someone
+# wants real art.
+#
+# Steam is the App this is for. It runs in Gamescope, as on a Steam Deck.
+apiVersion: direwolf.games-on-whales.github.io/v1alpha1
+kind: App
+metadata:
+  name: steam
+spec:
+  id: 1
+  title: Steam
+  isHDRSupported: false
+  appAssetWebP: UklGRhwBAABXRUJQVlA4IBABAADQHACdASosAZABPm02mUmkIqKhICgAgA2JaW7hd2EbQAnsA99snIe+2Yy09snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPekAAD+/9O4f/1K366KRn9B8NO3tyIAAAAAAAAAAAAAAAAAA
+  deviceClassName: default-wolf
+  template:
+    spec:
+      # Also merges the GPU node's nodeSelector and toleration into the pod
+      # (kube-system/nvidia-gpu-dra-driver/app/runtimeclass.yaml).
+      runtimeClassName: nvidia
+      resourceClaims:
+        - name: gpu
+          resourceClaimName: wolf-gpu
+      containers:
+        - name: app
+          image: ghcr.io/games-on-whales/steam:edge@sha256:7e2731e86bb7d49c66c8018e7df10e5d3dd9fc176c98fafbdbc727d3f4cababb
+          env:
+            - name: TZ
+              value: ${TIMEZONE}
+            - name: RUN_GAMESCOPE
+              value: "1"
+            # The same two NVIDIA settings wolf needs, for the same reasons
+            # (see GBM_BACKENDS_PATH in helmrelease.yaml).
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: all
+            - name: GBM_BACKENDS_PATH
+              value: /usr/lib/gbm
+          securityContext:
+            # Steam's pressure-vessel runtime sandboxes games with bwrap
+            # namespaces. These are the capabilities upstream Wolf's own
+            # Steam app grants, and bwrap needs seccomp and AppArmor out of
+            # the way. Steam also needs user namespaces on the node
+            # (user.max_user_namespaces, a Talos sysctl), which Talos
+            # disables by default.
+            capabilities:
+              add: [SYS_ADMIN, SYS_NICE, SYS_PTRACE, NET_RAW, MKNOD, NET_ADMIN]
+            seccompProfile:
+              type: Unconfined
+            appArmorProfile:
+              type: Unconfined
+          resources:
+            requests:
+              cpu: 2
+              memory: 4Gi
+              devic.es/uinput: "1"
+            limits:
+              memory: 16Gi
+              devic.es/uinput: "1"
+            claims:
+              - name: gpu
+          volumeMounts:
+            - name: steam-data
+              mountPath: /home/retro
+            # Steam's CEF UI shows a black screen on the 64Mi default.
+            - name: dshm
+              mountPath: /dev/shm
+            - name: egl-vendor
+              mountPath: /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+              subPath: 10_nvidia.json
+              readOnly: true
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 4Gi
+        - name: egl-vendor
+          configMap:
+            name: games-on-whales-egl-vendor
+  # One library per Profile: the PVC is steam-data-<profile>-steam-0, and the
+  # operator makes the Profile its owner. On the GPU node's own NVMe, because a
+  # session pod can only run there anyway, so Ceph's "survives a reschedule"
+  # buys nothing, and a game library is the one thing here that is all
+  # re-downloadable. openebs-hostpath does not enforce the size: it is what the
+  # libraries are expected to share the ~1TB disk at.
+  volumeClaimTemplates:
+    - metadata:
+        name: steam-data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: openebs-hostpath
+        resources:
+          requests:
+            storage: 400Gi
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/axolotlite/fenrir/3f75c1aa5e69f2370ea31b6e2cf10c406ad97abb/schemas/direwolf.games-on-whales.github.io/app_v1alpha1.json
+#
+# A bouncing ball and a ticking sound, from the wolf image already on the node.
+# The first thing to launch after pairing: it exercises wolf's compositor, the
+# NVENC encoder and audio, and nothing else. It deliberately takes no GPU claim
+# and no NVIDIA runtime, so if this streams and Steam does not, the fault is in
+# GPU injection into the session pod rather than in wolf.
+#
+# Flux substitution is off for this object: the ${GAMESCOPE_*} and
+# ${PULSE_SINK} below are filled in by the lobby's CDI spec at run time.
+apiVersion: direwolf.games-on-whales.github.io/v1alpha1
+kind: App
+metadata:
+  name: testball
+  annotations:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  id: 2
+  title: Test Ball
+  isHDRSupported: false
+  appAssetWebP: UklGRhwBAABXRUJQVlA4IBABAADQHACdASosAZABPm02mUmkIqKhICgAgA2JaW7hd2EbQAnsA99snIe+2Yy09snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPfbJyHvtk5D32ych77ZOQ99snIe+2TkPekAAD+/9O4f/1K366KRn9B8NO3tyIAAAAAAAAAAAAAAAAAA
+  deviceClassName: default-wolf
+  template:
+    spec:
+      nodeSelector:
+        node.kubernetes.io/gpu-vendor: nvidia
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: app
+          image: ghcr.io/games-on-whales/wolf:stable@sha256:47ce7a0b67ee6645d2c6fefd8fdda7fee49a00e327c39597a04e84a0cd052910
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              exec gst-launch-1.0 -e \
+                videotestsrc pattern=ball flip=true is-live=true ! \
+                "video/x-raw,format=BGRx,width=${GAMESCOPE_WIDTH},height=${GAMESCOPE_HEIGHT},framerate=${GAMESCOPE_REFRESH}/1" ! \
+                waylandsink fullscreen=true \
+                audiotestsrc wave=ticks is-live=true ! audioconvert ! audioresample ! \
+                pulsesink device="${PULSE_SINK}"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              memory: 1Gi

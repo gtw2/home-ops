@@ -1,0 +1,83 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# Advertises /dev/uinput as the extended resource devic.es/uinput on the NVIDIA
+# game-streaming node. Moonlight gamepads become virtual controllers through
+# uinput, and Steam Input creates its own through it as well. Steam does not
+# run privileged, so it only sees /dev/uinput if a device plugin mounts it in.
+#
+# The device has to exist on the node, which means the Talos node loads the
+# uinput module (KernelModuleConfig). If it does not, this plugin advertises
+# zero devices and anything requesting devic.es/uinput stays Pending. That is
+# where to look first when a Steam lobby will not schedule.
+#
+# Inert until a node carries node.kubernetes.io/gpu-vendor=nvidia.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app generic-device-plugin
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controllers:
+      generic-device-plugin:
+        type: daemonset
+        pod:
+          priorityClassName: system-node-critical
+          nodeSelector:
+            node.kubernetes.io/gpu-vendor: nvidia
+          tolerations:
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
+        containers:
+          app:
+            image:
+              repository: ghcr.io/squat/generic-device-plugin
+              # Upstream publishes only commit tags and latest.
+              tag: 0ae0011@sha256:6fd8023741b24c0302a97153605ff77f4d55535a4b5a8b0c8502b208e8310525
+            args:
+              # Set explicitly rather than left to the plugin's default, so the
+              # resource name cannot drift from the devic.es/uinput that the
+              # Steam App (games/games-on-whales/app/apps.yaml) requests.
+              - --domain=devic.es
+              - --device
+              - |
+                name: uinput
+                groups:
+                  # How many pods may hold /dev/uinput at once: wolf's sessions
+                  # plus their Steam pods, with room to spare.
+                  - count: 10
+                    paths:
+                      - path: /dev/uinput
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+            securityContext:
+              # Registers with the kubelet and stats host device nodes.
+              privileged: true
+    persistence:
+      device-plugins:
+        type: hostPath
+        hostPath: /var/lib/kubelet/device-plugins
+        globalMounts:
+          - path: /var/lib/kubelet/device-plugins
+      dev:
+        type: hostPath
+        hostPath: /dev
+        globalMounts:
+          - path: /dev

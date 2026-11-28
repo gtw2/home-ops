@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/resource.k8s.io/deviceclass_v1.json
+#
+# The class the operator's per-session "lobby" claims use. wolf-agent
+# publishes lobby slots as wolf.dra.io devices on its own node, so a session
+# pod that claims one lands next to wolf; the opaque parameters are handed to
+# wolf when it builds that lobby's compositor and encoder.
+#
+# default-wolf is the name the App CRD defaults deviceClassName to.
+apiVersion: resource.k8s.io/v1
+kind: DeviceClass
+metadata:
+  name: default-wolf
+spec:
+  selectors:
+    - cel:
+        expression: device.driver == "wolf.dra.io"
+  config:
+    - opaque:
+        driver: wolf.dra.io
+        parameters:
+          video_settings:
+            wayland_render_node: ${WOLF_RENDER_NODE}
+            runner_render_node: ${WOLF_RENDER_NODE}
+            # NVIDIA only. Wolf's nvcodec pipeline consumes CUDA memory; the
+            # upstream default, a DMABuf caps list written for AMD/Intel VA,
+            # never intersects with it, so the encoder gets no frames and the
+            # client shows a black screen (found on the reference RTX 3060).
+            video_producer_buffer_caps: video/x-raw(memory:CUDAMemory)

@@ -18,7 +18,8 @@
 # only bites a pod whose INGRESS is enforced.
 #
 # Selected: every app-template pod in the namespace except romm and
-# filebrowser, which are web apps behind the gateways, not game servers.
+# filebrowser, which are web apps behind the gateways, not game servers, and
+# games-on-whales, which is neither.
 # - romm needs Postgres, dragonfly and Authentik. Its egress has its own
 #   policy, games/romm/app/networkpolicy.yaml.
 # - filebrowser needs nothing in-cluster, but it has no login (FB_NOAUTH)
@@ -26,6 +27,10 @@
 #   The last rule below lets every selected pod reach every other, so
 #   selecting it here would open it to the game servers. Its own egress is
 #   not restricted by this file.
+# - games-on-whales is a streaming operator, not a game server: it needs the
+#   API server, which this policy does not allow. Its egress is in
+#   games/games-on-whales/app/networkpolicy.yaml. Excluding it here while
+#   that app is disabled matches nothing and changes nothing.
 # - app.kubernetes.io/controller is the label app-template puts on its pods.
 #   Requiring it leaves out the kopiur mover Jobs that run here (labelled
 #   app.kubernetes.io/managed-by=kopiur and nothing else of ours). It also
@@ -56,6 +61,7 @@ spec:
         values:
           - romm
           - filebrowser
+          - games-on-whales
   egress:
     # DNS. Plain L4, no dns rules: nothing below uses toFQDNs, so there is no
     # reason to put these lookups through the DNS proxy.

@@ -117,5 +117,12 @@
       ],
       versioning: 'regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)_base$',
     },
+    {
+      description: 'Hold the Fenrir images: they are a moving :main tag on an unreleased fork, and they have to move together with the CRD commit in kubernetes/apps/games/games-on-whales/ks.yaml, which Renovate does not track. Bump the three images and the commit together, by hand',
+      matchPackageNames: [
+        'ghcr.io/axolotlite/fenrir/**',
+      ],
+      enabled: false,
+    },
   ],
 }

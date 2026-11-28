@@ -1,0 +1,391 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-5.3.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# Fenrir: Games on Whales' Kubernetes operator for Wolf, the Moonlight
+# streaming server. Three Deployments and a pre-pull DaemonSet:
+#
+#   moonlight-proxy  pairing, app list and launch (GameStream HTTP/HTTPS)
+#   operator         turns a launch into a Lobby and a StatefulSet per session
+#   wolf-agent       wolf itself (compositor + NVENC) and the wolf.dra.io DRA
+#                    driver that hands each session pod its Wayland and
+#                    PulseAudio sockets
+#
+# Built from the DRA rework, which upstream has not released yet (the work is
+# open as games-on-whales/fenrir#56). The images and CRDs come from
+# axolotlite/fenrir at 3f75c1aa, which is that branch plus fixes. The NVIDIA
+# specifics follow rothgar/homelab-flux (clusters/wrtk8s/fenrir), which streams
+# from an RTX 3060 on Talos with this code. See README.md for what is and is
+# not verified here.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app games-on-whales
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    defaultPodOptions:
+      # All three talk to the API server: Sessions, Lobbies, StatefulSets,
+      # ResourceSlices.
+      automountServiceAccountToken: true
+
+    controllers:
+      operator:
+        type: deployment
+        strategy: Recreate
+        serviceAccount:
+          identifier: operator
+        containers:
+          app:
+            image:
+              repository: ghcr.io/axolotlite/fenrir/direwolf-operator
+              tag: main@sha256:fb32a2b73b65b6a26fc7f8b9934e6148bf6067813792e22c7c58f77fc3f0c4ab
+            # The image's entrypoint picks the binary from $APP_NAME; naming
+            # it here is less indirect.
+            command: [/app/operator]
+            env:
+              POD_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              POD_NAMESPACE:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+            securityContext: &restricted
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+
+      moonlight-proxy:
+        type: deployment
+        # Recreate, not RollingUpdate: on the host network a second pod cannot
+        # bind 47984/47989 while the first still holds them.
+        strategy: Recreate
+        serviceAccount:
+          identifier: moonlight-proxy
+        pod:
+          # Moonlight connects RTSP to the address it paired with and takes
+          # only the port from the launch reply, so the proxy and wolf must
+          # answer on one IP. On the host network that IP is the node's:
+          # clients add the GPU node's address. This also keeps GameStream's
+          # UDP off a LoadBalancer hop, and lets wolf see the real client
+          # address, which it checks against the session's.
+          hostNetwork: true
+          nodeSelector: &gpuNode
+            node.kubernetes.io/gpu-vendor: nvidia
+          tolerations: &gpuToleration
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
+        containers:
+          app:
+            image:
+              repository: ghcr.io/axolotlite/fenrir/moonlight-proxy
+              tag: main@sha256:cea0f12f9fa0e5df5ffe9f6f8b64e50bc7f138fe8bd13f9238028320a04a21d6
+            command: [/app/moonlight-proxy]
+            env:
+              POD_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              POD_NAMESPACE:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+              SERVER_CERT: /etc/certs/tls.crt
+              SERVER_KEY: /etc/certs/tls.key
+              # ALLOWED_HOSTS is left unset: it only filters X-Forwarded-Host,
+              # and nothing proxies in front of this.
+            probes:
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 47989
+                  periodSeconds: 10
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+            securityContext: *restricted
+
+      wolf-agent:
+        type: deployment
+        # Recreate: host ports, and the DRA plugin socket is per pod.
+        strategy: Recreate
+        serviceAccount:
+          identifier: wolf-agent
+        pod:
+          hostNetwork: true
+          nodeSelector: *gpuNode
+          tolerations: *gpuToleration
+          runtimeClassName: nvidia
+          resourceClaims:
+            - name: gpu
+              resourceClaimName: wolf-gpu
+        initContainers:
+          # wolf rewrites its own config and generates what it is missing,
+          # so cfg/ has to be writable: copy the certificate in rather than
+          # mounting it there. wolf reads cert.pem/key.pem by default. With
+          # no config.toml present it writes its built-in v7 defaults, which
+          # have the same nvh264enc/nvh265enc/nvav1enc pipelines that the
+          # reference and the Fenrir examples copy into a ConfigMap by hand.
+          # The [[profiles]] in those defaults go unused: under Fenrir the
+          # proxy serves the app list and the operator creates the lobbies.
+          config:
+            image: &wolfImage
+              repository: ghcr.io/games-on-whales/wolf
+              tag: stable@sha256:47ce7a0b67ee6645d2c6fefd8fdda7fee49a00e327c39597a04e84a0cd052910
+            command:
+              - /bin/sh
+              - -ec
+              - |
+                mkdir -p /etc/wolf/cfg
+                cp /etc/certs/tls.crt /etc/wolf/cfg/cert.pem
+                cp /etc/certs/tls.key /etc/wolf/cfg/key.pem
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+        containers:
+          agent:
+            image:
+              repository: ghcr.io/axolotlite/fenrir/wolf-agent
+              tag: main@sha256:f5b7ca6f5e7fa9019619df9155c90dc875501a573329e43b70a9920c50514d2a
+            command: [/app/wolf-agent]
+            env:
+              DRIVER_NAME: wolf.dra.io
+              NODE_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+              POD_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              POD_NAMESPACE:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+              POD_UID:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.uid
+              # Where it writes each lobby's CDI spec (the sockets a session
+              # pod gets). Must be one of containerd's cdi_spec_dirs, which
+              # here are /var/cdi/static and /var/cdi/dynamic
+              # (talos/machineconfig.yaml.j2), not the default /var/run/cdi.
+              CDI_DIR: /var/cdi/dynamic
+              SOCKETS_DIR: /var/run/wolf-sockets
+              WOLF_SOCKET_PATH: /etc/wolf/wolf.sock
+              # Concurrent sessions this node offers. GeForce drivers allow 8
+              # NVENC encodes at once; 24GB of VRAM runs out well before that
+              # with real games, so this is a ceiling, not a target.
+              MAX_LOBBIES: "4"
+              QUEUE_TIMEOUT_SECONDS: "30"
+              LOG_LEVEL: "2"
+              # Loaded and then unused by this build, but it exits without one.
+              TLS_CERT: /etc/certs/tls.crt
+              TLS_KEY: /etc/certs/tls.key
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+              # The agent checks render-node paths when it builds a lobby, so
+              # it needs the GPU's device nodes as well as wolf does.
+              claims:
+                - name: gpu
+            securityContext:
+              # A DRA kubelet plugin: it registers a socket under
+              # /var/lib/kubelet and writes host CDI specs.
+              privileged: true
+          wolf:
+            image: *wolfImage
+            # :stable rather than the sha-d6d41de the Fenrir examples pin: on
+            # the reference RTX 3060, d6d41de panics in waylanddisplaysrc
+            # negotiation even with every NVIDIA fix below in place.
+            env:
+              TZ: ${TIMEZONE}
+              XDG_RUNTIME_DIR: /var/run/wolf-sockets
+              WOLF_SOCKET_PATH: /etc/wolf/wolf.sock
+              WOLF_RENDER_NODE: ${WOLF_RENDER_NODE}
+              # Under Fenrir the proxy answers on 47984/47989. wolf's own
+              # GameStream HTTP servers go unused, and on the shared host
+              # network they would collide with the proxy.
+              WOLF_HTTP_PORT: "48989"
+              WOLF_HTTPS_PORT: "48984"
+              NVIDIA_DRIVER_CAPABILITIES: all
+              NVIDIA_VISIBLE_DEVICES: all
+              # NVIDIA's GBM backend. The DRA driver mounts it at
+              # /usr/lib/gbm, which is not on Debian's default search path
+              # (Mesa's /usr/lib/x86_64-linux-gnu/gbm), and unlike the classic
+              # container toolkit it does not set this variable. Without it
+              # DMABuf format negotiation comes back empty and wolf's Wayland
+              # pipeline fails "not-negotiated".
+              GBM_BACKENDS_PATH: /usr/lib/gbm
+            probes:
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: [test, -S, /etc/wolf/wolf.sock]
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+            resources:
+              requests:
+                cpu: 1
+                memory: 1Gi
+              limits:
+                memory: 4Gi
+              claims:
+                - name: gpu
+            securityContext:
+              # It creates the virtual gamepads through /dev/uinput, which is
+              # why it does not also request devic.es/uinput: privileged, it
+              # sees the host's /dev already. Upstream and the reference both
+              # run it privileged.
+              privileged: true
+
+      # Keeps the session images cached on the GPU node. A launch has 25s to
+      # produce a running session pod (moonlight-proxy's Session wait), and a
+      # cold pull of the multi-GB Steam image blows through that: Moonlight
+      # shows an error and the next attempt finds the image half-pulled.
+      # Add each App's image here.
+      image-prepull:
+        type: daemonset
+        # Needs no API access at all.
+        serviceAccount:
+          name: default
+        pod:
+          automountServiceAccountToken: false
+          nodeSelector: *gpuNode
+          tolerations: *gpuToleration
+        initContainers:
+          steam:
+            image:
+              repository: ghcr.io/games-on-whales/steam
+              tag: edge@sha256:7e2731e86bb7d49c66c8018e7df10e5d3dd9fc176c98fafbdbc727d3f4cababb
+            command: [/bin/true]
+            resources: &prepull
+              requests:
+                cpu: 1m
+                memory: 4Mi
+              limits:
+                memory: 16Mi
+        containers:
+          app:
+            image:
+              repository: registry.k8s.io/pause
+              tag: 3.10.2@sha256:f548e0e8e3dc1896ca956272154dde3314e8cc4fde0a57577ee9fa1c63f5baf4
+            resources: *prepull
+            securityContext: *restricted
+
+    serviceAccount:
+      operator: {}
+      moonlight-proxy: {}
+      wolf-agent: {}
+
+    persistence:
+      certs:
+        type: secret
+        name: games-on-whales-tls
+        defaultMode: 0400
+        advancedMounts:
+          moonlight-proxy:
+            app:
+              - path: /etc/certs
+                readOnly: true
+          wolf-agent:
+            config:
+              - path: /etc/certs
+                readOnly: true
+            agent:
+              - path: /etc/certs
+                readOnly: true
+      # wolf's socket and generated config, shared by the init copy, wolf and
+      # the agent. Rebuilt on every start, so the cert is re-copied each time.
+      wolf-state:
+        type: emptyDir
+        advancedMounts:
+          wolf-agent:
+            config:
+              - path: /etc/wolf
+            agent:
+              - path: /etc/wolf
+            wolf:
+              - path: /etc/wolf
+      # Each lobby's Wayland and PulseAudio sockets. A hostPath, because the
+      # session pod receives them through CDI as host paths.
+      sockets:
+        type: hostPath
+        hostPath: /var/run/wolf-sockets
+        hostPathType: DirectoryOrCreate
+        advancedMounts:
+          wolf-agent:
+            agent:
+              - path: /var/run/wolf-sockets
+            wolf:
+              - path: /var/run/wolf-sockets
+      cdi:
+        type: hostPath
+        hostPath: /var/cdi/dynamic
+        hostPathType: DirectoryOrCreate
+        advancedMounts:
+          wolf-agent:
+            agent:
+              - path: /var/cdi/dynamic
+      kubelet-plugins:
+        type: hostPath
+        hostPath: /var/lib/kubelet/plugins
+        hostPathType: DirectoryOrCreate
+        advancedMounts:
+          wolf-agent:
+            agent:
+              - path: /var/lib/kubelet/plugins
+      kubelet-plugins-registry:
+        type: hostPath
+        hostPath: /var/lib/kubelet/plugins_registry
+        hostPathType: DirectoryOrCreate
+        advancedMounts:
+          wolf-agent:
+            agent:
+              - path: /var/lib/kubelet/plugins_registry
+      # libglvnd's EGL vendor file for NVIDIA. The classic container toolkit
+      # adds it when graphics capabilities are requested; the DRA driver does
+      # not, so libEGL falls back to Mesa and wolf's compositor panics with
+      # "Failed to create EGLDisplay".
+      egl-vendor:
+        type: configMap
+        name: games-on-whales-egl-vendor
+        advancedMounts:
+          wolf-agent:
+            wolf:
+              - path: /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+                subPath: 10_nvidia.json
+                readOnly: true

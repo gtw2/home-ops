@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Egress for this release's own pods, which games/network-policy's
+# game-servers-egress leaves out by name. That policy is for servers that take
+# traffic from the internet and need only the internet back; this release's
+# controllers need the API server and nothing else.
+#
+# What this actually covers is the operator and the image pre-pull pods.
+# moonlight-proxy and wolf-agent run on the host network, where they are not
+# Cilium endpoints and no CiliumNetworkPolicy applies.
+#
+# The session pods the operator creates (label app=direwolf-worker) are not
+# selected here or by game-servers-egress, so they keep unrestricted egress.
+# Steam and its games need the internet, and a game may want a LAN address (one
+# of this cluster's own game servers, say), which the game-server policy's
+# private-range exception would break.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: games-on-whales-egress
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: games-on-whales
+  egress:
+    # The operator uses the in-cluster API address directly, so it needs no
+    # DNS. The API server is on the node IPs, which only the entity selects.
+    - toEntities:
+        - kube-apiserver
