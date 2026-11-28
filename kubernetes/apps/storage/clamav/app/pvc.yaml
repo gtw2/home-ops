@@ -1,0 +1,16 @@
+---
+# The signature database freshclam keeps current, a few hundred MB. A volume
+# rather than an emptyDir so a restart does not fetch the whole set again:
+# database.clamav.net answers clients that download too often with HTTP 429,
+# and freshclam then backs off for hours, during which clamd cannot start
+# fresh and ocis uploads wait. Not backed up: freshclam rebuilds it.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clamav-db
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: ceph-block

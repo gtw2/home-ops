@@ -1,0 +1,105 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app clamav
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  values:
+    controllers:
+      clamav:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          # uid 100 and gid 101 are the image's clamav user and group (read
+          # from /etc/passwd and /etc/group in the 1.5.5_base image). gid 101
+          # also owns /var/lib/clamav there, and fsGroup makes the database
+          # volume writable for freshclam.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100
+            runAsGroup: 101
+            fsGroup: 101
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile: { type: RuntimeDefault }
+        containers:
+          app:
+            # _base: the image without a signature database baked in, so the
+            # digest moves only with a release, not with every daily
+            # signature build. freshclam fetches the database into the volume.
+            image:
+              repository: docker.io/clamav/clamav
+              tag: 1.5.5_base@sha256:92bf5569b64d3a51cfd5f660b1556b8855e082e0c2e551d1ed7be39304f53d67
+            # The image's own entrypoint for running without root. It fetches
+            # the database on first start, then runs freshclam and clamd.
+            command: ["/init-unprivileged"]
+            env:
+              TZ: ${TIMEZONE}
+              # Update checks per day. The entrypoint's default is 1;
+              # database.clamav.net publishes several updates a day and asks
+              # clients not to check more often than hourly.
+              FRESHCLAM_CHECKS: "12"
+            probes:
+              liveness: &probes
+                enabled: true
+              readiness: *probes
+              # clamd only listens once the database is loaded. The first
+              # start also downloads it. 90 x 10s = 15m covers both.
+              startup:
+                enabled: true
+                spec:
+                  failureThreshold: 90
+                  periodSeconds: 10
+            # clamd holds the loaded database in memory, a little over 1GiB
+            # for the full set. Reloads after an update are concurrent (the
+            # default), so for a moment both copies are resident.
+            resources:
+              requests:
+                cpu: 50m
+                memory: 1536Mi
+              limits:
+                memory: 4Gi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+
+    service:
+      app:
+        controller: clamav
+        ports:
+          clamd:
+            port: 3310
+            primary: true
+
+    persistence:
+      config:
+        type: configMap
+        name: clamav-configmap
+        globalMounts:
+          - path: /etc/clamav/clamd.conf
+            subPath: clamd.conf
+            readOnly: true
+          - path: /etc/clamav/freshclam.conf
+            subPath: freshclam.conf
+            readOnly: true
+      database:
+        existingClaim: clamav-db
+        globalMounts:
+          - path: /var/lib/clamav
+      # clamd's socket, the entrypoint's first-run freshclam config, and
+      # TemporaryDirectory, where each stream from ocis is written and
+      # unpacked: up to 1024M plus 2048M per scan (clamd.conf), with ocis
+      # running at most 2 at once (ANTIVIRUS_WORKERS). The limit keeps a
+      # runaway archive off the node disk; past it the pod is evicted.
+      tmp:
+        type: emptyDir
+        sizeLimit: 16Gi
+        globalMounts:
+          - path: /tmp
