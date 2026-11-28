@@ -110,5 +110,12 @@
       additionalBranchPrefix: 'extension-',
       commitMessageTopic: 'extension {{depName}}',
     },
+    {
+      description: 'Track ClamAV on its x.y.z_base tags, the image without a bundled signature database. Docker versioning cannot read the _base suffix, and the plain tags are rebuilt with fresh signatures every day',
+      matchPackageNames: [
+        'docker.io/clamav/clamav',
+      ],
+      versioning: 'regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)_base$',
+    },
   ],
 }

@@ -1,5 +1,32 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The virus scanner for ocis uploads (ANTIVIRUS_CLAMAV_SOCKET in app/). ocis
+# does not depend on it here: while clamav is down, uploads wait in
+# postprocessing rather than fail, so ocis is better left reconciling.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app ocis-clamav
+  namespace: flux-system
+spec:
+  targetNamespace: storage
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+  interval: 1h
+  path: "./kubernetes/apps/storage/ocis/clamav"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  wait: false
+  dependsOn:
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
