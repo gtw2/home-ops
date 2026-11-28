@@ -92,6 +92,15 @@
       },
     },
     {
+      description: "Recyclarr Group — the chart is versioned with the app, and its HelmRelease pins that image by digest",
+      groupName: "Recyclarr",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/recyclarr\\/(charts\\/)?recyclarr$/"],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       description: "Rook-Ceph Group",
       groupName: "Rook-Ceph",
       matchDatasources: ["docker"],
