@@ -109,7 +109,12 @@ spec:
         - matchLabels:
             io.kubernetes.pod.namespace: llm
             app: toolhive-embed
-        # Replies: session storage.
+        # Replies: session storage, from the gateway's own Dragonfly. The
+        # shared one in database stays until the gateway has moved off it.
+        - matchLabels:
+            io.kubernetes.pod.namespace: llm
+            app: toolhive-config-dragonfly
+            app.kubernetes.io/name: dragonfly
         - matchLabels:
             io.kubernetes.pod.namespace: database
             app.kubernetes.io/name: dragonfly

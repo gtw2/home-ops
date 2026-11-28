@@ -176,7 +176,10 @@ spec:
               AUDIO_STT_MODEL: whisper-1
               ENABLE_WEBSOCKET_SUPPORT: "true"
               WEBSOCKET_MANAGER: "redis"
-              WEBSOCKET_REDIS_URL: "redis://dragonfly.database.svc.cluster.local:6379/5"
+              # Open WebUI's own Dragonfly (components/dragonfly), db 0. On the
+              # shared instance its socket.io channel ("socketio") was also
+              # RomM's, so each server received the other's broadcasts.
+              WEBSOCKET_REDIS_URL: "redis://open-webui-dragonfly.llm.svc.cluster.local:6379/0"
             envFrom:
               - secretRef:
                   name: "{{ .Release.Name }}-secret"

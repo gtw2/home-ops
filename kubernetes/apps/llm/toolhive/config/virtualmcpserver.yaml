@@ -51,13 +51,14 @@ spec:
       # The knob that matters at 22 tok/s: how many tool definitions get spent
       # from the context budget on every turn. 8 is the CRD default.
       maxToolsToReturn: 8
-  # The shared dragonfly runs --cluster_mode=emulated, where only db 0 exists,
-  # so separation from litellm's keys is by prefix rather than by db index.
-  # That instance has no auth configured, hence no passwordRef; the llm
-  # namespace is already in its dragonfly-allow-clients NetworkPolicy.
+  # The gateway's own Dragonfly (components/dragonfly, wired up in
+  # toolhive/ks.yaml as toolhive-config-dragonfly). It has no auth, hence no
+  # passwordRef: its NetworkPolicy admits only the gateway's pods. The key
+  # prefix dates from sharing an instance with litellm and is kept so the
+  # keys stay recognisable.
   sessionStorage:
     provider: redis
-    address: dragonfly.database.svc.cluster.local:6379
+    address: toolhive-config-dragonfly.llm.svc.cluster.local:6379
     db: 0
     keyPrefix: "toolhive:vmcp:"
   podTemplateSpec:

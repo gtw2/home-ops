@@ -10,6 +10,8 @@ spec:
   commonMetadata:
     labels:
       app.kubernetes.io/name: *app
+  components:
+    - ../../../../components/dragonfly
   dependsOn:
     # CRDs: LiteLLMProxy/LiteLLMModel/LiteLLMVirtualKey from the operator,
     # Model/InferenceService from llmkube.
@@ -19,7 +21,7 @@ spec:
       namespace: *namespace
     - name: cloudnative-pg-cluster
       namespace: database
-    - name: dragonfly-cluster
+    - name: dragonfly
       namespace: database
     - name: external-secrets-stores
       namespace: external-secrets
@@ -28,6 +30,9 @@ spec:
   force: true
   interval: 1h
   path: ./kubernetes/apps/llm/litellm/app
+  postBuild:
+    substitute:
+      APP: *app
   prune: true
   sourceRef:
     kind: GitRepository

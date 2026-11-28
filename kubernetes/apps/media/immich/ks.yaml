@@ -41,9 +41,10 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
+    - ../../../../components/dragonfly
     - ../../../../components/zeroscaler
   dependsOn:
-    - name: dragonfly-cluster
+    - name: dragonfly
       namespace: database
     - name: immich-database
       namespace: media

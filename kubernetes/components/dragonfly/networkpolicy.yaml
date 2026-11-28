@@ -1,0 +1,92 @@
+---
+# Who may reach this app's Dragonfly. The operator labels the pods
+# app=<Dragonfly name>, which is what tells this instance from another one in
+# the same namespace.
+#
+# Selecting the pods isolates them for ingress:
+# - 6379, the data port, to the app's own pods only. That is the whole access
+#   control: Dragonfly has no password here, so anything that reaches 6379 can
+#   read and write every key.
+# - The operator, which creates the replication and promotes on failover, and
+#   the instance's own pods, which replicate. Replicas reach the master's admin
+#   port 9999, which runs with --admin_nopass; that is safe only because this
+#   list is short.
+# - Prometheus, for metrics on 9999 (podmonitor.yaml).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ${APP}-dragonfly
+spec:
+  podSelector:
+    matchLabels:
+      app: ${APP}-dragonfly
+      app.kubernetes.io/name: dragonfly
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ${DRAGONFLY_CLIENT:=${APP}}
+      ports:
+        - port: 6379
+          protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: database
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: dragonfly-operator
+              control-plane: controller-manager
+        - podSelector:
+            matchLabels:
+              app: ${APP}-dragonfly
+              app.kubernetes.io/name: dragonfly
+      ports:
+        - port: 6379
+          protocol: TCP
+        - port: 9999
+          protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - port: 9999
+          protocol: TCP
+---
+# Keep Dragonfly's daily call to version.dragonflydb.io inside the cluster: it
+# sends threads, kernel, uptime, memory bucket, cloud or VM label, deployment
+# environment and role (src/server/version_monitor.cc at v2.1.0). Why this is
+# a policy and not --version_check=false is in dragonfly.yaml.
+#
+# Selecting the pods isolates them for egress, and the only thing they start
+# themselves is replication: dragonfly-operator v1.7.1 hands replicas the
+# master's pod IP, on 9999 as observed. DNS stays blocked too, so the hostname
+# never resolves. A snapshot to S3 or an FQDN replica would need a rule here.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ${APP}-dragonfly-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: ${APP}-dragonfly
+      app.kubernetes.io/name: dragonfly
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: ${APP}-dragonfly
+              app.kubernetes.io/name: dragonfly
+      ports:
+        - port: 6379
+          protocol: TCP
+        - port: 9999
+          protocol: TCP

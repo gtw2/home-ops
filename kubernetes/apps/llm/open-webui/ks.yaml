@@ -11,8 +11,11 @@ spec:
     labels:
       app.kubernetes.io/name: *app
   components:
+    - ../../../../components/dragonfly
     - ../../../../components/kopiur/backup
   dependsOn:
+    - name: dragonfly
+      namespace: database
     # Reads litellm-key-open-webui directly now, so the virtual key has to be
     # minted before the pod can start.
     - name: litellm
