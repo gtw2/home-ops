@@ -7,9 +7,9 @@
 # edge and the LoadBalancer IPs), run third-party server builds, and mostly run
 # without runAsNonRoot or dropped capabilities. Until this policy, one of them
 # compromised could open a connection to anything: the MCP gateway (anonymous
-# in-cluster, with a Home Assistant token behind it), dragonfly (no auth, and
-# its NetworkPolicy admits this namespace), mosquitto (anonymous) and every
-# host on the LAN.
+# in-cluster, with a Home Assistant token behind it), the shared dragonfly
+# since retired (no auth, and its NetworkPolicy admitted this namespace),
+# mosquitto (anonymous) and every host on the LAN.
 #
 # Egress only. With no ingress section the pods stay open inbound exactly as
 # before, so the game ports, the towonel agents, Prometheus, warden and
