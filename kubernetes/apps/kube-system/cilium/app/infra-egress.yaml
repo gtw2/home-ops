@@ -1,0 +1,114 @@
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumclusterwidenetworkpolicy_v2.json
+#
+# Keep pods away from the hosts that run the house rather than the cluster:
+# the R730XD's iDRAC (10.10.40.2), the NAS boxes (nas 10.10.40.4, tank
+# 10.10.40.5) and the Management VLAN (10.10.5.0/24). A pod that gets
+# compromised through an app can otherwise reach their web UIs, SSH, IPMI
+# (whose RAKP handshake hands out a crackable password hash) and NUT, from an
+# address those hosts trust: pod traffic leaves its node with the node's IP.
+#
+# Deny-only, and each policy says enableDefaultDeny false. Without that, a
+# policy with egress(Deny) rules puts every pod it selects into default-deny
+# egress (the field's own description), which here would be every pod in the
+# cluster. Deny rules win over any allow, so the few pods that need one of
+# these hosts are left out of the selector instead of allowed back in.
+#
+# Not affected: anything on the host network. Kubelet mounts tank's NFS
+# exports and the Talos nut-client talks to tank's upsd as the node itself,
+# not as a pod. Node addresses on the Management VLAN (10.10.5.21-24) belong
+# to the nodes, and a CIDR rule does not cover nodes while
+# policy-cidr-match-mode is unset; pods reach the nodes on their Production
+# addresses anyway.
+#
+# Who needs what was read from Cilium's conntrack on every node and from the
+# manifests (2026-11-27):
+#   idrac-fan-controller   iDRAC, IPMI 623/udp and ping
+#   nut-exporter           tank, upsd 3493 and ping
+#   blackbox-exporter-lan  ping to all three, tank NFS 2049 (lan probes)
+#   homepage               nas web UI (its TrueNAS widget)
+# The exemptions match on labels alone, not namespace: a selector can only
+# combine expressions with AND. Labels are set by the manifests here, and a
+# pod cannot relabel itself without API access.
+#
+# After it applies, check the probes and exporters still answer, and watch
+# for anything else hitting these rules with
+#   kubectl -n kube-system exec ds/cilium -- cilium-dbg monitor --type drop
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: pods-deny-idrac
+spec:
+  enableDefaultDeny:
+    egress: false
+    ingress: false
+  endpointSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: NotIn
+        values: ["idrac-fan-controller"]
+      - key: app.kubernetes.io/instance
+        operator: NotIn
+        values: ["blackbox-exporter-lan"]
+  egressDeny:
+    - toCIDR:
+        - 10.10.40.2/32
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumclusterwidenetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: pods-deny-tank
+spec:
+  enableDefaultDeny:
+    egress: false
+    ingress: false
+  endpointSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: NotIn
+        values: ["nut-exporter"]
+      - key: app.kubernetes.io/instance
+        operator: NotIn
+        values: ["blackbox-exporter-lan"]
+  egressDeny:
+    - toCIDR:
+        - 10.10.40.5/32
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumclusterwidenetworkpolicy_v2.json
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: pods-deny-nas
+spec:
+  enableDefaultDeny:
+    egress: false
+    ingress: false
+  endpointSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: NotIn
+        values: ["homepage"]
+      - key: app.kubernetes.io/instance
+        operator: NotIn
+        values: ["blackbox-exporter-lan"]
+  egressDeny:
+    - toCIDR:
+        - 10.10.40.4/32
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumclusterwidenetworkpolicy_v2.json
+#
+# No pod talks to the Management VLAN: tank's and nas's management addresses,
+# and whatever else lands there.
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: pods-deny-management
+spec:
+  enableDefaultDeny:
+    egress: false
+    ingress: false
+  endpointSelector: {}
+  egressDeny:
+    - toCIDR:
+        - 10.10.5.0/24
