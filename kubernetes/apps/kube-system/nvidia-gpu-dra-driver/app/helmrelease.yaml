@@ -1,0 +1,100 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+#
+# Publishes the RTX 3090 as DRA devices (DeviceClass gpu.nvidia.com), the same
+# way the Intel and AMD drivers next to this one publish theirs. DRA is the only
+# path a GPU takes to a pod here: there is no NVIDIA device plugin and no
+# nvidia.com/gpu extended resource. That matters for sharing: with one
+# accounting path, the scheduler's view of the GPU is the only view, which is
+# what a game session and an LLM sharing the card both depend on.
+#
+# Inert until a node carries node.kubernetes.io/gpu-vendor=nvidia: the
+# DaemonSet below selects nothing before that, and the chart's only other
+# objects are RBAC and the cluster-scoped DeviceClasses.
+#
+# Node contract, set by Talos (machineconfig, not this repo's kubernetes/):
+# - extensions nvidia-open-gpu-kernel-modules-production and
+#   nvidia-container-toolkit-production, which put the userspace driver under
+#   /usr/local and register containerd's `nvidia` runtime handler;
+# - label node.kubernetes.io/gpu-vendor=nvidia (NodeRestriction allows the
+#   node.kubernetes.io/ prefix; see docs/talos.md);
+# - taint nvidia.com/gpu=present:NoSchedule, which this chart already
+#   tolerates by default.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nvidia-gpu-dra-driver
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: nvidia-gpu-dra-driver
+  interval: 1h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    # The Talos NVIDIA extensions install the libraries in /usr/local/lib and
+    # nvidia-smi in /usr/local/bin, not under /. The chart's default of / makes
+    # the plugin fail to find libnvidia-ml.so and publish no devices.
+    nvidiaDriverRoot: /usr/local
+    # The chart refuses resources.gpus.enabled unless you confirm no NVIDIA
+    # device plugin runs on the same node, since the two would hand out the
+    # same GPU twice. None does here; see the header.
+    gpuResourcesEnabledOverride: true
+    resources:
+      gpus:
+        enabled: true
+      # IMEX/NVLink multi-node domains (GB200-class). Off, so the chart
+      # renders no controller Deployment at all.
+      computeDomains:
+        enabled: false
+    kubeletPlugin:
+      # Replaces the chart's default affinity, which keys on Node Feature
+      # Discovery or GPU Operator labels. This cluster runs neither, so the
+      # default would schedule the plugin nowhere. Lists are replaced, not
+      # merged, so only this term remains.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node.kubernetes.io/gpu-vendor
+                    operator: In
+                    values: ["nvidia"]
+      # The chart default, restated: the node contract above relies on it.
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+  postRenderers:
+    - kustomize:
+        patches:
+          # The chart hardcodes /var/run/cdi for the CDI specs it writes (no
+          # value overrides it). containerd here reads only
+          # cdi_spec_dirs = /var/cdi/static and /var/cdi/dynamic
+          # (talos/machineconfig.yaml.j2), so a spec in /var/run/cdi is never
+          # found and the GPU is never injected into the pod. Mount the host's
+          # /var/cdi/dynamic at the path the plugin writes to. The spec files
+          # name only devices and host paths, never their own directory, so
+          # moving them is safe.
+          - target:
+              kind: DaemonSet
+              name: dra-driver-nvidia-gpu-kubelet-plugin
+            patch: |
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: dra-driver-nvidia-gpu-kubelet-plugin
+              spec:
+                template:
+                  spec:
+                    volumes:
+                      - name: cdi
+                        hostPath:
+                          path: /var/cdi/dynamic
+                          type: DirectoryOrCreate
