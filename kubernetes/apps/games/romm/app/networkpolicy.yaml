@@ -1,0 +1,93 @@
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Egress for RomM. It takes uploads from users and unpacks and hashes them, so
+# a file that exploits one of those parsers runs code in this pod. Without a
+# policy that code reaches the whole cluster and the LAN: the iDRAC, tank, the
+# gateway and the workstation. This lists what RomM needs and nothing else.
+#
+# Egress only. Inbound (Envoy, Prometheus) is untouched, which also keeps this
+# clear of the netkit reply problem described in
+# kritika-system/kritika/app/networkpolicy.yaml: it only bites a pod whose
+# ingress is enforced. Same shape as the game servers' policy in
+# games/network-policy, which leaves RomM out.
+#
+# Cilium checks egress after a Service address is translated, so each rule
+# names the pods behind a Service, not the Service.
+#
+# Not tested against live traffic before merge: Hubble is off. After it
+# applies, watch for drops with
+#   kubectl -n kube-system exec ds/cilium -- cilium-dbg monitor --type drop
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: romm-egress
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: romm
+      app.kubernetes.io/controller: romm
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+    # ROMM_DB_DRIVER postgresql, for the app and its init-db container. Every
+    # instance of the cluster, so a switchover does not cut it off.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: database
+            cnpg.io/cluster: postgres17
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+
+    # REDIS_HOST. Every pod of the instance: the Service follows the master
+    # role, which the operator moves between them. RomM's own instance
+    # (romm-dragonfly, from components/dragonfly) and the shared one in
+    # database, which it used before; drop the second once that is retired.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: games
+            app: romm-dragonfly
+            app.kubernetes.io/name: dragonfly
+        - matchLabels:
+            io.kubernetes.pod.namespace: database
+            app.kubernetes.io/name: dragonfly
+      toPorts:
+        - ports:
+            - port: "6379"
+              protocol: TCP
+
+    # Authentik (OIDC). The sso hostname resolves to envoy-external's LAN
+    # address, so the token and userinfo calls go through Envoy. Any port:
+    # the listener ports are not declared on the proxy pods.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: envoy
+            app.kubernetes.io/component: proxy
+
+    # Metadata providers on the internet: IGDB, ScreenScraper, LaunchBox,
+    # RetroAchievements, Hasheous, Playmatch. Everything except the private,
+    # CGNAT, link-local and multicast ranges, the same set the game servers
+    # use, which is what keeps the LAN out of reach. Pods and nodes are not
+    # covered by a CIDR rule at all while policy-cidr-match-mode is unset, so
+    # this grants nothing inside the cluster.
+    - toCIDRSet:
+        - cidr: 0.0.0.0/0
+          except:
+            - 10.0.0.0/8
+            - 100.64.0.0/10
+            - 169.254.0.0/16
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+            - 224.0.0.0/3

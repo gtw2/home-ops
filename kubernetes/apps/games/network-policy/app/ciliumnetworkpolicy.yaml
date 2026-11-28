@@ -19,7 +19,8 @@
 #
 # Selected: every app-template pod in the namespace except romm and
 # filebrowser, which are web apps behind the gateways, not game servers.
-# - romm needs Postgres, dragonfly and Authentik.
+# - romm needs Postgres, dragonfly and Authentik. Its egress has its own
+#   policy, games/romm/app/networkpolicy.yaml.
 # - filebrowser needs nothing in-cluster, but it has no login (FB_NOAUTH)
 #   over the valheim volume, and its route is on envoy-internal only.
 #   The last rule below lets every selected pod reach every other, so

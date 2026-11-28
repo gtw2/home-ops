@@ -1,0 +1,88 @@
+---
+# yaml-language-server: $schema=https://kube-schemas.pages.dev/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Egress for ocis. It stores whatever users upload and decodes images for
+# thumbnails, so a file that exploits a parser runs code in this pod. Without
+# a policy that code reaches the whole cluster and the LAN: the iDRAC, tank,
+# the gateway and the workstation. This lists what ocis needs and nothing else.
+#
+# Egress only. Inbound (Envoy, Prometheus) is untouched, which also keeps this
+# clear of the netkit reply problem described in
+# kritika-system/kritika/app/networkpolicy.yaml: it only bites a pod whose
+# ingress is enforced. ocis runs all its services in this one process and
+# they talk over localhost, which no policy sees.
+#
+# Cilium checks egress after a Service address is translated, so each rule
+# names the pods behind a Service, not the Service.
+#
+# Not tested against live traffic before merge: Hubble is off. After it
+# applies, watch for drops with
+#   kubectl -n kube-system exec ds/cilium -- cilium-dbg monitor --type drop
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ocis-egress
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: ocis
+      app.kubernetes.io/controller: ocis
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+    # STORAGE_USERS_S3NG_ENDPOINT: file contents live in Garage's ocis-data
+    # bucket.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: storage
+            app.kubernetes.io/name: garage
+            app.kubernetes.io/controller: garage
+      toPorts:
+        - ports:
+            - port: "3900"
+              protocol: TCP
+
+    # ANTIVIRUS_CLAMAV_SOCKET, once uploads are scanned (../clamav).
+    # Harmless before that: it names pods that do not exist yet.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: storage
+            app.kubernetes.io/name: clamav
+      toPorts:
+        - ports:
+            - port: "3310"
+              protocol: TCP
+
+    # Authentik (OIDC discovery, userinfo) and ocis's own public URL. Both
+    # names resolve to envoy-external's LAN address, so the calls go through
+    # Envoy. Any port: the listener ports are not declared on the proxy pods.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: envoy
+            app.kubernetes.io/component: proxy
+
+    # The internet, for the notifications SMTP server (a public host, port
+    # 587). Everything except the private, CGNAT, link-local and multicast
+    # ranges, the same set the game servers use in games/network-policy, which
+    # is what keeps the LAN out of reach. Pods and nodes are not covered by a
+    # CIDR rule at all while policy-cidr-match-mode is unset, so this grants
+    # nothing inside the cluster.
+    - toCIDRSet:
+        - cidr: 0.0.0.0/0
+          except:
+            - 10.0.0.0/8
+            - 100.64.0.0/10
+            - 169.254.0.0/16
+            - 172.16.0.0/12
+            - 192.168.0.0/16
+            - 224.0.0.0/3
