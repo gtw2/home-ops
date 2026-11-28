@@ -34,7 +34,11 @@ spec:
           reloader.stakater.com/auto: "true"
         cronjob:
           schedule: "@daily"
-          timeZone: ${TIMEZONE}
+          # The default is for konflate only. flate 0.8 renders a value that
+          # uses a SOPS key as null, even when quoted, and app-template's
+          # schema needs a string here. The cluster has TIMEZONE from
+          # cluster-secrets, so it never uses the default.
+          timeZone: ${TIMEZONE:=Etc/UTC}
           concurrencyPolicy: Forbid
           successfulJobsHistory: 1
           failedJobsHistory: 1
