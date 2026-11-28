@@ -84,3 +84,9 @@ storageTemplate:
 backup:
   database:
     enabled: false
+
+# Off under the no-phone-home policy: by default the server calls
+# https://version.immich.cloud/version at start-up and then hourly
+# (services/version.service.js, v3.4.2). Releases are tracked by Renovate.
+newVersionCheck:
+  enabled: false
